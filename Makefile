@@ -1,12 +1,11 @@
-LIBEVENTDIR=$(HOME)/progs/libevent-0.9
 LUADIR=lua-5.0.2
 SDLDIR=$(shell sdl-config --prefix)
 
-CFLAGS   = -I$(LIBEVENTDIR) -I$(LUADIR)/include/ -I$(SDLDIR)/include/SDL -std=gnu99 -Wall 
+CFLAGS   = -I$(LUADIR)/include/ -I$(SDLDIR)/include/SDL -std=gnu99 -Wall 
 CFLAGS  += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
 # CFLAGS  += -ggdb
 
-LDFLAGS  = -L$(LIBEVENTDIR) -L$(LUADIR)/lib -L$(SDLDIR)/lib -levent -llua -llualib -lm -lSDL -lSDL_image -lSGE -lSDL_gfx
+LDFLAGS  = -L$(LUADIR)/lib -L$(SDLDIR)/lib -levent -llua -llualib -lm -lSDL -lSDL_image -lSGE -lSDL_gfx
 
 all: infon
 
