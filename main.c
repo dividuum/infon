@@ -56,7 +56,7 @@ void print_fps() {
     }
 }   
 
-int main() {
+int main(int argc, char *argv[]) {
     // const int width = 320, height = 208;
     const int width = 640, height = 480;
     // const int width = 800, height = 600;
