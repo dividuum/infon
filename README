@@ -1,0 +1,11 @@
+TODO :)
+
+Requires libevent (tested with 0.9), SDL (tested with 1.2.8), SDL_image, SDL_gfx, SGE
+Type 'make', edit config.lua, run ./infon
+
+Send me your bots, images of events, patches etc..
+
+
+
+
+Florian `dividuum` Wesch <fw@dividuum.de>

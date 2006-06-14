@@ -1,0 +1,19 @@
+LIBEVENTDIR=$(HOME)/progs/libevent-0.9
+LUADIR=lua-5.0.2
+SDLDIR=$(shell sdl-config --prefix)
+
+CFLAGS   = -I$(LIBEVENTDIR) -I$(LUADIR)/include/ -I$(SDLDIR)/include/SDL -std=gnu99 -Wall 
+CFLAGS  += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
+# CFLAGS  += -ggdb
+
+LDFLAGS  = -L$(LIBEVENTDIR) -L$(LUADIR)/lib -L$(SDLDIR)/lib -levent -llua -llualib -lm -lSDL -lSDL_image -lSGE -lSDL_gfx
+
+all: infon
+
+infon: main.o server.o listener.o player.o map.o path.o sprite.o misc.o world.o path.o map.o video.o creature.o
+	$(MAKE) -C $(LUADIR)
+	$(CC) $^ $(LDFLAGS) -o $@
+
+clean:
+	$(MAKE) -C $(LUADIR) clean
+	-rm -f *.o infon tags

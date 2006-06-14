@@ -1,0 +1,436 @@
+<html><body>
+    <center><img src="koth.png"></center>
+    
+    <h2>Erste Schritte</h2>
+
+    Laeuft der Spieleserver, so kann ueber Telnet/netcat/etc eine Verbindung dorthin aufgebaut werden (IP und Port sollte der
+    Serveradmin im Scroller angezeigt lassen). Anschliessend erwartet den Spieler ein Prompt und er koennen Befehle
+    eingegeben werden:
+
+    <table border='1'>
+        <tr><td>?</td><td>Hilfe</td></tr>
+        <tr><td>j</td><td>joined das Spiel. Es kann ein neuer Spieler erzeugt werden, oder einem aktiven Spieler beigetreten
+        werden</td></tr>
+        <tr><td>p</td><td>verlaesst ein zuvor gejointes Spiel</td></tr>
+        <tr><td>l</td><td>fuehrt eine Zeile lua Code innerhalb der Spieler VM aus</td></tr>
+        <tr><td>b</td><td>Liest mehrere Zeilen lua Code ein. Nach Eingabe eines einzelnen Punktes wird die gesammte Eingabe
+                in der VM des Spielers ausgefuehrt.</td></tr>
+        <tr><td>n</td><td>Ermoeglicht das setzen des eigenen Spielernamens</td></tr>
+        <tr><td>r</td><td>Ruft innerhalb der Spieler VM die Funktion <i>restart</i> auf</td></tr>
+        <tr><td>i</td><td>Ruft innerhalb der Spieler VM die Funktion <i>info</i> auf</td></tr>
+        <tr><td>q</td><td>Trennt die Verbindung. Der Spieler bleibt weiterhin im Spiel</td></tr>
+        <tr><td>k</td><td>Nimmt den eigenen Spieler aus dem Spiel</td></tr>
+        <tr><td>prompt</td><td>Ermoeglicht das Aendern des Standardprompts '&gt;&nbsp;'</td></tr>
+    </table>
+
+    <h2>Rundenfunktion & Informationsvariablen</h2>
+
+    Jeder Spieler besitzt seine eigene, von anderen Spielern getrennte Lua VM.  In jeder Spielrunde werden zunaechst die
+    moeglicherweise vom Spieler ueber Telnet eingegebenen Befehle in seiner VM ausgefuehrt.  Anschliessend wird fuer jeden
+    Spieler die in seiner VM definierte Funktion <i>player_think</i> aufgerufen. Innerhalb dieser Funktion sollten die
+    eigenen Kreaturen durch ein zuvor an den Server geschicktes Programm gesteuert werden.
+
+    <h2>player_think und Austauschvariablen</h2>
+
+    Vor Aufruf der Funktion <i>player_think</i> werden die Tabellen _spawned_creatures, _killed_creatures und
+    _attacked_creatures mit den in der vorherige Runde stattgefundenen Ereignisse befuellt: 
+    
+    <table border='1'><tr><th>Variable</th><th>Inhalt</th></tr>
+        <tr><td>_spawned_creatures</td>
+            <td>Tabelle mit creature_id =&gt; Runde Paaren fuer jede neu erzeugte Kreatur.</td></tr>
+        <tr><td>_attacked_creatures</td>
+            <td>Tabelle mit attacker_id =&gt; creature_id Paaren der in dier letzten Runde angegriffenen Kreaturen.</td></tr>
+        <tr><td>_killed_creatures</td>
+            <td>Tabelle mit creature_id =&gt; killer_id Paaren der in der letzten Runde getoeteten Kreaturen. Ist killer_id
+                -1, so ist die Kreatur eines natuerlichen Todes (durch Verhungern :-)) gestorben, und der Spieler verliert 3
+                Punkte</td></tr>
+    </table>
+
+    Innerhalb von <i>player_think</i> sollten die Variablen auf leere Tabellen zurueckgesetzt werden, um in der naechsten
+    Runde sinnvolle Inhalte zu haben.
+
+    Die gleiche creature_id kann in _spawned_creatures und _killed_creatures auftauchen, da innerhalb einer Runde eine Kreature
+    mit creature_id x sterben kann, und von einer weiteren eigenen Kreature eine neue Kreature mit creature_id x gespawnet
+    werden kann.
+
+    <h2>Lowlevel API</h2>        
+
+    Die folgenden Funktionen koennen ueber den Client oder wahrend einer Runde ausgefuehrt werden:
+
+    <h3>Kreaturbezogene Funktionen</h3>        
+
+    <ul>
+        <li><b>print(msg)</b><br/><br/>
+        Gibt eine Meldung auf den Clients des eigenen Spielers aus
+        <br/></br>
+        Parameter:<br/>
+        <i>msg</i> - Auszugebende Meldung
+        <br/><br/>
+        Rueckgabe:<br/>
+        -
+        </li>
+       
+
+
+        <li><b>suicide(creature_id)</b><br/><br/>
+        Toetet eine eigene Kreatur. 1/3 der Nahrung der Kreatur landet dabei auf dem aktuellen Feld.
+        Zieht 5 Punkte ab.
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id der eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        -
+        </li>
+
+        
+
+        <li><b>ok = set_path(creature_id, x, y)</b><br/><br/>
+        Legt ein anzulaufendes Ziel fest. Anschliessend kann mit <i>set_state</i> das laufen zum gesetzten Spiel gestartet werden.
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id der eigenen Kreatur<br/>
+        <i>x</i> - X Koordinate des Ziels<br/>
+        <i>y</i> - Y Koordinate des Ziels
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>ok</i> - true, falls gesetzt, false falls nicht gesetzt (nicht erreich oder begehbar)
+        </li>
+
+
+        
+        <li><b>x, y = get_pos(creature_id)</b><br/><br/>
+        Liefert die Koordinate der Kreatur
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>x</i> - X Koordinate<br/>
+        <i>y</i> - Y Koordinate
+        </li>
+
+
+
+        <li><b>state = get_state(creature_id)</b><br/><br/>
+        Liefert den aktuellen Zustand der Kreatur
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>state</i> - Zustand der Kreatur (siehe <i>set_state</i>)
+        </li>
+
+
+
+        <li><b>ok = set_state(creature_id, state)</b><br/><br/>
+        Setzt den Zustand der Kreatur.</br>
+        Der Wechsel in einen neuen Zustand wird auf dem Serverdisplay mittels Gedankenblase dargestellt:
+        <img src='states.gif'>. Die Zustaende im einzelnen:
+        <table border='1'><tr><th>Zustand</th><th>Aktivitaet</td></tr>
+            <tr><td>CREATURE_IDLE</td>
+                <td>Kreature macht nichts. Nur in diesem Zustand kann eine Kreature King-of-the-Hill werden. Fuer 5 Sekunden
+                    King of the Hill gibt es einen Punkt</td></tr>
+            <tr><td>CREATURE_WALK</td>
+                <td>Kreature steuert ein zuvor mit <i>set_path</i> gesetztes Ziel an. Wechselt bei erreichen in Zustand
+                    IDLE. Kann nur bei gesetzten Ziel betreten werden.</td></tr>
+            <tr><td>CREATURE_HEAL</td>
+                <td>Verbraucht schrittweise aufgenommene Nahrung um sich zu heilen. Wechselt bei aufgebrauchter Nahrung oder
+                    vollstaendiger Gesundheit in Zustand IDLE. Kann nur betreten werden, wenn Heilung moeglich und Nahrung
+                    vorhanden ist.</td></tr>
+            <tr><td>CREATURE_EAT</td>
+                <td>Nimmt schrittweise die auf dem aktuellen Feld vorhandene Nahrung auf. Bei maximaler Nahrungsaufnahme oder
+                    leergefressenem Feld wird in Zustand IDLE gewechselt. Kann nur betreten werden, wenn Nahrung vorhanden
+                    ist, und diese aufgenommen werden kann</td></tr>
+            <tr><td>CREATURE_ATTACK</td>
+                <td>Attackiert die zuvor mit <i>set_target</i> ausgewaehlte Kreature. Falls die aktuelle Kreature nicht
+                    angreifen kann (Nur Kreaturen des Typs 1 koennen angreifen), die Zielkreatur zu weit entfernt ist (maximal
+                    256 Einheiten, oder die angegriffene Kreature getoetet wurde, wird in Zustand IDLE gewechselt. Der
+                    Zustand kann bei Typ 1 Kreaturen immer betreten werden, wird aber moeglicherweise direkt wieder
+                    verlassen. Wird eine gegnerische Kreatur getoetet, so verliert der Gegner 3 Punkte, man selbst bekommt 20
+                    Punkte</td></tr>
+            <tr><td>CREATURE_CONVERT</td>
+                <td>Verwendet gesammelte Nahrung, um sich in die zuvor ueber <i>set_convert</i> gesetzte Kreature
+                    umzuwandeln. Es ist momentan nur die Umwandlung von Typ 0 in Typ 1 moeglich. Die Umwandlung verbraucht
+                    8000 Nahrung. Wird die Umwandlung durch Wechsel in einen anderen Zustand vorzeitig abgebrochen, so geht die bisher
+                    aufgewendete Nahrung verloren. Nach Abschluss der Umwandlung oder bei nicht moeglicher Umwandlung
+                    (ungueltiges mit set_convert gesetzter Zieltyp, ausgegangene Nahrung) wird in den Zustand IDLE
+                    gewechselt. Der Zustand kann nur betreten werden, wenn 8000 Nahrung und ein gueltiges Umwandlungsziel 
+                    mittels <i>set_convert</i> gesetzt wurde</td></tr>
+            <tr><td>CREATURE_SPAWN</td>
+                <td>Kreaturen des Typs 1 koennen unter Verbrauch von Nahrung (8000) und Lebensenergie (~20%) neue Kreaturen des Typs 0
+                    erzeugen. Beim Betreten dieses Zustands verliert die Kreature schlagartig 20% Lebensenergie. Anschliessend werden
+                    8000 Nahrung verbraucht und dann eine neue Kreatur des Typ 0 erzeugt. Wird das Erzeugen durch Wechsel in einen 
+                    anderen Zustand vorzeitig abgebrochen, so geht die bisher aufgewendete Nahrung sowie die Lebensenergie verloren.
+                    Der Zustand kann nur betreten werden, sofern 8000 Nahrung und mindestens 20% Lebensenergie vorhanden
+                    sind. Nach Erfolg wird in Zustand IDLE zurueckgewechselt. Fuer das Erzeugen einer neuen Kreatur gibt es 3
+                    Punkte</td></tr>
+            <tr><td>CREATURE_FEED</td>
+                <td>Uebertraegt eigene Nahrung langsam an eine zuvor mit <i>set_target</i> angegebene Kreatur. Bei
+                    vollstaendiger Gesundheit der anderen Kreatur oder aufgebrauchter Nahrung wird in Zustand IDLE
+                    zurueckgewechselt. Kann nur betreten werden, sofern Nahrung und Heilung moeglich.</td></tr>
+        </table>
+
+
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur<br/>
+        <i>state</i> - zu setzender Zustand
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>ok</i> - true, falls gesetzt, false falls nicht gesetzt (nicht durchfuehrbar)
+        </li>
+
+
+
+        <li><b>ok = set_target(creature_id, ziel_creature_id)</b><br/><br/>
+        Setzt das Ziel fuer Angriffe oder Nahrungstransfer (siehe <i>set_state</i>)
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <i>ziel_creature_id</i> - id einer eigenen/anderen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>ok</i> - true, falls gesetzt, false falls nicht ziel nicht vorhanden oder creature_id == ziel_creature_id
+        </li>
+
+
+
+        <li><b>ok = set_convert(creature_id, type)</b><br/><br/>
+        Setzt den Zieltyp fuer eine Umwandlung. 
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <i>type</i> - Umwandlungsziel Typ (momentan nur 1 moeglich)
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>ok</i> - true, falls gesetzt, false falls Umwandungszieltyp nicht moeglich.
+        </li>
+
+
+
+        <li><b>creature_id, x, y, playernum, dist = nearest_enemy(creature_id)</b><br/><br/>
+        Liefert Informationen zur naechstgelegenen gegnerischen Kreatur.
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>creature_id</i> - id naechsten gegnerischen Kreatur, oder nil, falls keine vorhanden.<br/>
+        <i>x</i> - X Koordinate<br/>
+        <i>y</i> - Y Koordinate<br/>
+        <i>playernum</i> - Nummer des Besitzers der Kreatur<br/>
+        <i>dist</i> - Luftlinienabstand
+        </li>
+
+
+
+        <li><b>type = get_type(creature_id)</b><br/><br/>
+        Liefert den Typ der Kreatur
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>type</i> - Typ
+        </li>
+
+
+
+        <li><b>food = get_food(creature_id)</b><br/><br/>
+        Liefert die von der Kreatur aufgenommene Nahrung
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>food</i> - Anzahl der von der Kreatur aufgenommenen Nahrung
+        </li>
+
+
+
+        <li><b>health = get_health(creature_id)</b><br/><br/>
+        Liefert die Lebensenergie einer Kreatur
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>health</i> - Lebensenergie (0-100%)
+        </li>
+
+
+
+        <li><b>speed = get_speed(creature_id)</b><br/><br/>
+        Liefert die Geschwindigkeit einer Kreatur
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>speed</i> - Geschwindigkeit (in Einheiten/sek)
+        </li>
+
+
+
+        <li><b>food = get_tile_food(creature_id)</b><br/><br/>
+        Liefert die Anzahl Nahrung auf dem Feld der Kreatur
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>food</i> - auf dem Feld der Kreatur vorhandene Nahrung
+        </li>
+
+
+
+        <li><b>food = get_max_food(creature_id)</b><br/><br/>
+        Liefert maximale Menge an aufnehmbarer Nahrung.
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>food</i> - Maximale Menge der Aufnehmbaren Nahrung. Typ 0 Kreaturen koennen 10000 Nahrung aufnehmen, Typ 1
+        Kreaturen 20000.
+        </li>
+
+
+
+        <li><b>dist = get_distance(creature_id, ziel_creature_id)</b><br/><br/>
+        Liefert den Abstand zwischen einer eigenen Kreatur und einer weiteren Kreatur.
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <i>ziel_creature_id</i> - id einer Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>dist</i> - Luftlinienabstand.
+        </li>
+
+
+
+        <li><b>set_message(creature_id, message)</b><br/><br/>
+        Zeigt auf dem Bildschirm fuer 2 Sekunden unterhalb einer Kreatur eine
+        Nachricht an.
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <i>message</i> - Nachricht. Mehr als 8 Zeichen werden nicht angezeigt
+        <br/><br/>
+        Rueckgabe:<br/>
+        -
+        </li>
+    </ul>
+
+    <h3>Sonstige Funktionen</h3>        
+
+    <ul>
+        <li><b>x1, y1, x2, y2 = world_size()</b><br/><br/>
+        Liefert die Ausdehnung der Spielwelt
+        <br/></br>
+        Parameter:<br/>
+        -
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>x1</i> - X Koordinate oberste linke Ecke<br/>
+        <i>y1</i> - Y Koordinate oberste linke Ecke<br/>
+        <i>x2</i> - X Koordinate untere rechte Ecke<br/>
+        <i>y2</i> - Y Koordinate untere rechte Ecke 
+        </li>
+
+
+        
+        <li><b>time = game_time()</b><br/><br/>
+        Liefert die Spielzeit
+        <br/></br>
+        Parameter:<br/>
+        -
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>time</i> - fortlaufende Spielzeit in Millisekunden
+        </li>
+
+
+        
+        <li><b>x, y = get_koth_pos()</b><br/><br/>
+        Liefert die Koordinaten des King-of-the-Hill Feldes
+        <br/></br>
+        Parameter:<br/>
+        -
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>x</i> - X Koordinate<br/>
+        <i>y</i> - Y Koordinate
+        </li>
+
+
+
+        <li><b>flag = creature_exists(creature_id)</b><br/><br/>
+        Liefert, ob eine Kreatur exisitert
+        <br/></br>
+        Parameter:<br/>
+        <i>creature_id</i> - id einer eigenen Kreatur
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>flag</i> - bool, ob exisitert
+        </li>
+
+
+
+        <li><b>flag = player_exists(player_id)</b><br/><br/>
+        Liefert, ob ein Spieler exisitert
+        <br/></br>
+        Parameter:<br/>
+        <i>player_id</i> - id des Spielers
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>flag</i> - bool, ob exisitert
+        </li>
+
+
+
+        <li><b>player_id = king_player()</b><br/><br/>
+        Liefert den aktuellen King of the Hill
+        <br/></br>
+        Parameter:<br/>
+        -
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>player_id</i> - id des Koenigs :)
+        </li>
+
+
+
+        <li><b>score = player_score(player_id)</b><br/><br/>
+        Liefert den Punktestand eines Spielers
+        <br/></br>
+        Parameter:<br/>
+        <i>player_id</i> - id des Spielers
+        <br/><br/>
+        Rueckgabe:<br/>
+        <i>score</i> - Punkte
+        </li>
+    </ul>
+
+    <h3>Vordefinierte Variablen</h3>        
+
+    <ul>
+        <li><b>MAXPLAYER</b> - Maximale Anzahl Spieler</li>
+        <li><b>player_number</b> - Eigene player_id</li>
+    </ul>
+
+    <h2>Limits</h2>        
+
+    <ul>
+        <li>Die CPU Resourcen pro Spieler in jeder Runde sind beschraenkt. Nach 400000 Lua VM Zyklen wird jeweils die Ausfuehrung von
+        ueber Telnet eingegebenen Befehlen oder die Ausfuehrung von <i>player_think</i> abgebrochen.</li>
+        <li>Der innerhalb der VM verwendbare Speicher ist auf 8MB beschraenkt.</li>
+        <li>Es kann maximal 256 Kreaturen geben</li>
+        <li>Es kann maximal 32 Spieler geben</li>
+    </ul>
+        
+</body></html>
+
