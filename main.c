@@ -129,10 +129,10 @@ int main(int argc, char *argv[]) {
                     break;
                 case SDL_MOUSEMOTION:
                     if (event.motion.state == 1) {
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE + 1);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE + 1);
+                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE, SOLID);
+                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE, SOLID);
+                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE + 1, SOLID);
+                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE + 1, SOLID);
                         printf("%d %d %d\n", 
                                event.motion.x * TILE_SCALE / SPRITE_TILE_SIZE,
                                event.motion.y * TILE_SCALE / SPRITE_TILE_SIZE, 

@@ -36,33 +36,35 @@ static map_t        *map_pathfind;
 static pathfinder_t  finder;
 static sprite_t    **map_sprites;
 static int          *map_food;
+static maptype_e    *map_type;
 static int           displaymode;
 
 void world_draw() {
     for (int y = 0; y < world_h; y++) {
         for (int x = 0; x < world_w; x++) {
+            int val;
             switch (displaymode) {
                 case 0:
                     video_draw(x * SPRITE_TILE_SIZE, 
                                y * SPRITE_TILE_SIZE, 
                                map_sprites[y * world_w + x]);
                     break;
-                    /*
                 case 1:
+                    val = (int)MAP_TILE(map_pathfind, x, y)->area;
                     video_rect(x * SPRITE_TILE_SIZE, 
                                y * SPRITE_TILE_SIZE,
                                (x+1) * SPRITE_TILE_SIZE,
                                (y+1) * SPRITE_TILE_SIZE,
-                               (int)MAP_TILE(map_pathfind, x, y)->area);
+                               val % 206, -val / 200, val, 0xFF);
                     break;
                 case 2:
+                    val = MAP_TILE(map_pathfind, x, y)->region;
                     video_rect(x * SPRITE_TILE_SIZE, 
                                y * SPRITE_TILE_SIZE,
                                (x+1) * SPRITE_TILE_SIZE,
                                (y+1) * SPRITE_TILE_SIZE,
-                               MAP_TILE(map_pathfind, x, y)->region * 1246);
+                               val * 206, -val * 200, val, 0xFF);
                     break;
-                    */
             }
 
             int food = map_food[y * world_w + x];
@@ -80,7 +82,7 @@ int world_walkable(int x, int y) {
            map_walkable(map_pathfind, x, y);
 }
 
-int world_dig(int x, int y) {
+int world_dig(int x, int y, maptype_e type) {
     if (x < 1 || x >= world_w - 1 ||
         y < 1 || y >= world_h - 1)
         return 0;
@@ -176,7 +178,7 @@ void world_init(int w, int h) {
     memset(map_food, 0, w * h * sizeof(int));
 
     // Koth Tile freigraben
-    world_dig(koth_x, koth_y);
+    world_dig(koth_x, koth_y, SOLID);
 
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {

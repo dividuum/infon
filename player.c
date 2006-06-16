@@ -475,12 +475,16 @@ void player_mark_for_kill(player_t *player) {
     player->kill_me = 1;
 }
 
-void player_destroy(player_t *player) {
+void player_kill_all_creatures(player_t *player) {
     for (int c = 0; c < CREATURE_NUM; c++) {
         creature_t *creature = creature_by_num(c);
         if (creature && creature->player == player)
             creature_kill(creature, NULL);
     }
+}
+
+void player_destroy(player_t *player) {
+    player_kill_all_creatures(player);
             
     client_t *client;
     while ((client = player->clients)) {

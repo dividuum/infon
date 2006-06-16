@@ -31,4 +31,13 @@ int        game_round;
 
 #define GAME_NAME "Infon Battle Arena 'GPN-5-Release'"
 
+// Pfadsuche, bei der mehrere beieinanderliegende
+// Tiles zu einem Area zusammengefasst werden. Die
+// Pfadsuche verwendet dann diese Areas fuer die 
+// Pfadsuche. Dies ist schneller und die gefundenen
+// Pfade sehen natuerlicher aus. Allerdings ergeben 
+// sich gelegentlich aufgrund der zusammenfassung
+// der Tiles komische Pfade.
+#define PATHFIND_AREA_MERGE 
+
 #endif

@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "path.h"
+#include "global.h"
 
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
@@ -683,7 +684,11 @@ int map_dig(map_t *map, int x, int y) {
     tile->walkable = 1;
 
     map_set_region(map, x, y);
+#ifdef PATHFIND_AREA_MERGE
     map_area_merge(map, map_area_add(map, x, y));
+#else
+    map_area_add(map, x, y);
+#endif
     return 1;
 }
 

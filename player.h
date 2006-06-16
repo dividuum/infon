@@ -69,6 +69,7 @@ player_t   *player_by_num(int playerno);
 int         player_num(player_t *player);
 void        player_writeto(player_t *player, const void *data, size_t size);
 
+void        player_kill_all_creatures(player_t *player);
 player_t   *player_create(const char *pass);
 void        player_mark_for_kill(player_t *player);
 

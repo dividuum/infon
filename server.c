@@ -298,13 +298,19 @@ static int luaPlayerNumClients(lua_State *L) {
     return 1;
 }
 
-static int luaCreateSetPlayerName(lua_State *L) {
+static int luaSetPlayerName(lua_State *L) {
     player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
     snprintf(player->name, sizeof(player->name), "%s", luaL_checkstring(L, 2));
     return 0;
 }
 
-static int luaCreateGetPlayerName(lua_State *L) {
+static int luaSetPlayerScore(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player->score = luaL_checklong(L, 2);
+    return 0;
+}
+
+static int luaGetPlayerName(lua_State *L) {
     player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
     lua_pushstring(L, player->name);
     return 1;
@@ -317,7 +323,7 @@ static int luaTurnIntoGuiClient(lua_State *L) {
 }
 
 static int luaWorldDig(lua_State *L) {
-    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2)));
+    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2), SOLID));
     return 1;
 }
 
@@ -351,6 +357,12 @@ static int luaGameInfo(lua_State *L) {
 static int luaGameTime(lua_State *L) {
     lua_pushnumber(L, game_time);
     return 1;
+}
+
+static int luaPlayerKillAllCreatures(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_kill_all_creatures(player);
+    return 0;
 }
 
 static int luaPlayerExecute(lua_State *L) {
@@ -449,10 +461,12 @@ void server_init() {
     lua_register(L, "attach_client_to_player",  luaAttachClientToPlayer);
     lua_register(L, "detach_client_from_player",luaDetachClientFromPlayer);
     lua_register(L, "create_player",            luaCreatePlayer);
-    lua_register(L, "set_player_name",          luaCreateSetPlayerName);
-    lua_register(L, "get_player_name",          luaCreateGetPlayerName);
+    lua_register(L, "set_player_name",          luaSetPlayerName);
+    lua_register(L, "get_player_name",          luaGetPlayerName);
     lua_register(L, "player_number",            luaPlayerNumber);
     lua_register(L, "player_execute",           luaPlayerExecute);
+    lua_register(L, "player_kill_all_creatures",luaPlayerKillAllCreatures);
+    lua_register(L, "set_player_score",         luaSetPlayerScore);
     lua_register(L, "player_num_clients",       luaPlayerNumClients);
     lua_register(L, "turn_into_guiclient",      luaTurnIntoGuiClient);
     lua_register(L, "world_dig",                luaWorldDig);

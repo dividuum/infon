@@ -223,6 +223,19 @@ function kick(fd, msg)
     clients[fd].kill_me = true
 end
 
+function killall()
+    for n = 0, MAXPLAYERS - 1 do
+        pcall(player_kill_all_creatures, n)
+    end
+end
+
+function reset()
+    killall()
+    for n = 0, MAXPLAYERS - 1 do
+        pcall(set_player_score, n, 0)
+    end
+end
+
 function kickall()
     table.foreach(clients, function (fd, obj)
                                clients[fd].kill_me = true

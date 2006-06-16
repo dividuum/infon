@@ -26,7 +26,15 @@
 // Begrenzt durch die Anzahl vorhandener Food Sprites
 #define MAX_TILE_FOOD 9999
 
-int         world_dig(int x, int y);
+// XXX
+typedef enum {
+    SOLID = 0,
+    PLAIN = 1,
+    WATER = 2,
+    LAVA  = 3,
+} maptype_e;
+
+int         world_dig(int x, int y, maptype_e type);
 int         world_walkable(int x, int y);
 int         world_get_food(int x, int y);
 int         world_add_food(int x, int y, int amount);
