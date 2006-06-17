@@ -91,15 +91,17 @@ int main(int argc, char *argv[]) {
     creature_init();
 
     game_round = 0;
+    game_time  = 0;
 
     Uint32 lastticks = SDL_GetTicks();
     while (running) {
         game_round++;
-        game_time = SDL_GetTicks();
-        Uint32 delta = game_time - lastticks;
+        Uint32 nowticks = SDL_GetTicks();
+        Uint32 delta = nowticks - lastticks;
 
-        if (game_time < lastticks || game_time > lastticks + 1000) {
-            lastticks = game_time;
+        if (nowticks < lastticks || nowticks > lastticks + 1000) {
+            // Timewarp?
+            lastticks = nowticks;
             SDL_Delay(5);
             continue;
         } else if (delta < 10) {
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        lastticks = game_time;
+        lastticks = nowticks;
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -149,6 +151,9 @@ int main(int argc, char *argv[]) {
 
         print_fps();
 
+        // Zeit weiterlaufen lassen
+        game_time += delta;
+
         // IO Lesen/Schreiben
         server_tick();
 
@@ -168,7 +173,6 @@ int main(int argc, char *argv[]) {
 
         // GUI Client aktualisieren 
         // TODO: implement me
-
     }
     
     creature_shutdown();
