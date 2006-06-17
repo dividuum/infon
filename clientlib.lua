@@ -234,6 +234,7 @@ function reset()
     for n = 0, MAXPLAYERS - 1 do
         pcall(set_player_score, n, 0)
     end
+    wall("Game restarted")
 end
 
 function kickall()
