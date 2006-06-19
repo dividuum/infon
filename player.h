@@ -26,9 +26,9 @@
 #include <lua.h>
 
 #include "server.h"
+#include "packet.h"
 
 #define MAXPLAYERS 32
-
 
 typedef struct player_s {
     char        name[32];
@@ -69,6 +69,7 @@ player_t   *player_by_num(int playerno);
 int         player_num(player_t *player);
 void        player_writeto(player_t *player, const void *data, size_t size);
 
+void        player_set_name(player_t *player, const char *name);
 void        player_kill_all_creatures(player_t *player);
 player_t   *player_create(const char *pass);
 void        player_mark_for_kill(player_t *player);
@@ -79,6 +80,18 @@ void        player_draw(int delta);
 void        player_is_king_of_the_hill(player_t *player, int delta);
 void        player_there_is_no_king();
 player_t   *player_king();
+
+/* Network */
+void        player_send_initial_update(client_t *client);
+
+int         packet_player_update_static(player_t *player, packet_t *packet);
+int         packet_player_update_round(player_t *player, packet_t *packet);
+int         packet_player_joined(player_t *player, packet_t *packet);
+int         packet_player_left(player_t *player, packet_t *packet);
+
+void        packet_handle_player_update_static(packet_t *packet);
+void        packet_handle_player_update_round(packet_t *packet);
+void        packet_handle_player_join_leave(packet_t *packet);
 
 void        player_init();
 void        player_shutdown();

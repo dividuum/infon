@@ -44,6 +44,9 @@
 
 #define CLIENT_USED(client) ((client)->in_buf)
 
+static client_t *guiclients = NULL;
+
+
 static void client_readable(int fd, short event, void *arg);
 static void client_writable(int fd, short event, void *arg);
 
@@ -117,6 +120,8 @@ static void client_create(int fd, const char *addr) {
     clients[fd].prev = NULL;
 
     clients[fd].is_gui_client = 0;
+    clients[fd].next_gui = NULL;
+    clients[fd].prev_gui = NULL;
 
     lua_pushliteral(L, "on_client_accepted");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -187,6 +192,14 @@ void client_writeto(client_t *client, const void *data, size_t size) {
     event_add(&client->wr_event, NULL);
 }
 
+void client_writeto_all_gui_clients(const void *data, size_t size) {
+    client_t *client = guiclients;
+    if (client) do {
+        client_writeto(client, data, size);
+        client = client->next_gui;
+    } while (client != guiclients);
+}
+
 static void client_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
@@ -213,9 +226,11 @@ void client_destroy(client_t *client, char *reason) {
         fprintf(stderr, "error calling on_client_close: %s\n", lua_tostring(L, -1));
 
     // Versuchen, den Rest rauszuschreiben.
-    evbuffer_add(client->out_buf, "\nconnection terminating: ", 25);
-    evbuffer_add(client->out_buf, reason, strlen(reason));
-    evbuffer_add(client->out_buf, "\n", 1);
+    if (!client->is_gui_client) {
+        evbuffer_add(client->out_buf, "\nconnection terminating: ", 25);
+        evbuffer_add(client->out_buf, reason, strlen(reason));
+        evbuffer_add(client->out_buf, "\n", 1);
+    }
     evbuffer_write(client->out_buf, fd);
 
     evbuffer_free(client->in_buf);
@@ -231,7 +246,35 @@ void client_destroy(client_t *client, char *reason) {
     assert(client->next == NULL);
     assert(client->prev == NULL);
 
+    if (client->is_gui_client) {
+        if (client->next_gui == client) {
+            assert(client->prev_gui == client);
+            guiclients = NULL;
+        } else {
+            client->next_gui->prev_gui = client->prev_gui;
+            client->prev_gui->next_gui = client->next_gui;
+            guiclients = client->next_gui;
+        }
+    }
     close(fd);
+}
+
+static void initial_update(client_t *client) {
+    player_send_initial_update(client);
+}
+
+static void client_turn_into_gui_client(client_t *client) {
+    assert(!client->is_gui_client);
+    client->is_gui_client = 1;
+    if (guiclients) {
+        client->prev_gui = guiclients;
+        client->next_gui = guiclients->next_gui;
+        client->next_gui->prev_gui = client;
+        client->prev_gui->next_gui = client;
+    } else {
+        client->prev_gui = client->next_gui = guiclients = client;
+    }
+    initial_update(client);
 }
 
 static client_t *client_get_checked_lua(lua_State *L, int clientno) {
@@ -300,7 +343,7 @@ static int luaPlayerNumClients(lua_State *L) {
 
 static int luaSetPlayerName(lua_State *L) {
     player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    snprintf(player->name, sizeof(player->name), "%s", luaL_checkstring(L, 2));
+    player_set_name(player, luaL_checkstring(L, 2));
     return 0;
 }
 
@@ -318,8 +361,14 @@ static int luaGetPlayerName(lua_State *L) {
 
 static int luaTurnIntoGuiClient(lua_State *L) {
     client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
-    client->is_gui_client = 1;
+    client_turn_into_gui_client(client);
     return 0;
+}
+
+static int luaIsGuiClient(lua_State *L) {
+    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    lua_pushboolean(L, client->is_gui_client);
+    return 1;
 }
 
 static int luaWorldDig(lua_State *L) {
@@ -477,6 +526,7 @@ void server_init() {
     lua_register(L, "find_digged",              luaWorldFindDigged);
     lua_register(L, "add_to_scroller",          luaAddToScroller);
     lua_register(L, "game_time",                luaGameTime);
+    lua_register(L, "is_gui_client",            luaIsGuiClient);
 
     lua_pushliteral(L, "MAXPLAYERS");
     lua_pushnumber(L,   MAXPLAYERS);

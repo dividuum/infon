@@ -41,6 +41,8 @@ typedef struct client_s {
 
     // Client, welcher kontinuierlich Updates erhaelt
     int is_gui_client;
+    struct client_s *next_gui;
+    struct client_s *prev_gui;
 } client_t;
 
 client_t clients[MAXCLIENTS];
@@ -50,6 +52,7 @@ void server_shutdown();
 
 int  client_accept(int fd, struct sockaddr_in *peer);
 void client_writeto(client_t *client, const void *data, size_t size);
+void client_writeto_all_gui_clients(const void *data, size_t size);
 void client_destroy(client_t *client, char *reason);
 
 void server_tick();

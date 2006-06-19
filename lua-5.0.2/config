@@ -119,8 +119,8 @@ WARN= -Wall
 # debug information. If you only want the shared libraries, you may want to
 # add -fPIC to MYCFLAGS.
 #
-#MYCFLAGS= -O0 -ggdb '-Dapi_check(L,o)=assert(o)'
-MYCFLAGS= -O3 -fomit-frame-pointer -DNDEBUG # -fPIC
+MYCFLAGS= -O0 -ggdb '-Dapi_check(L,o)=assert(o)'
+#MYCFLAGS= -O3 -fomit-frame-pointer -DNDEBUG # -fPIC
 
 # Write here any options you may need for your C linker.
 #MYLDFLAGS=

@@ -219,12 +219,18 @@ function Client:mainmenu()
     end
 end
 
+function Client:gui_client_menu()
+    while true do 
+        self:readln()
+    end
+end
+
 function Client:handler()
     self:writeln("Welcome to " .. GAME_NAME .. ". Press <enter>")
     binary = self:readln()
-    if binary == "guiclient" then
+    if binary == "g" then
         self:turn_into_guiclient()
-        return
+        self:gui_client_menu()
     end
     self:writeln("")
     self:writeln("")
