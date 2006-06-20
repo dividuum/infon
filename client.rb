@@ -18,6 +18,9 @@ TCPSocket.open('localhost', 1234) { |socket|
             print "player join/leave: "
             print "pno=%d " % socket.read(1)[0]
             puts "op=%s" % (socket.read(1)[0] == 0 ? "leave" : "join")
+        when 3:
+            print "king update: "
+            puts "king=%d " % socket.read(1)[0]
         else
             print "???"
         end

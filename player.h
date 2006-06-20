@@ -88,10 +88,12 @@ int         packet_player_update_static(player_t *player, packet_t *packet);
 int         packet_player_update_round(player_t *player, packet_t *packet);
 int         packet_player_joined(player_t *player, packet_t *packet);
 int         packet_player_left(player_t *player, packet_t *packet);
+int         packet_player_update_king(packet_t *packet);
 
 void        packet_handle_player_update_static(packet_t *packet);
 void        packet_handle_player_update_round(packet_t *packet);
 void        packet_handle_player_join_leave(packet_t *packet);
+void        packet_handle_player_update_king(packet_t *packet);
 
 void        player_init();
 void        player_shutdown();
