@@ -186,9 +186,13 @@ static void sprite_load_images() {
 }
 
 sprite_t *sprite_get(int i) {
-    assert(i < SPRITE_NUM);
-    assert(i >= 0);
+    if (i < 0 || i >= SPRITE_NUM)
+        return NULL;
     return &sprites[i];
+}
+
+int sprite_num(sprite_t *sprite) {
+    return sprite - sprites;
 }
 
 void sprite_init() {

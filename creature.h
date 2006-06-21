@@ -24,7 +24,7 @@
 #include "path.h"
 #include "player.h"
 
-#define CREATURE_NUM       256
+#define MAXCREATURES       256
 
 #define CREATURE_COLORS     16
 #define CREATURE_TYPES       4
@@ -54,10 +54,14 @@ typedef struct creature_s {
         CREATURE_SPAWN,
         CREATURE_FEED,
     } state;
-    int age_action_deltas;
-    int last_state_change;
-    int spawn_time;
 
+    int  age_action_deltas;
+    int  last_state_change;
+    int  spawn_time;
+
+    int  health_percent;
+    int  food_percent;
+    
     char message[9];
     int  last_msg_set;
 } creature_t;
@@ -82,9 +86,15 @@ int         creature_max_food(const creature_t *creature);
 int         creature_hitpoints(const creature_t *creature);
 int         creature_attack_distance(const creature_t *creature);
 
+void        creature_kill_all_players_creatures(player_t *player);
 int         creature_king_player();
 void        creature_moveall(int delta);
 void        creature_draw();
+
+/* Network */
+//int         packet_creature_spawned(creature_t *creature, packet_t *packet);
+//int         packet_creature_died(creature_t *creature, packet_t *packet);
+//void        packet_handle_creature_spawndie(packet_t *packet);
 
 void        creature_init();
 void        creature_shutdown();

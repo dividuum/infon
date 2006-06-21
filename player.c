@@ -35,8 +35,9 @@
 #include "video.h"
 #include "misc.h"
 #include "rules.h"
+#include "scroller.h"
 
-#define PLAYER_USED(player) ((player)->L)
+#define PLAYER_USED(player) (!!((player)->L))
 
 static player_t *king_player = NULL;
 
@@ -51,6 +52,7 @@ void player_score(player_t *player, int scoredelta, char *reason) {
                                
     add_to_scroller(buf);
     player->score += scoredelta;
+    player->dirtymask |= PLAYER_DIRTY_SCORE;
 
     printf("stat: %10d %3d '%10s' %5d: %s\n", game_time, player_num(player), player->name, player->score, reason);
 }
@@ -468,23 +470,12 @@ player_t *player_create(const char *pass) {
     lua_setmaxmem(player->L, LUA_MAX_MEM);
     lua_dofile(player->L, "player.lua");
     
-    // Network Sync
-    packet_t packet; int packet_size;
-
-    packet_size = packet_player_joined(player, &packet);
-    client_writeto_all_gui_clients(&packet, packet_size);
-
-    packet_size = packet_player_update_static(player, &packet);
-    client_writeto_all_gui_clients(&packet, packet_size);
-
-    packet_size = packet_player_update_round(player, &packet);
-    client_writeto_all_gui_clients(&packet, packet_size);
-
+    player_to_network(player, PLAYER_DIRTY_ALL);
     return player;
 }
 
 void player_destroy(player_t *player) {
-    player_kill_all_creatures(player);
+    creature_kill_all_players_creatures(player);
             
     client_t *client;
     while ((client = player->clients)) {
@@ -494,33 +485,16 @@ void player_destroy(player_t *player) {
     lua_close(player->L);
     player->L = NULL;
     
-    // Network Sync
-    packet_t packet; int packet_size;
-
-    packet_size = packet_player_left(player, &packet);
-    client_writeto_all_gui_clients(&packet, packet_size);
+    player_to_network(player, PLAYER_DIRTY_ALIVE);
 }
 
 void player_set_name(player_t *player, const char *name) {
     snprintf(player->name, sizeof(player->name), "%s", name);
-    
-    // Network Sync
-    packet_t packet; int packet_size;
-
-    packet_size = packet_player_update_static(player, &packet);
-    client_writeto_all_gui_clients(&packet, packet_size);
+    player->dirtymask |= PLAYER_DIRTY_NAME;
 }
 
 void player_mark_for_kill(player_t *player) {
     player->kill_me = 1;
-}
-
-void player_kill_all_creatures(player_t *player) {
-    for (int c = 0; c < CREATURE_NUM; c++) {
-        creature_t *creature = creature_by_num(c);
-        if (creature && creature->player == player)
-            creature_kill(creature, NULL);
-    }
 }
 
 int player_num(player_t *player) {
@@ -671,10 +645,24 @@ void player_think() {
     for (playerno = 0; playerno < MAXPLAYERS; playerno++, player++) {
         if (!PLAYER_USED(player))
             continue;
-
+        
         // Killen?
-        if (player->kill_me || (player->num_clients == 0 && 
-                                player->all_disconnected_time + NO_PLAYER_DISCONNECT < game_time)) 
+        if (player->kill_me) {
+            player_writeto(player, "killed\n", 7);
+            player_destroy(player);
+            continue;
+        }
+
+        // Zu wenig Score?
+        if (player->score <= PLAYER_KICK_SCORE) {
+            player_writeto(player, "score too low. try harder!\n", 27);
+            player_destroy(player);
+            continue;
+        }
+
+        // Kein Client mehr da?
+        if (player->num_clients == 0 && 
+            player->all_disconnected_time + NO_PLAYER_DISCONNECT < game_time) 
         {
             player_destroy(player);
             continue;
@@ -722,18 +710,22 @@ void player_think() {
                 break;
         }
 
-        player->cycles_left = lua_getcycles(player->L);
+        int cycles_left = lua_getcycles(player->L);
 
-        if (player->cycles_left < 0)
-            player->cycles_left = 0;
+        if (cycles_left < 0)
+            cycles_left = 0;
+
+        int newcpu = 100 * (player->max_cycles - cycles_left) / player->max_cycles;
+
+        if (newcpu != player->cpu_usage) {
+            player->dirtymask |= PLAYER_DIRTY_CPU;
+            player->cpu_usage = newcpu;
+        }
 
         lua_pop(player->L, 1);
 
-        // Network Sync
-        packet_t packet; int packet_size;
-
-        packet_size = packet_player_update_round(player, &packet);
-        client_writeto_all_gui_clients(&packet, packet_size);
+        player_to_network(player, player->dirtymask);
+        player->dirtymask = PLAYER_DIRTY_NONE;
     }
 }
 
@@ -807,7 +799,7 @@ void player_draw(int delta) {
                                               (game_time / 1000) % CREATURE_DIRECTIONS,
                                               (game_time /  123) % 2)));
         // CPU Auslastung Anzeigen
-        const int cpu = 80 * (player->max_cycles - player->cycles_left) / player->max_cycles;
+        const int cpu = 80 * player->cpu_usage / 100;
         video_rect(player_displayed * 128 + 16, 
                    video_height() - 32, 
                    player_displayed * 128 + 16 + cpu,
@@ -826,7 +818,7 @@ void player_draw(int delta) {
 }
 
 void player_is_king_of_the_hill(player_t *player, int delta) {
-    player_t *old_king = king_player;
+    //player_t *old_king = king_player;
 
     king_player = player;
     player->last_koth_time = game_time;
@@ -836,6 +828,7 @@ void player_is_king_of_the_hill(player_t *player, int delta) {
         player->koth_time -= 2000;
     }
 
+    /*
     if (king_player != old_king) {
         // Network Sync
         packet_t packet; int packet_size;
@@ -843,12 +836,14 @@ void player_is_king_of_the_hill(player_t *player, int delta) {
         packet_size = packet_player_update_king(&packet);
         client_writeto_all_gui_clients(&packet, packet_size);
     }
+    */
 }
 
 void player_there_is_no_king() {
-    player_t *old_king = king_player;
+    //player_t *old_king = king_player;
     king_player = NULL;
 
+    /*
     if (old_king) {
         // Network Sync
         packet_t packet; int packet_size;
@@ -856,6 +851,7 @@ void player_there_is_no_king() {
         packet_size = packet_player_update_king(&packet);
         client_writeto_all_gui_clients(&packet, packet_size);
     }
+    */
 }
 
 player_t *player_king() {
@@ -866,59 +862,86 @@ player_t *player_king() {
 }
 
 void player_send_initial_update(client_t *client) {
-    // Network Sync
-    packet_t packet; int packet_size;
-
     int playerno;
     player_t *player = &players[0];
     for (playerno = 0; playerno < MAXPLAYERS; playerno++, player++) {
         if (!PLAYER_USED(player))
             continue;
 
-        packet_size = packet_player_joined(player, &packet);
-        client_writeto(client, &packet, packet_size);
-
-        packet_size = packet_player_update_static(player, &packet);
-        client_writeto(client, &packet, packet_size);
-
-        packet_size = packet_player_update_round(player, &packet);
-        client_writeto(client, &packet, packet_size);
+        player_to_network(player, PLAYER_DIRTY_ALL);
     }
-
-    packet_size = packet_player_update_king(&packet);
-    client_writeto_all_gui_clients(&packet, packet_size);
 }
 
-int packet_player_joined(player_t *player, packet_t *packet) {
-    packet->type = PACKET_PLAYER_JOINLEAVE;
-    packet->player_join_leave.playerno = player_num(player);
-    packet->player_join_leave.join_or_leave = 1;
-    return sizeof(packet_player_join_leave_t);
+void player_to_network(player_t *player, int dirtymask) {
+    if (dirtymask == PLAYER_DIRTY_NONE)
+        return;
+
+    packet_t packet;
+    packet_reset(&packet);
+
+    packet_write08(&packet, player_num(player));
+    packet_write08(&packet, dirtymask);
+    if (dirtymask & PLAYER_DIRTY_ALIVE) 
+        packet_write08(&packet, PLAYER_USED(player));
+    if (dirtymask & PLAYER_DIRTY_NAME) {
+        packet_write08(&packet, strlen(player->name));
+        packet_writeXX(&packet, &player->name, strlen(player->name));
+    }
+    if (dirtymask & PLAYER_DIRTY_COLOR) 
+        packet_write08(&packet, player->color);
+    if (dirtymask & PLAYER_DIRTY_CPU)
+        packet_write08(&packet, player->cpu_usage);
+    if (dirtymask & PLAYER_DIRTY_SCORE)
+        packet_write16(&packet, player->score - PLAYER_KICK_SCORE);
+
+    packet_send(PACKET_PLAYER_UPDATE, &packet);
 }
 
-int packet_player_left(player_t *player, packet_t *packet) {
-    packet->type = PACKET_PLAYER_JOINLEAVE;
-    packet->player_join_leave.playerno = player_num(player);
-    packet->player_join_leave.join_or_leave = 0;
-    return sizeof(packet_player_join_leave_t);
+void player_from_network(packet_t *packet) {
+    uint8_t playerno   = 0;
+
+    if (!packet_read08(packet, &playerno))      goto failed; 
+
+    player_t *player = player_by_num(playerno);
+    if (!player)                                goto failed;
+           
+    uint8_t  updatemask;
+    if (!packet_read08(packet, &updatemask))    goto failed;
+
+    if (updatemask & PLAYER_DIRTY_ALIVE) {
+        uint8_t alive;
+        if (!packet_read08(packet, &alive))     goto failed;
+        player->L = alive ? (void*)0x1 : NULL;
+    }
+    if (updatemask & PLAYER_DIRTY_NAME) {
+        uint8_t len; char buf[256];
+        if (!packet_read08(packet, &len))       goto failed;
+        if (!packet_readXX(packet, buf, len))   goto failed;
+        buf[len] = '\0';
+        snprintf(player->name, sizeof(player->name), "%s", buf);
+    }
+    if (updatemask & PLAYER_DIRTY_COLOR) { 
+        uint8_t col;
+        if (!packet_read08(packet, &col))       goto failed;
+        player->color = col;
+    }
+    if (updatemask & PLAYER_DIRTY_CPU) {
+        uint8_t cpu;
+        if (!packet_read08(packet, &cpu))       goto failed;
+        player->cpu_usage = cpu;
+    }
+    if (updatemask & PLAYER_DIRTY_SCORE) {
+        uint16_t score;
+        if (!packet_read16(packet, &score))     goto failed;
+        player->score = score + PLAYER_KICK_SCORE;
+    }
+    return;
+failed:
+    printf("parsing player update packet failed\n");
+    return;
 }
 
-int packet_player_update_static(player_t *player, packet_t *packet) {
-    packet->type = PACKET_PLAYER_STATIC;
-    packet->player_update_static.playerno = player_num(player);
-    strcpy(packet->player_update_static.name, player->name);
-    packet->player_update_static.color = player->color;
-    return sizeof(packet_player_update_static_t);
-}
-
-int packet_player_update_round(player_t *player, packet_t *packet) {
-    packet->type = PACKET_PLAYER_ROUND;
-    packet->player_update_round.playerno    = player_num(player);
-    packet->player_update_round.score       = htonl(player->score);
-    packet->player_update_round.cycles_left = htonl(player->cycles_left);
-    return sizeof(packet_player_update_round_t);
-}
-
+/*
 int packet_player_update_king(packet_t *packet) {
     packet->type = PACKET_PLAYER_KING;
     if (player_king()) {
@@ -927,6 +950,17 @@ int packet_player_update_king(packet_t *packet) {
         packet->player_update_king.king_player = 0xFF;
     }
     return sizeof(packet_player_update_king_t);
+}
+
+void packet_handle_player_join_leave(packet_t *packet) {
+    assert(packet->type == PACKET_PLAYER_JOINLEAVE);
+    if (packet->player_join_leave.playerno >= MAXPLAYERS) 
+        return;
+    player_t *player = &players[packet->player_join_leave.playerno];
+    if (packet->player_join_leave.join_or_leave) 
+        player->L = (void*)0x1; // HACKHACK: Als benutzt markieren
+    else
+        player->L = NULL;
 }
 
 void packet_handle_player_update_static(packet_t *packet) {
@@ -942,19 +976,8 @@ void packet_handle_player_update_round(packet_t *packet) {
     assert(packet->type == PACKET_PLAYER_ROUND);
     player_t *player = player_by_num(packet->player_update_round.playerno);
     if (!player) return;
-    player->score       = ntohl(packet->player_update_round.score);
-    player->cycles_left = ntohl(packet->player_update_round.cycles_left);
-}
-
-void packet_handle_player_join_leave(packet_t *packet) {
-    assert(packet->type == PACKET_PLAYER_JOINLEAVE);
-    if (packet->player_join_leave.playerno >= MAXPLAYERS) 
-        return;
-    player_t *player = &players[packet->player_join_leave.playerno];
-    if (packet->player_join_leave.join_or_leave) 
-        player->L = (void*)0x1; // HACKHACK: Als benutzt markieren
-    else
-        player->L = NULL;
+    player->score       = ntohs(packet->player_update_round.score) + PLAYER_KICK_SCORE;
+    player->cpu_usage   = packet->player_update_round.cpu_usage;
 }
 
 void packet_handle_player_update_king(packet_t *packet) {
@@ -967,6 +990,7 @@ void packet_handle_player_update_king(packet_t *packet) {
         return;
     king_player = &players[packet->player_update_king.king_player];
 }
+*/
 
 void player_init() {
     memset(players, 0, sizeof(players));

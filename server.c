@@ -38,9 +38,10 @@
 #include "player.h"
 #include "server.h"
 #include "world.h"
-#include "video.h"
 #include "listener.h"
 #include "misc.h"
+#include "scroller.h"
+#include "creature.h"
 
 #define CLIENT_USED(client) ((client)->in_buf)
 
@@ -260,6 +261,7 @@ void client_destroy(client_t *client, char *reason) {
 }
 
 static void initial_update(client_t *client) {
+    world_send_initial_update(client);
     player_send_initial_update(client);
 }
 
@@ -410,7 +412,7 @@ static int luaGameTime(lua_State *L) {
 
 static int luaPlayerKillAllCreatures(lua_State *L) {
     player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    player_kill_all_creatures(player);
+    creature_kill_all_players_creatures(player);
     return 0;
 }
 
@@ -428,61 +430,9 @@ static int luaPlayerExecute(lua_State *L) {
     return 0;
 }
 
-struct evbuffer *scrollbuffer;
-
-void add_to_scroller(const char* msg) {
-    // Zuviel?
-    if (EVBUFFER_LENGTH(scrollbuffer) + strlen(msg) > 10000)
-        return;
-    evbuffer_add(scrollbuffer, (char*)msg, strlen(msg));
-    evbuffer_add(scrollbuffer, "  -  ", 5);
-}
-
 static int luaAddToScroller(lua_State *L) {
     add_to_scroller(luaL_checkstring(L, 1));
     return 0;
-}
-
-
-void server_draw() {
-    // XXX: Rotzig
-    static float x = 0;
-    static int   last_time = 0;
-    static float curspeed = 0;
-
-    if (!last_time) last_time = game_time;
-
-    int chars_per_screen = video_width() / 6 + 1;
-
-    while (EVBUFFER_LENGTH(scrollbuffer) <= chars_per_screen + 1) 
-        evbuffer_add(scrollbuffer, " ", 1);
-
-    float speed = ((float)game_time - last_time) * 
-                   (float)(EVBUFFER_LENGTH(scrollbuffer) - chars_per_screen - 3) / 200.0;
-
-    if (curspeed < speed) curspeed += 0.1; //(speed - curspeed)/30.0;
-    if (curspeed > speed) curspeed = speed;
-    if (curspeed < 0.1)   curspeed = 0;
-
-    x        -= curspeed;
-    last_time = game_time;
-
-    while (x < -6) {
-        evbuffer_drain(scrollbuffer, 1);
-        x += 6;
-    }
-
-    video_rect(0, video_height() - 15, video_width(), video_height(), 0, 0, 0, 0);
-
-    assert(chars_per_screen < EVBUFFER_LENGTH(scrollbuffer));
-    char *end = &EVBUFFER_DATA(scrollbuffer)[chars_per_screen];
-    char saved = *end; *end = '\0';
-    video_write(x, video_height() - 15, EVBUFFER_DATA(scrollbuffer));
-    *end = saved;
-    
-    // Bitte drinlassen. Danke
-    if (game_time / 1000 % 60 < 5) 
-        video_draw(video_width() - 190, 20, sprite_get(SPRITE_LOGO));
 }
 
 void server_tick() {
@@ -498,7 +448,6 @@ void server_tick() {
 
 void server_init() {
     event_init();
-    scrollbuffer = evbuffer_new();
 
     if (!listener_init()) 
         die("error initializing listener");
@@ -531,6 +480,10 @@ void server_init() {
     lua_pushliteral(L, "MAXPLAYERS");
     lua_pushnumber(L,   MAXPLAYERS);
     lua_settable(L, LUA_GLOBALSINDEX);
+
+    lua_pushliteral(L, "GAME_NAME");
+    lua_pushliteral(L, GAME_NAME);
+    lua_rawset(L, LUA_GLOBALSINDEX);
 }
 
 void server_shutdown() {
@@ -539,8 +492,6 @@ void server_shutdown() {
         if (CLIENT_USED(&clients[clientno])) 
             client_destroy(&clients[clientno], "server shutdown");
     }
-
-    evbuffer_free(scrollbuffer);
 
     listener_shutdown();
 }

@@ -44,6 +44,10 @@
                           SPRITE_NUM_PLAIN  + \
                           SPRITE_NUM_BORDER + \
                           SPRITE_NUM_KOTH)
+
+// Sprite Nummern bis hier duerfen maximal 255 sein, da diese 
+// beim World Netzwerk syncen in Bytes verpackt werden.
+
 #define SPRITE_TILE_SIZE 16
 
 // Food Konstanten
@@ -62,6 +66,8 @@
 #define SPRITE_LOGO         (SPRITE_CROWN + SPRITE_NUM_CROWN)
 #define SPRITE_NUM_LOGO     1
 
+
+
 #define SPRITE_CREATURE 256
 
 // Creature Konstanten
@@ -76,6 +82,7 @@ typedef struct sprite_s {
 } sprite_t;
 
 sprite_t   *sprite_get(int i);
+int         sprite_num(sprite_t *sprite);
 
 void        sprite_init();
 void        sprite_shutdown();

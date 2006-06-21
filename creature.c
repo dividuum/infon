@@ -30,12 +30,12 @@
 #include "video.h"
 #include "map.h"
 
-static creature_t creatures[CREATURE_NUM];
+static creature_t creatures[MAXCREATURES];
 
 #define CREATURE_USED(creature) ((creature)->player)
 
 static creature_t *creature_find_unused() {
-    for (int i = 0; i < CREATURE_NUM; i++) {
+    for (int i = 0; i < MAXCREATURES; i++) {
         creature_t *creature = &creatures[i];
         if (!CREATURE_USED(creature))
             return creature;
@@ -44,7 +44,7 @@ static creature_t *creature_find_unused() {
 }
 
 creature_t *creature_by_num(int creature_num) {
-    if (creature_num < 0 || creature_num >= CREATURE_NUM)
+    if (creature_num < 0 || creature_num >= MAXCREATURES)
         return NULL;
     creature_t *creature = &creatures[creature_num];
     if (!CREATURE_USED(creature))
@@ -89,11 +89,22 @@ int creature_max_food(const creature_t *creature) {
     }
 }
 
+int creature_aging(const creature_t *creature) {
+    switch (creature->type) {
+        case 0:
+            return 5;
+        case 1:
+            return 7;
+        default:
+            return 0;
+    }
+}
+
 creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
     int mindist = 1000000;
     creature_t *nearest  = NULL;
     creature_t *creature = &creatures[0];
-    for (int i = 0; i < CREATURE_NUM; i++, creature++) {
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature) || creature->player == reference->player) 
             continue;
 
@@ -113,14 +124,14 @@ creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
 
 void creature_draw() {
     creature_t *creature = &creatures[0];
-    for (int i = 0; i < CREATURE_NUM; i++, creature++) {
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature)) 
             continue;
         
         const int x = X_TO_SCREENX(creature->x) - 7;
         const int y = Y_TO_SCREENY(creature->y) - 7;
-        const int hw = creature->health * 16 / creature_max_health(creature);
-        const int fw = creature->food   * 16 / creature_max_food(creature);
+        const int hw = creature->health_percent * 16 / 100;
+        const int fw = creature->food_percent   * 16 / 100;
 
         if (fw != 16) video_rect(x + fw, y - 4, x + 16, y - 2, 0x00, 0x00, 0x00, 0xB0);
         if (fw !=  0) video_rect(x,      y - 4, x + fw, y - 2, 0xFF, 0xFF, 0xFF, 0xB0);
@@ -156,7 +167,7 @@ void creature_draw() {
         */
 
         if (creature->state == CREATURE_ATTACK && creature->spawn_time != game_time) {
-            assert(creature->target >= 0 && creature->target < CREATURE_NUM);
+            assert(creature->target >= 0 && creature->target < MAXCREATURES);
             const creature_t *target = &creatures[creature->target];
             if (target) { // Das Angegriffene Vieh koennte in dieser Runde bereits getoetet sein.
                 video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3, Y_TO_SCREENY(target->y) - 3);
@@ -641,7 +652,7 @@ void creature_moveall(int delta) {
     creature_t *creature_on_koth = NULL;
 
     creature_t *creature = &creatures[0];
-    for (int i = 0; i < CREATURE_NUM; i++, creature++) {
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature)) 
             continue;
 
@@ -649,19 +660,13 @@ void creature_moveall(int delta) {
         creature->age_action_deltas += delta;
         while (creature->age_action_deltas >= 100) {
             creature->age_action_deltas -= 100;
-            switch (creature->type) {
-                case 0:
-                    creature->health -= 1;
-                case 1: // Fallthough
-                    creature->health -= 4;
-                    if (creature->health <= 0) {
-                        creature_kill(creature, NULL);
-                        goto next_creature;
-                    }
-                    break;
-                default:
-                    break;
-            }
+            creature->health -= creature_aging(creature);
+        }
+
+        // Tot?
+        if (creature->health <= 0) {
+            creature_kill(creature, NULL);
+            goto next_creature;
         }
                 
         // State Aktion
@@ -705,6 +710,10 @@ void creature_moveall(int delta) {
                 creature_on_koth = creature;
             }
         }
+
+        // Leben/Food Prozentangaben aktualisieren
+        creature->health_percent = 100 * creature->health / creature_max_health(creature);
+        creature->food_percent   = 100 * creature->food   / creature_max_food(creature);
 next_creature: ;
     }
 
@@ -775,6 +784,13 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
     creature->age_action_deltas = 0;
 
     player_on_creature_spawned(player, creature_num(creature), points);
+
+    // Network Sync
+    //packet_t packet; int packet_size;
+
+    //packet_size = packet_creature_spawned(creature, &packet);
+    //client_writeto_all_gui_clients(&packet, packet_size);
+
     return creature;
 }
 
@@ -793,17 +809,67 @@ void creature_kill(creature_t *creature, creature_t *killer) {
 
     path_delete(creature->path);
     creature->player = NULL;
+    
+    // Network Sync
+    //packet_t packet; int packet_size;
+
+    //packet_size = packet_creature_died(creature, &packet);
+    //client_writeto_all_gui_clients(&packet, packet_size);
 }
 
+void creature_kill_all_players_creatures(player_t *player) {
+    creature_t *creature = &creatures[0];
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
+        if (!CREATURE_USED(creature)) 
+            continue;
+        if (creature->player != player)
+            continue;
+
+        creature_kill(creature, NULL);
+    }
+}
+
+/*
+int packet_creature_spawned(creature_t *creature, packet_t *packet) {
+    packet->type = PACKET_CREATURE_SPAWNDIE;
+    packet->creature_spawndie.creatureno   = htons(creature_num(creature));
+    packet->creature_spawndie.spawn_or_die = 1;
+    return sizeof(packet_creature_spawndie_t);
+}
+
+int packet_creature_died(creature_t *creature, packet_t *packet) {
+    packet->type = PACKET_CREATURE_SPAWNDIE;
+    packet->creature_spawndie.creatureno   = htons(creature_num(creature));
+    packet->creature_spawndie.spawn_or_die = 0;
+    return sizeof(packet_creature_spawndie_t);
+}
+
+int packet_creature_update_static(creature_t *creature, packet_t *packet) {
+}
+
+
+void packet_handle_creature_spawndie(packet_t *packet) {
+    assert(packet->type == PACKET_CREATURE_SPAWNDIE);
+    int creatureno = ntohs(packet->creature_spawndie.creatureno);
+    if (creatureno >= MAXCREATURES) 
+        return;
+    creature_t *creature = &creatures[creatureno];
+    if (packet->creature_spawndie.spawn_or_die) 
+        creature->player = (void*)0x1; // HACKHACK: Als benutzt markieren
+    else
+        creature->player = NULL;
+}
+*/
+
 void creature_init() {
-    for (int i = 0; i < CREATURE_NUM; i++) {
+    for (int i = 0; i < MAXCREATURES; i++) {
         creature_t *creature = &creatures[i];
         creature->player = NULL;
     }
 }
 
 void creature_shutdown() {
-    for (int i = 0; i < CREATURE_NUM; i++) {
+    for (int i = 0; i < MAXCREATURES; i++) {
         creature_t *creature = &creatures[i];
         if (CREATURE_USED(creature))
             creature_kill(&creatures[i], NULL);

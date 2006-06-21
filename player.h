@@ -31,26 +31,36 @@
 #define MAXPLAYERS 32
 
 typedef struct player_s {
-    char        name[32];
-    char        pass[16];
-    int         color;
-    lua_State  *L;
-    int         num_creatures;
+    char          name[16];
+    char          pass[16];
+    int           color;
+    lua_State    *L;
+    int           num_creatures;
 
-    int         num_clients;
-    client_t   *clients;
+    int           num_clients;
+    client_t     *clients;
 
-    int         score;
-    int         koth_time;
-    int         last_koth_time;
+    int           score;
+    int           koth_time;
+    int           last_koth_time;
 
-    int         all_dead_time;
-    int         all_disconnected_time;
+    int           all_dead_time;
+    int           all_disconnected_time;
 
-    int         max_cycles;
-    int         cycles_left;
+    int           max_cycles;
+    int           cpu_usage;
 
-    int         kill_me;
+    int           kill_me;
+
+    unsigned char dirtymask;
+#define PLAYER_DIRTY_ALIVE   (1 << 0)  //  1 Byte
+#define PLAYER_DIRTY_NAME    (1 << 1)  // 16 Byte 
+#define PLAYER_DIRTY_COLOR   (1 << 2)  //  1 Byte
+#define PLAYER_DIRTY_CPU     (1 << 3)  //  1 Byte
+#define PLAYER_DIRTY_SCORE   (1 << 4)  //  2 Bytes
+
+#define PLAYER_DIRTY_ALL         0x1F
+#define PLAYER_DIRTY_NONE        0x00
 } player_t;
 
 player_t players[MAXPLAYERS];
@@ -70,7 +80,6 @@ int         player_num(player_t *player);
 void        player_writeto(player_t *player, const void *data, size_t size);
 
 void        player_set_name(player_t *player, const char *name);
-void        player_kill_all_creatures(player_t *player);
 player_t   *player_create(const char *pass);
 void        player_mark_for_kill(player_t *player);
 
@@ -83,17 +92,9 @@ player_t   *player_king();
 
 /* Network */
 void        player_send_initial_update(client_t *client);
+void        player_to_network(player_t *player, int dirtymask);
+void        player_from_network(packet_t *packet);
 
-int         packet_player_update_static(player_t *player, packet_t *packet);
-int         packet_player_update_round(player_t *player, packet_t *packet);
-int         packet_player_joined(player_t *player, packet_t *packet);
-int         packet_player_left(player_t *player, packet_t *packet);
-int         packet_player_update_king(packet_t *packet);
-
-void        packet_handle_player_update_static(packet_t *packet);
-void        packet_handle_player_update_round(packet_t *packet);
-void        packet_handle_player_join_leave(packet_t *packet);
-void        packet_handle_player_update_king(packet_t *packet);
 
 void        player_init();
 void        player_shutdown();

@@ -260,7 +260,7 @@ end
 
 function ServerMain()
     require 'level.lua'
-    add_to_scroller("Welcome!")
+    add_to_scroller("Welcome to " .. GAME_NAME .. "!")
     add_to_scroller(join_info)
     food_spawner = {}
     for s = 0, 10 do
@@ -279,8 +279,6 @@ function ServerMain()
 
     info_time = game_info()
     while true do
-        coroutine.yield()
-
         if game_info() > info_time + 10000 then
            info_time = game_info() 
            if join_info ~= "" then
@@ -296,6 +294,8 @@ function ServerMain()
                 spawner.n = spawner.n + spawner.i                               
             end
         end
+
+        coroutine.yield()
     end
 end
 

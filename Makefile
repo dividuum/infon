@@ -9,7 +9,7 @@ LDFLAGS  = -L$(LUADIR)/lib -L$(SDLDIR)/lib -levent -llua -llualib -lm -lSDL -lSD
 
 all: infond
 
-infond: infond.o server.o listener.o player.o map.o path.o sprite.o misc.o world.o path.o map.o video.o creature.o packet.o
+infond: infond.o server.o listener.o player.o map.o path.o sprite.o misc.o world.o path.o map.o video.o creature.o packet.o scroller.o
 	$(MAKE) -C $(LUADIR)
 	$(CC) $^ $(LDFLAGS) -o $@
 

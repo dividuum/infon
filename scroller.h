@@ -18,23 +18,17 @@
 
 */
 
-#ifndef RULES_H
-#define RULES_H
+#ifndef SCROLLER_H
+#define SCROLLER_H
 
-#define PLAYER_CREATURE_RESPAWN_DELAY 2000
-#define CREATURE_SUICIDE_POINTS        -40
-#define CREATURE_DIED_POINTS            -3
-#define CREATURE_VICTIM_POINTS_0        -3
-#define CREATURE_VICTIM_POINTS_1       -20
-#define CREATURE_KILLED_POINTS          10
-#define CREATURE_KOTH_POINTS             5
+void scroller_draw();
 
-#define RESTRICTIVE                      0
+void add_to_scroller(const char* msg);
 
-#define NO_PLAYER_DISCONNECT   (120 * 1000)
-#define PLAYER_KICK_SCORE            (-500)
+/* Network */
+void scroller_from_network(packet_t *packet);
 
-#define LUA_MAX_MEM       (8 * 1024 * 1024)
-#define LUA_MAX_CPU                  400000
+void scroller_init();
+void scroller_shutdown();
 
 #endif

@@ -33,6 +33,7 @@
 #include "video.h"
 #include "sprite.h"
 #include "creature.h"
+#include "scroller.h"
 
 static int running = 1;
 
@@ -48,7 +49,7 @@ void print_fps() {
         static int iteration = 0;
         if (++iteration % 35 == 0) {
             static char buf[16];
-            snprintf(buf, sizeof(buf), "%d fps\n", frames);
+            snprintf(buf, sizeof(buf), "%d fps", frames);
             add_to_scroller(buf);
         }
         frames = 0;
@@ -77,14 +78,11 @@ int main(int argc, char *argv[]) {
     lua_dblibopen(L);
     lua_mathlibopen(L);
 
-    lua_pushliteral(L, "GAME_NAME");
-    lua_pushliteral(L, GAME_NAME);
-    lua_rawset(L, LUA_GLOBALSINDEX);
-
     lua_dofile(L, "config.lua");
 
     video_init(width, height);
     sprite_init();
+    scroller_init();
     world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
     server_init();
     player_init();
@@ -166,7 +164,7 @@ int main(int argc, char *argv[]) {
         // Anzeigen
         world_draw();
         creature_draw();
-        server_draw();
+        scroller_draw();
         player_draw(delta);
 
         video_flip();
@@ -179,6 +177,7 @@ int main(int argc, char *argv[]) {
     player_shutdown();
     server_shutdown();
     world_shutdown();
+    scroller_shutdown();
     sprite_shutdown();
     video_shutdown();
 

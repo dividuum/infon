@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "world.h"
 #include "video.h"
@@ -93,6 +94,8 @@ int world_dig(int x, int y, maptype_e type) {
 
     map_dig(map_pathfind, x, y);
     map_sprites[y * world_w + x] = sprite_get(SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN);
+    
+    world_to_network(x, y);
     return 1;
 }
 
@@ -114,22 +117,32 @@ int world_get_food(int x, int y) {
 int world_add_food(int x, int y, int amount) {
     if (!world_walkable(x, y))
         return 0;
+
     int old = map_food[y * world_w + x];
     int new = old + amount;
     if (new > MAX_TILE_FOOD) new = MAX_TILE_FOOD;
     if (new < 0)             new = 0;
     map_food[y * world_w + x] = new;
+
+    if (new != old) 
+        world_to_network(x, y);
+
     return new - old;
 }
 
 int world_food_eat(int x, int y, int amount) {
     if (!MAP_IS_ON_MAP(map_pathfind, x, y))
         return 0;
+
     int ontile = map_food[y * world_w + x];
     if (amount > ontile)
         amount = ontile;
 
     map_food[y * world_w + x] -= amount;
+
+    if (amount != 0) 
+        world_to_network(x, y);
+    
     return amount;
 }
 
@@ -162,6 +175,46 @@ void world_find_digged(int *x, int *y) {
     }
 }
 
+void world_send_initial_update(client_t *client) {
+    for (int x = 0; x < world_w; x++) {
+        for (int y = 0; y < world_h; y++) {
+            world_to_network(x, y);
+        }
+    }
+}
+
+void world_to_network(int x, int y) {
+    packet_t packet;
+    packet_reset(&packet);
+
+    packet_write08(&packet, x);
+    packet_write08(&packet, y);
+    packet_write08(&packet, sprite_num(map_sprites[x + world_w * y]));
+    packet_write16(&packet, map_food[x + world_w * y]);
+    packet_send(PACKET_WORLD_UPDATE, &packet);
+}
+
+void world_from_network(packet_t *packet) {
+    uint8_t x; uint8_t y;
+    if (!packet_read08(packet, &x))         goto failed; 
+    if (!packet_read08(packet, &y))         goto failed; 
+    if (x >= world_w)                       goto failed;
+    if (y >= world_h)                       goto failed;
+    uint8_t spriteno;
+    if (!packet_read08(packet, &spriteno))  goto failed; 
+    sprite_t *sprite = sprite_get(spriteno);
+    if (!sprite)                            goto failed; 
+    map_sprites[x + world_w * y] = sprite;
+    uint16_t food; 
+    if (!packet_read16(packet, &food))      goto failed;
+    if (food > MAX_TILE_FOOD)               goto failed;
+    map_food[x + world_w * y] = food;
+    return;
+failed:    
+    printf("parsing world update packet failed\n");
+    return;
+}
+
 void world_init(int w, int h) {
     world_w = w;
     world_h = h;
@@ -192,6 +245,7 @@ void world_init(int w, int h) {
             }
         }
     }
+
 }
 
 void world_shutdown() {

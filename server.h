@@ -56,8 +56,5 @@ void client_writeto_all_gui_clients(const void *data, size_t size);
 void client_destroy(client_t *client, char *reason);
 
 void server_tick();
-void server_draw();
-
-void add_to_scroller(const char* msg);
 
 #endif

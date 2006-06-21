@@ -22,6 +22,8 @@
 #define WORLD_H
 
 #include "path.h"
+#include "packet.h"
+#include "server.h"
 
 // Begrenzt durch die Anzahl vorhandener Food Sprites
 #define MAX_TILE_FOOD 9999
@@ -51,6 +53,12 @@ void        world_find_digged(int *x, int *y);
 void        world_set_display_mode(int mode);
 
 void        world_draw();
+
+/* Network */
+void        world_send_initial_update(client_t *client);
+
+void        world_to_network(int x, int y);
+void        world_from_network(packet_t *packet);
 
 void        world_init(int w, int h);
 void        world_shutdown();
