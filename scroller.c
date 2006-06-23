@@ -26,9 +26,8 @@
 #include "packet.h"
 
 static struct evbuffer *scrollbuffer;
-static float  x = 0;
+
 static int    last_time;
-static float  curspeed = 0;
 
 static void append(const char *msg) {
     evbuffer_add(scrollbuffer, (char*)msg, strlen(msg));
@@ -50,14 +49,15 @@ void add_to_scroller(const char* msg) {
     packet_t packet;
     packet_reset(&packet);
     packet_writeXX(&packet, msg, strlen(msg));
-    packet_send(PACKET_SCROLLER_MSG, &packet);
+    packet_send(PACKET_SCROLLER_MSG, &packet, PACKET_BROADCAST);
 }
+
+#ifdef SERVER_GUI
+static float  x = 0;
+static float  curspeed = 0;
 
 void scroller_draw() {
     int chars_per_screen = video_width() / 6 + 1;
-
-    while (EVBUFFER_LENGTH(scrollbuffer) <= chars_per_screen + 1) 
-        evbuffer_add(scrollbuffer, " ", 1);
 
     Uint32 now = SDL_GetTicks();
 
@@ -76,6 +76,9 @@ void scroller_draw() {
         x += 6;
     }
 
+    while (EVBUFFER_LENGTH(scrollbuffer) <= chars_per_screen + 1) 
+        evbuffer_add(scrollbuffer, " ", 1);
+
     video_rect(0, video_height() - 15, video_width(), video_height(), 0, 0, 0, 0);
 
     assert(chars_per_screen < EVBUFFER_LENGTH(scrollbuffer));
@@ -88,6 +91,11 @@ void scroller_draw() {
     if (now / 1000 % 60 < 5) 
         video_draw(video_width() - 190, 20, sprite_get(SPRITE_LOGO));
 }
+#else
+void scroller_draw() {
+    evbuffer_drain(scrollbuffer, EVBUFFER_LENGTH(scrollbuffer));
+}
+#endif
 
 void scroller_from_network(packet_t *packet) {
     char buf[257];

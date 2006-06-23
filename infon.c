@@ -24,19 +24,16 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <lualib.h>
-#include <lauxlib.h>
-
 #include "global.h"
-#include "server.h"
+#include "client.h"
 #include "world.h"
 #include "video.h"
 #include "sprite.h"
 #include "creature.h"
 #include "scroller.h"
+#include "misc.h"
 
 static int running = 1;
-static int paused  = 0;
 
 void sighandler(int sig) {
     running = 0;
@@ -49,9 +46,7 @@ void print_fps() {
     if(SDL_GetTicks() >= ticks + 1000) {
         static int iteration = 0;
         if (++iteration % 35 == 0) {
-            static char buf[16];
-            snprintf(buf, sizeof(buf), "%d fps", frames);
-            add_to_scroller(buf);
+            printf("%d fps\n", frames);
         }
         frames = 0;
         ticks = SDL_GetTicks();
@@ -59,6 +54,9 @@ void print_fps() {
 }   
 
 int main(int argc, char *argv[]) {
+    if (argc != 2)
+        die("%s <ip:port>");
+
     // const int width = 320, height = 208;
     const int width = 640, height = 480;
     // const int width = 800, height = 600;
@@ -70,49 +68,19 @@ int main(int argc, char *argv[]) {
 
     srand(time(0));
 
-    L = lua_open();
+    client_init(argv[1]);
 
-    lua_baselibopen(L);
-    lua_tablibopen(L);
-    lua_iolibopen(L);
-    lua_strlibopen(L);
-    lua_dblibopen(L);
-    lua_mathlibopen(L);
-
-    lua_dofile(L, "config.lua");
-
-#ifdef SERVER_GUI
     video_init(width, height);
     sprite_init();
-#endif
     scroller_init();
     world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
-    server_init();
     player_init();
     creature_init();
 
     game_round = 0;
     game_time  = 0;
 
-    Uint32 lastticks = SDL_GetTicks();
-    while (running) {
-        game_round++;
-        Uint32 nowticks = SDL_GetTicks();
-        Uint32 delta = nowticks - lastticks;
-
-        if (nowticks < lastticks || nowticks > lastticks + 1000) {
-            // Timewarp?
-            lastticks = nowticks;
-            SDL_Delay(5);
-            continue;
-        } else if (delta < 10) {
-            SDL_Delay(5);
-            continue;
-        }
-
-        lastticks = nowticks;
-
-#ifdef SERVER_GUI
+    while (running && client_is_connected()) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -125,25 +93,7 @@ int main(int argc, char *argv[]) {
                         case SDLK_ESCAPE:
                             running = 0;
                             break;
-                        case SDLK_1: world_set_display_mode(0); break;
-                        case SDLK_2: world_set_display_mode(1); break;
-                        case SDLK_3: world_set_display_mode(2); break;
-                        case SDLK_SPACE: paused = !paused;      break;
                         default: ;
-                    }
-                    break;
-                case SDL_MOUSEMOTION:
-                    if (event.motion.state == 1) {
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE, SOLID);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE, SOLID);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE + 1, SOLID);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE + 1, SOLID);
-                        printf("%d %d %d\n", 
-                               event.motion.x * TILE_SCALE / SPRITE_TILE_SIZE,
-                               event.motion.y * TILE_SCALE / SPRITE_TILE_SIZE, 
-                                world_get_food(event.motion.x / SPRITE_TILE_SIZE,
-                                               event.motion.y / SPRITE_TILE_SIZE));
-
                     }
                     break;
                 case SDL_QUIT:
@@ -151,26 +101,12 @@ int main(int argc, char *argv[]) {
                     break;
             }
         }
-#endif
 
         print_fps();
 
-        // Zeit weiterlaufen lassen
-        if (!paused)    
-            game_time += delta;
-
         // IO Lesen/Schreiben
-        server_tick();
+        client_tick();
 
-        if (!paused) {
-            // Spieler Programme ausfuehren
-            player_think();
-
-            // Viecher bewegen
-            creature_moveall(delta);
-        }
-
-#ifdef SERVER_GUI
         // Anzeigen
         world_draw();
         creature_draw();
@@ -178,23 +114,15 @@ int main(int argc, char *argv[]) {
         player_draw();
 
         video_flip();
-#endif
-
-        // GUI Client aktualisieren 
-        // TODO: implement me
     }
     
     creature_shutdown();
     player_shutdown();
-    server_shutdown();
     world_shutdown();
     scroller_shutdown();
-#ifdef SERVER_GUI
     sprite_shutdown();
     video_shutdown();
-#endif
-
-    lua_close(L);
+    client_shutdown();
 
     return EXIT_SUCCESS; 
 }

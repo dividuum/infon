@@ -23,8 +23,6 @@ TCPSocket.open('localhost', 1234) { |socket|
         end
     end
     
-    p socket.gets
-    socket.write("g\n")
     loop do 
         len = socket.read8
         print "len=%3d " % len
@@ -43,6 +41,25 @@ TCPSocket.open('localhost', 1234) { |socket|
             puts  "%d, %d => %d (%d) " % [socket.read8, socket.read8, socket.read8, socket.read16]
         when 2:
             puts  "msg: %s  " % socket.read(len).unpack("A*")[0] 
+        when 3: 
+            print "creature upd: "
+            print "cno=%d "         % socket.read16
+            print "mask=%d "        % mask = socket.read8
+            print "alive=%s "       % [socket.read8 == 0xFF ? "dead" : "spawned"]   if mask &  1 != 0
+            print "pos=%d,%d,%d "   % [socket.read16, socket.read16, socket.read8]  if mask &  2 != 0
+            print "type=%d "        % socket.read8                                  if mask &  4 != 0
+            print "food=%d "        % socket.read8                                  if mask &  8 != 0                                              
+            print "health=%d "      % socket.read8                                  if mask & 16 != 0
+            print "state=%d "       % socket.read8                                  if mask & 32 != 0
+            print "target=%d "      % socket.read16                                 if mask & 64 != 0
+            print "message=%s "     % socket.read(socket.read8).unpack("A*")[0]     if mask &128 != 0
+            puts
+        when 4:
+            puts  "quit msg: %s  " % socket.read(len).unpack("A*")[0] 
+            break
+        when 32:
+            socket.write("guiclient\n")
+            puts  "welcome: %s" % socket.read(len).delete("\n").strip
         else
             puts  "???: #{type}"
         end

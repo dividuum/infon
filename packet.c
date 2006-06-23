@@ -18,6 +18,8 @@
 
 */
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdio.h>
 
 #include "packet.h"
@@ -30,10 +32,13 @@ void packet_reset(packet_t *packet) {
     packet->offset = 0;
 }
 
-void packet_send(int type, packet_t *packet) {
+void packet_send(int type, packet_t *packet, client_t *client) {
     packet->len  = packet->offset;
     packet->type = type;
-    client_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
+    if (!client) 
+        client_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
+    else
+        client_writeto(client, packet, 1 + 1 + packet->len);
 }
 
 int packet_read08(packet_t *packet, uint8_t *data) {
@@ -114,22 +119,4 @@ int packet_writeXX(packet_t *packet, const void *data, int len) {
     memcpy(&packet->data[packet->offset], data, len);
     packet->offset += len;
     return 1;
-}
-
-
-void packet_handle(struct evbuffer *packet_buffer) {
-    /*
-    while (EVBUFFER_LENGTH(packet_buffer) >= 1) {
-        switch (EVBUFFER_DATA(packet_buffer)[0]) {
-            case PACKET_PLAYER_STATIC:    handle_player_update_static);
-            case PACKET_PLAYER_ROUND:     handle_player_update_round);
-            case PACKET_PLAYER_JOINLEAVE: handle_player_join_leave);
-            case PACKET_PLAYER_KING:      handle_player_update_king);
-            case PACKET_WORLD_SPRITE:     handle_world_sprite);
-            case PACKET_WORLD_FOOD:       handle_world_food);
-            case PACKET_SCROLLER_MSG:     handle_scroller_msg);
-            case PACKET_CREATURE_SPAWNDIE:handle_creature_spawndie);
-        }
-    }
-    */
 }

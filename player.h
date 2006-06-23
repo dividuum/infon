@@ -53,11 +53,11 @@ typedef struct player_s {
     int           kill_me;
 
     unsigned char dirtymask;
-#define PLAYER_DIRTY_ALIVE   (1 << 0)  //  1 Byte
-#define PLAYER_DIRTY_NAME    (1 << 1)  // 16 Byte 
-#define PLAYER_DIRTY_COLOR   (1 << 2)  //  1 Byte
-#define PLAYER_DIRTY_CPU     (1 << 3)  //  1 Byte
-#define PLAYER_DIRTY_SCORE   (1 << 4)  //  2 Bytes
+#define PLAYER_DIRTY_ALIVE   (1 << 0)
+#define PLAYER_DIRTY_NAME    (1 << 1)
+#define PLAYER_DIRTY_COLOR   (1 << 2)
+#define PLAYER_DIRTY_CPU     (1 << 3)
+#define PLAYER_DIRTY_SCORE   (1 << 4)
 
 #define PLAYER_DIRTY_ALL         0x1F
 #define PLAYER_DIRTY_NONE        0x00
@@ -84,7 +84,7 @@ player_t   *player_create(const char *pass);
 void        player_mark_for_kill(player_t *player);
 
 void        player_think();
-void        player_draw(int delta);
+void        player_draw();
 
 void        player_is_king_of_the_hill(player_t *player, int delta);
 void        player_there_is_no_king();
@@ -92,7 +92,7 @@ player_t   *player_king();
 
 /* Network */
 void        player_send_initial_update(client_t *client);
-void        player_to_network(player_t *player, int dirtymask);
+void        player_to_network(player_t *player, int dirtymask, client_t *client);
 void        player_from_network(packet_t *packet);
 
 

@@ -18,7 +18,7 @@
 
 ]]--
 
-require "clientlib.lua"
+require "serverlib.lua"
 
 -----------------------------------------------------------
 -- Clientlogik
@@ -226,15 +226,13 @@ function Client:gui_client_menu()
 end
 
 function Client:handler()
-    self:writeln("Welcome to " .. GAME_NAME .. ". Press <enter>")
-    binary = self:readln()
-    if binary == "g" then
+    self:welcome("Press <enter>")
+    if self:readln() == "guiclient" then
         self:turn_into_guiclient()
         self:gui_client_menu()
     end
-    self:writeln("")
-    self:writeln("")
-    self:writeln("                      Hello " .. self.addr .. "!")
+    self:centerln("Hello " .. self.addr .. "!")
+    self:centerln("Welcome to " .. GAME_NAME)
     self:writeln("")
     --                  von http://www.asciiworld.com/animals_birds.html
     self:writeln("                                     \\")
@@ -276,7 +274,6 @@ function ServerMain()
                        10000)
     end
                         
-
     info_time = game_info()
     while true do
         if game_info() > info_time + 10000 then

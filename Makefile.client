@@ -1,0 +1,19 @@
+#XXX: Rotzig
+
+LUADIR=lua-5.0.2
+SDLDIR=$(shell sdl-config --prefix)
+
+CFLAGS   = -I$(LUADIR)/include/ -I$(SDLDIR)/include/SDL -std=gnu99 -Wall 
+# CFLAGS  += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
+CFLAGS  += -ggdb
+
+CFLAGS+=-DCLIENT=1 -DSERVER_GUI=1
+LDFLAGS = -L$(LUADIR)/lib -L$(SDLDIR)/lib -levent -llua -llualib -lm -lSDL -lSDL_image -lSGE -lSDL_gfx
+
+all: infon
+
+infon: infon.o client.o server.o listener.o player.o map.o path.o misc.o world.o path.o map.o creature.o packet.o scroller.o sprite.o video.o 
+	$(CC) $^ $(LDFLAGS) -o $@
+
+clean:
+	-rm -f *.o infon tags

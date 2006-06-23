@@ -32,7 +32,7 @@
 
 static creature_t creatures[MAXCREATURES];
 
-#define CREATURE_USED(creature) ((creature)->player)
+#define CREATURE_USED(creature) (!!((creature)->player))
 
 static creature_t *creature_find_unused() {
     for (int i = 0; i < MAXCREATURES; i++) {
@@ -122,6 +122,7 @@ creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
     return nearest;
 }
 
+#ifdef SERVER_GUI
 void creature_draw() {
     creature_t *creature = &creatures[0];
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
@@ -130,8 +131,8 @@ void creature_draw() {
         
         const int x = X_TO_SCREENX(creature->x) - 7;
         const int y = Y_TO_SCREENY(creature->y) - 7;
-        const int hw = creature->health_percent * 16 / 100;
-        const int fw = creature->food_percent   * 16 / 100;
+        const int hw = creature->network_health * 16 / 100;
+        const int fw = creature->network_food   * 16 / 100;
 
         if (fw != 16) video_rect(x + fw, y - 4, x + 16, y - 2, 0x00, 0x00, 0x00, 0xB0);
         if (fw !=  0) video_rect(x,      y - 4, x + fw, y - 2, 0xFF, 0xFF, 0xFF, 0xB0);
@@ -178,6 +179,10 @@ void creature_draw() {
         }
     }
 }
+#else
+void creature_draw() {
+}
+#endif
 
 
 // ------------- Bewegung -------------
@@ -432,6 +437,7 @@ void creature_do_convert(creature_t *creature, int delta) {
             creature->health = creature_max_health(creature);
         if (creature->food   > creature_max_food(creature))
             creature->food   = creature_max_food(creature);
+        creature->dirtymask |= CREATURE_DIRTY_TYPE;
         creature_set_state(creature, CREATURE_IDLE);
     }
 }
@@ -580,6 +586,7 @@ int creature_set_target(creature_t *creature, int target) {
     // Runde toeten koennte und daher ein true hier nicht heisst,
     // dass tatsaechlich attackiert/gefuettert werden kann.
     creature->target = target;
+    creature->dirtymask |= CREATURE_DIRTY_TARGET;
     return 1;
 }
 
@@ -644,6 +651,7 @@ int creature_set_state(creature_t *creature, int newstate) {
 
     creature->state = newstate;
     creature->last_state_change = game_time;
+    creature->dirtymask |= CREATURE_DIRTY_STATE;
     return 1;
 }
 
@@ -711,10 +719,40 @@ void creature_moveall(int delta) {
             }
         }
 
-        // Leben/Food Prozentangaben aktualisieren
-        creature->health_percent = 100 * creature->health / creature_max_health(creature);
-        creature->food_percent   = 100 * creature->food   / creature_max_food(creature);
 next_creature: ;
+    }
+
+    // Zweite Iteration fuer Network Sync
+    creature = &creatures[0];
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
+        if (!CREATURE_USED(creature)) 
+            continue;
+        
+        // Leben/Food Prozentangaben aktualisieren
+        int newhealth = 100 * creature->health / creature_max_health(creature);
+        if (newhealth != creature->network_health) {
+            creature->network_health = newhealth;
+            creature->dirtymask |= CREATURE_DIRTY_HEALTH;
+        }
+
+        int newfood = 100 * creature->food   / creature_max_food(creature);
+        if (newfood != creature->network_food) {
+            creature->network_food = newfood;
+            creature->dirtymask |= CREATURE_DIRTY_FOOD;
+        }
+
+        if (creature->x   != creature->network_x ||
+            creature->y   != creature->network_y ||
+            creature->dir != creature->network_dir) 
+        { 
+             creature->network_x   = creature->x;  
+             creature->network_y   = creature->y; 
+             creature->network_dir = creature->dir;
+             creature->dirtymask |= CREATURE_DIRTY_POS;
+        }
+
+        creature_to_network(creature, creature->dirtymask, PACKET_BROADCAST);
+        creature->dirtymask = CREATURE_DIRTY_NONE;
     }
 
     // Gibt es einen Koenig? :)
@@ -751,8 +789,11 @@ int creature_set_path(creature_t *creature, int x, int y) {
 }
 
 void creature_set_message(creature_t *creature, const char *message) {
-    snprintf(creature->message, sizeof(creature->message), "%s", message);
-    creature->last_msg_set = game_time;
+    if (strcmp(creature->message, message)) {
+        snprintf(creature->message, sizeof(creature->message), "%s", message);
+        creature->last_msg_set = game_time;
+        creature->dirtymask |= CREATURE_DIRTY_MESSAGE;
+    }
 }
 
 creature_t *creature_spawn(player_t *player, int x, int y, int type, int points) {
@@ -783,14 +824,17 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
     creature->last_state_change = game_time;
     creature->age_action_deltas = 0;
 
+    creature->dirtymask     = 0;
+
+    creature->network_x      = x;
+    creature->network_y      = y;
+    creature->network_dir    = 0;
+    creature->network_health = 100;
+    creature->network_food   = 0;
+
     player_on_creature_spawned(player, creature_num(creature), points);
 
-    // Network Sync
-    //packet_t packet; int packet_size;
-
-    //packet_size = packet_creature_spawned(creature, &packet);
-    //client_writeto_all_gui_clients(&packet, packet_size);
-
+    creature_to_network(creature, CREATURE_DIRTY_ALL, PACKET_BROADCAST);
     return creature;
 }
 
@@ -810,11 +854,7 @@ void creature_kill(creature_t *creature, creature_t *killer) {
     path_delete(creature->path);
     creature->player = NULL;
     
-    // Network Sync
-    //packet_t packet; int packet_size;
-
-    //packet_size = packet_creature_died(creature, &packet);
-    //client_writeto_all_gui_clients(&packet, packet_size);
+    creature_to_network(creature, CREATURE_DIRTY_ALIVE, PACKET_BROADCAST);
 }
 
 void creature_kill_all_players_creatures(player_t *player) {
@@ -829,25 +869,55 @@ void creature_kill_all_players_creatures(player_t *player) {
     }
 }
 
+void creature_send_initial_update(client_t *client) {
+    creature_t *creature = &creatures[0];
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
+        if (!CREATURE_USED(creature)) 
+            continue;
+        creature_to_network(creature, CREATURE_DIRTY_ALL, client);
+    }
+}
+
+void creature_to_network(creature_t *creature, int dirtymask, client_t *client) {
+    if (dirtymask == CREATURE_DIRTY_NONE)
+        return;
+
+    packet_t packet;
+    packet_reset(&packet);
+
+    packet_write16(&packet, creature_num(creature));
+    packet_write08(&packet, dirtymask);
+    if (dirtymask & CREATURE_DIRTY_ALIVE) {
+        if (CREATURE_USED(creature))
+            packet_write08(&packet, player_num(creature->player));
+        else
+            packet_write08(&packet, 0xFF);
+    }
+    if (dirtymask & CREATURE_DIRTY_POS) {
+        packet_write16(&packet, creature->network_x);
+        packet_write16(&packet, creature->network_y);
+        packet_write08(&packet, creature->network_dir);
+    }
+    if (dirtymask & CREATURE_DIRTY_TYPE) 
+        packet_write08(&packet, creature->type);
+    if (dirtymask & CREATURE_DIRTY_FOOD)
+        packet_write08(&packet, creature->network_food);
+    if (dirtymask & CREATURE_DIRTY_HEALTH)
+        packet_write08(&packet, creature->network_health);
+    if (dirtymask & CREATURE_DIRTY_STATE)
+        packet_write08(&packet, creature->state);
+    if (dirtymask & CREATURE_DIRTY_TARGET)
+        packet_write16(&packet, creature->target);
+    if (dirtymask & CREATURE_DIRTY_MESSAGE) {
+        packet_write08(&packet, strlen(creature->message));
+        packet_writeXX(&packet, &creature->message, strlen(creature->message));
+    }
+    
+    packet_send(PACKET_CREATURE_UPDATE, &packet, client);
+}
+
+
 /*
-int packet_creature_spawned(creature_t *creature, packet_t *packet) {
-    packet->type = PACKET_CREATURE_SPAWNDIE;
-    packet->creature_spawndie.creatureno   = htons(creature_num(creature));
-    packet->creature_spawndie.spawn_or_die = 1;
-    return sizeof(packet_creature_spawndie_t);
-}
-
-int packet_creature_died(creature_t *creature, packet_t *packet) {
-    packet->type = PACKET_CREATURE_SPAWNDIE;
-    packet->creature_spawndie.creatureno   = htons(creature_num(creature));
-    packet->creature_spawndie.spawn_or_die = 0;
-    return sizeof(packet_creature_spawndie_t);
-}
-
-int packet_creature_update_static(creature_t *creature, packet_t *packet) {
-}
-
-
 void packet_handle_creature_spawndie(packet_t *packet) {
     assert(packet->type == PACKET_CREATURE_SPAWNDIE);
     int creatureno = ntohs(packet->creature_spawndie.creatureno);

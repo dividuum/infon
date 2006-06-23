@@ -186,9 +186,13 @@ static void sprite_load_images() {
 }
 
 sprite_t *sprite_get(int i) {
-    if (i < 0 || i >= SPRITE_NUM)
-        return NULL;
     return &sprites[i];
+}
+
+int sprite_exists(int i) {
+    if (i < 0 || i >= SPRITE_NUM) return 0;
+    if (!sprites[i].surface)      return 0;
+    return 1;
 }
 
 int sprite_num(sprite_t *sprite) {

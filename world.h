@@ -57,7 +57,7 @@ void        world_draw();
 /* Network */
 void        world_send_initial_update(client_t *client);
 
-void        world_to_network(int x, int y);
+void        world_to_network(int x, int y, client_t *client);
 void        world_from_network(packet_t *packet);
 
 void        world_init(int w, int h);

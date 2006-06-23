@@ -34,6 +34,7 @@
 #include <lauxlib.h>
 #include <event.h>
 
+#include "packet.h"
 #include "global.h"
 #include "player.h"
 #include "server.h"
@@ -227,7 +228,12 @@ void client_destroy(client_t *client, char *reason) {
         fprintf(stderr, "error calling on_client_close: %s\n", lua_tostring(L, -1));
 
     // Versuchen, den Rest rauszuschreiben.
-    if (!client->is_gui_client) {
+    if (client->is_gui_client) {
+        packet_t packet;
+        packet_reset(&packet);
+        packet_writeXX(&packet, reason, strlen(reason));
+        packet_send(PACKET_QUIT_MSG, &packet, client);
+    } else {
         evbuffer_add(client->out_buf, "\nconnection terminating: ", 25);
         evbuffer_add(client->out_buf, reason, strlen(reason));
         evbuffer_add(client->out_buf, "\n", 1);
@@ -263,6 +269,7 @@ void client_destroy(client_t *client, char *reason) {
 static void initial_update(client_t *client) {
     world_send_initial_update(client);
     player_send_initial_update(client);
+    creature_send_initial_update(client);
 }
 
 static void client_turn_into_gui_client(client_t *client) {
@@ -452,7 +459,7 @@ void server_init() {
     if (!listener_init()) 
         die("error initializing listener");
 
-    lua_dofile(L, "client.lua");
+    lua_dofile(L, "server.lua");
 
     memset(clients, 0, sizeof(clients));
     lua_register(L, "write_to_client",          luaWriteToClient);

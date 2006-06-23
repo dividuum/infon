@@ -18,43 +18,18 @@
 
 */
 
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef CLIENT_H
+#define CLIENT_H
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include <event.h>
 
-#define MAXCLIENTS 1024
+void client_tick();
+int  client_is_connected();
 
-typedef struct client_s {
-    struct event rd_event;
-    struct event wr_event;
-    struct evbuffer *in_buf;
-    struct evbuffer *out_buf;
-
-    // Verbindung von: 1-player <-> N-client
-    struct player_s *player;
-    struct client_s *next;
-    struct client_s *prev;
-
-    // Client, welcher kontinuierlich Updates erhaelt
-    int is_gui_client;
-    struct client_s *next_gui;
-    struct client_s *prev_gui;
-} client_t;
-
-client_t clients[MAXCLIENTS];
-
-int  client_accept(int fd, struct sockaddr_in *peer);
-void client_writeto(client_t *client, const void *data, size_t size);
-void client_writeto_all_gui_clients(const void *data, size_t size);
-void client_destroy(client_t *client, char *reason);
-
-void server_tick();
-
-void server_init();
-void server_shutdown();
+void client_init(char *addr);
+void client_shutdown();
 
 #endif

@@ -151,6 +151,23 @@ function Client:writeln(line)
     end
 end
 
+function Client:centerln(line)
+    self:writeln(string.rep(" ", (60 - string.len(line)) / 2) .. line)
+end
+
+-- Speziell formatiert, so dass es von einem GUI Client
+-- wie andere in packet.h definierte Packete gelesen
+-- gelesen werden kann (len = 32 (space), type = 32 (space).
+function Client:welcome(msg)
+    msglen = string.len(msg)
+    if msglen > 30 then
+        print('welcome message too long')
+        msg = "Press <enter>"
+        msglen = string.len(msg)
+    end
+    self:write("  \n" .. msg .. string.rep(" ", 30 - msglen) .. "\n")
+end
+
 function Client.writeAll(line)
     table.foreach(clients, function (fd, obj)
                                obj:write(line)
@@ -219,7 +236,11 @@ end
 
 function kick(fd, msg)
     -- XXX: momentan bis zur naechsten eingabe delayed...
-    write_to_client(fd, msg .. "\n")
+    if is_gui_client(fd) then
+        -- XXX: TODO 
+    else
+        write_to_client(fd, msg .. "\n")
+    end
     clients[fd].kill_me = true
 end
 

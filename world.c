@@ -35,11 +35,12 @@ static int           koth_y;
 
 static map_t        *map_pathfind;
 static pathfinder_t  finder;
-static sprite_t    **map_sprites;
+static int          *map_sprites;
 static int          *map_food;
-static maptype_e    *map_type;
+//static maptype_e    *map_type;
 static int           displaymode;
 
+#ifdef SERVER_GUI
 void world_draw() {
     for (int y = 0; y < world_h; y++) {
         for (int x = 0; x < world_w; x++) {
@@ -48,7 +49,7 @@ void world_draw() {
                 case 0:
                     video_draw(x * SPRITE_TILE_SIZE, 
                                y * SPRITE_TILE_SIZE, 
-                               map_sprites[y * world_w + x]);
+                               sprite_get(map_sprites[y * world_w + x]));
                     break;
                 case 1:
                     val = (int)MAP_TILE(map_pathfind, x, y)->area;
@@ -77,6 +78,11 @@ void world_draw() {
         }
     }
 }
+#else
+void world_draw() {
+}
+#endif
+
 
 int world_walkable(int x, int y) {
     return MAP_IS_ON_MAP(map_pathfind, x, y) &&
@@ -93,9 +99,9 @@ int world_dig(int x, int y, maptype_e type) {
     printf("world_dig(%d, %d)\n", x, y);
 
     map_dig(map_pathfind, x, y);
-    map_sprites[y * world_w + x] = sprite_get(SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN);
+    map_sprites[y * world_w + x] = SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN;
     
-    world_to_network(x, y);
+    world_to_network(x, y, PACKET_BROADCAST);
     return 1;
 }
 
@@ -125,7 +131,7 @@ int world_add_food(int x, int y, int amount) {
     map_food[y * world_w + x] = new;
 
     if (new != old) 
-        world_to_network(x, y);
+        world_to_network(x, y, PACKET_BROADCAST);
 
     return new - old;
 }
@@ -141,7 +147,7 @@ int world_food_eat(int x, int y, int amount) {
     map_food[y * world_w + x] -= amount;
 
     if (amount != 0) 
-        world_to_network(x, y);
+        world_to_network(x, y, PACKET_BROADCAST);
     
     return amount;
 }
@@ -178,22 +184,23 @@ void world_find_digged(int *x, int *y) {
 void world_send_initial_update(client_t *client) {
     for (int x = 0; x < world_w; x++) {
         for (int y = 0; y < world_h; y++) {
-            world_to_network(x, y);
+            world_to_network(x, y, client);
         }
     }
 }
 
-void world_to_network(int x, int y) {
+void world_to_network(int x, int y, client_t *client) {
     packet_t packet;
     packet_reset(&packet);
 
     packet_write08(&packet, x);
     packet_write08(&packet, y);
-    packet_write08(&packet, sprite_num(map_sprites[x + world_w * y]));
+    packet_write08(&packet, map_sprites[x + world_w * y]);
     packet_write16(&packet, map_food[x + world_w * y]);
-    packet_send(PACKET_WORLD_UPDATE, &packet);
+    packet_send(PACKET_WORLD_UPDATE, &packet, client);
 }
 
+#ifdef CLIENT
 void world_from_network(packet_t *packet) {
     uint8_t x; uint8_t y;
     if (!packet_read08(packet, &x))         goto failed; 
@@ -202,9 +209,8 @@ void world_from_network(packet_t *packet) {
     if (y >= world_h)                       goto failed;
     uint8_t spriteno;
     if (!packet_read08(packet, &spriteno))  goto failed; 
-    sprite_t *sprite = sprite_get(spriteno);
-    if (!sprite)                            goto failed; 
-    map_sprites[x + world_w * y] = sprite;
+    if (!sprite_exists(spriteno))           goto failed; 
+    map_sprites[x + world_w * y] = spriteno;
     uint16_t food; 
     if (!packet_read16(packet, &food))      goto failed;
     if (food > MAX_TILE_FOOD)               goto failed;
@@ -214,6 +220,7 @@ failed:
     printf("parsing world update packet failed\n");
     return;
 }
+#endif
 
 void world_init(int w, int h) {
     world_w = w;
@@ -226,7 +233,7 @@ void world_init(int w, int h) {
     map_init(map_pathfind, w, h);
     finder_init(&finder);
 
-    map_sprites = (sprite_t**)malloc(w * h * sizeof(sprite_t*));
+    map_sprites = malloc(w * h * sizeof(int));
     map_food    = malloc(w * h * sizeof(int));
     memset(map_food, 0, w * h * sizeof(int));
 
@@ -237,11 +244,11 @@ void world_init(int w, int h) {
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
             if (x == 0 || x == w - 1 || y == 0 || y == h - 1) {
-                map_sprites[x + w * y] = sprite_get(SPRITE_BORDER + rand() % SPRITE_NUM_BORDER);
+                map_sprites[x + w * y] = SPRITE_BORDER + rand() % SPRITE_NUM_BORDER;
             } else if (x == koth_x && y == koth_y) {
-                map_sprites[x + w * y] = sprite_get(SPRITE_KOTH);
+                map_sprites[x + w * y] = SPRITE_KOTH;
             } else {
-                map_sprites[x + w * y] = sprite_get(SPRITE_SOLID + rand() % SPRITE_NUM_SOLID);
+                map_sprites[x + w * y] = SPRITE_SOLID + rand() % SPRITE_NUM_SOLID;
             }
         }
     }

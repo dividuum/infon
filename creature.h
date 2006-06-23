@@ -23,6 +23,7 @@
 
 #include "path.h"
 #include "player.h"
+#include "server.h"
 
 #define MAXCREATURES       256
 
@@ -59,11 +60,27 @@ typedef struct creature_s {
     int  last_state_change;
     int  spawn_time;
 
-    int  health_percent;
-    int  food_percent;
+    int  network_health;
+    int  network_food;
+    int  network_x;
+    int  network_y;
+    int  network_dir;
     
     char message[9];
     int  last_msg_set;
+
+    unsigned char dirtymask;
+#define CREATURE_DIRTY_ALIVE   (1 << 0) 
+#define CREATURE_DIRTY_POS     (1 << 1) 
+#define CREATURE_DIRTY_TYPE    (1 << 2)
+#define CREATURE_DIRTY_FOOD    (1 << 3)
+#define CREATURE_DIRTY_HEALTH  (1 << 4)
+#define CREATURE_DIRTY_STATE   (1 << 5)
+#define CREATURE_DIRTY_TARGET  (1 << 6)
+#define CREATURE_DIRTY_MESSAGE (1 << 7)
+
+#define CREATURE_DIRTY_ALL         0xFF
+#define CREATURE_DIRTY_NONE        0x00
 } creature_t;
 
 int         creature_num(const creature_t *creature);
@@ -92,9 +109,8 @@ void        creature_moveall(int delta);
 void        creature_draw();
 
 /* Network */
-//int         packet_creature_spawned(creature_t *creature, packet_t *packet);
-//int         packet_creature_died(creature_t *creature, packet_t *packet);
-//void        packet_handle_creature_spawndie(packet_t *packet);
+void        creature_send_initial_update(client_t *client);
+void        creature_to_network(creature_t *creature, int dirtymask, client_t *client);
 
 void        creature_init();
 void        creature_shutdown();
