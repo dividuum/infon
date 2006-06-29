@@ -55,7 +55,7 @@ int world_dig(int x, int y, maptype_e type) {
     map_dig(map_pathfind, x, y);
     map_sprites[y * world_w + x] = SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN;
     
-    world_to_network(x, y, PACKET_BROADCAST);
+    world_to_network(x, y, SEND_BROADCAST);
     return 1;
 }
 
@@ -69,6 +69,10 @@ int world_get_food(int x, int y) {
     return map_food[y * world_w + x];
 }
 
+static int food_to_network_food(int food) {
+    return food == 0 ? 0xFF : food / 1000;
+}
+
 int world_add_food(int x, int y, int amount) {
     if (!world_walkable(x, y))
         return 0;
@@ -79,8 +83,8 @@ int world_add_food(int x, int y, int amount) {
     if (new < 0)             new = 0;
     map_food[y * world_w + x] = new;
 
-    if (new != old) 
-        world_to_network(x, y, PACKET_BROADCAST);
+    if (food_to_network_food(new) != food_to_network_food(old))
+        world_to_network(x, y, SEND_BROADCAST);
 
     return new - old;
 }
@@ -93,10 +97,11 @@ int world_food_eat(int x, int y, int amount) {
     if (amount > ontile)
         amount = ontile;
 
-    map_food[y * world_w + x] -= amount;
+    int old = map_food[y * world_w + x];
+    int new = map_food[y * world_w + x] -= amount;
 
-    if (amount != 0) 
-        world_to_network(x, y, PACKET_BROADCAST);
+    if (food_to_network_food(new) != food_to_network_food(old))
+        world_to_network(x, y, SEND_BROADCAST);
     
     return amount;
 }
@@ -140,13 +145,17 @@ void world_send_initial_update(client_t *client) {
 
 void world_to_network(int x, int y, client_t *client) {
     packet_t packet;
-    packet_reset(&packet);
+    packet_init(&packet, PACKET_WORLD_UPDATE);
 
     packet_write08(&packet, x);
     packet_write08(&packet, y);
     packet_write08(&packet, map_sprites[x + world_w * y]);
-    packet_write16(&packet, map_food[x + world_w * y]);
-    packet_send(PACKET_WORLD_UPDATE, &packet, client);
+    if (map_food[x + world_w * y] == 0) {
+        packet_write08(&packet, 0xFF);
+    } else {
+        packet_write08(&packet, map_food[x + world_w * y] / 1000);
+    }
+    client_send_packet(&packet, client);
 }
 
 void world_init(int w, int h) {

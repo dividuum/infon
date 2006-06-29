@@ -27,8 +27,7 @@
 
 #include "server.h"
 #include "packet.h"
-
-#define MAXPLAYERS 32
+#include "common_player.h"
 
 typedef struct player_s {
     char          name[16];
@@ -53,17 +52,7 @@ typedef struct player_s {
     int           kill_me;
 
     unsigned char dirtymask;
-#define PLAYER_DIRTY_ALIVE   (1 << 0)
-#define PLAYER_DIRTY_NAME    (1 << 1)
-#define PLAYER_DIRTY_COLOR   (1 << 2)
-#define PLAYER_DIRTY_CPU     (1 << 3)
-#define PLAYER_DIRTY_SCORE   (1 << 4)
-
-#define PLAYER_DIRTY_ALL         0x1F
-#define PLAYER_DIRTY_NONE        0x00
 } player_t;
-
-player_t players[MAXPLAYERS];
 
 int         player_attach_client(client_t *client, player_t *player, const char *pass);
 int         player_detach_client(client_t *client, player_t *player);

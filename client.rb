@@ -38,7 +38,7 @@ TCPSocket.open('localhost', 1234) { |socket|
             print "score=%d " % (socket.read16 - 500)                     if mask & 16 != 0
             puts
         when 1:
-            puts  "%d, %d => %d (%d) " % [socket.read8, socket.read8, socket.read8, socket.read16]
+            puts  "%d, %d => %d (%d) " % [socket.read8, socket.read8, socket.read8, socket.read8]
         when 2:
             puts  "msg: %s  " % socket.read(len).unpack("A*")[0] 
         when 3: 
@@ -55,11 +55,13 @@ TCPSocket.open('localhost', 1234) { |socket|
             print "message=%s "     % socket.read(socket.read8).unpack("A*")[0]     if mask &128 != 0
             puts
         when 4:
-            puts  "quit msg: %s  " % socket.read(len).unpack("A*")[0] 
+            puts  "quit msg: %s  "  % socket.read(len).unpack("A*")[0] 
             break
+        when 5:
+            puts  "king: %d  "      % socket.read8
         when 32:
             socket.write("guiclient\n")
-            puts  "welcome: %s" % socket.read(len).delete("\n").strip
+            puts  "welcome: %s"     % socket.read(len).delete("\n").strip
         else
             puts  "???: #{type}"
         end

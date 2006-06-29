@@ -75,18 +75,18 @@ void gui_scroller_draw() {
         video_draw(video_width() - 190, 20, sprite_get(SPRITE_LOGO));
 }
 
-void scroller_from_network(packet_t *packet) {
+void gui_scroller_from_network(packet_t *packet) {
     char buf[257];
     memcpy(buf, &packet->data, packet->len);
     buf[packet->len] = '\0';
     append(buf);
 }
 
-void scroller_init() {
+void gui_scroller_init() {
     scrollbuffer = evbuffer_new();
     last_time = SDL_GetTicks();
 }
 
-void scroller_shutdown() {
+void gui_scroller_shutdown() {
     evbuffer_free(scrollbuffer);
 }

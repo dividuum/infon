@@ -21,9 +21,7 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include "server.h"
-
-#define PACKET_BROADCAST NULL
+#include <stdint.h>
 
 typedef struct {
 // Wire Data    
@@ -34,14 +32,15 @@ typedef struct {
 #define PACKET_SCROLLER_MSG      2
 #define PACKET_CREATURE_UPDATE   3
 #define PACKET_QUIT_MSG          4
+#define PACKET_KOTH_UPDATE       5
 #define PACKET_WELCOME_MSG      32
     uint8_t  data[256];
 // Mgmt Data    
     uint8_t  offset;
 } packet_t __attribute__((packed));
 
-void packet_reset(packet_t *packet);
-void packet_send(int type, packet_t *packet, client_t *client);
+void packet_rewind(packet_t *packet);
+void packet_init  (packet_t *packet, int type);
 
 int  packet_read08(packet_t *packet, uint8_t  *data);
 int  packet_read16(packet_t *packet, uint16_t *data);

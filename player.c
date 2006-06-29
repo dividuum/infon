@@ -37,6 +37,7 @@
 
 #define PLAYER_USED(player) (!!((player)->L))
 
+static player_t players[MAXPLAYERS];
 static player_t *king_player = NULL;
 
 void player_score(player_t *player, int scoredelta, char *reason) {
@@ -468,7 +469,7 @@ player_t *player_create(const char *pass) {
     lua_setmaxmem(player->L, LUA_MAX_MEM);
     lua_dofile(player->L, "player.lua");
     
-    player_to_network(player, PLAYER_DIRTY_ALL, PACKET_BROADCAST);
+    player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
     return player;
 }
 
@@ -483,7 +484,7 @@ void player_destroy(player_t *player) {
     lua_close(player->L);
     player->L = NULL;
     
-    player_to_network(player, PLAYER_DIRTY_ALIVE, PACKET_BROADCAST);
+    player_to_network(player, PLAYER_DIRTY_ALIVE, SEND_BROADCAST);
 }
 
 void player_set_name(player_t *player, const char *name) {
@@ -722,13 +723,24 @@ void player_think() {
 
         lua_pop(player->L, 1);
 
-        player_to_network(player, player->dirtymask, PACKET_BROADCAST);
+        player_to_network(player, player->dirtymask, SEND_BROADCAST);
         player->dirtymask = PLAYER_DIRTY_NONE;
     }
 }
 
+void player_send_king_update(client_t *client) {
+    // Network Sync
+    packet_t packet;
+    packet_init(&packet, PACKET_KOTH_UPDATE);
+    if (king_player) 
+        packet_write08(&packet, player_num(king_player));
+    else
+        packet_write08(&packet, 0xFF);
+    client_send_packet(&packet, client); 
+}
+
 void player_is_king_of_the_hill(player_t *player, int delta) {
-    //player_t *old_king = king_player;
+    player_t *old_king = king_player;
 
     king_player = player;
     player->last_koth_time = game_time;
@@ -738,30 +750,16 @@ void player_is_king_of_the_hill(player_t *player, int delta) {
         player->koth_time -= 2000;
     }
 
-    /*
-    if (king_player != old_king) {
-        // Network Sync
-        packet_t packet; int packet_size;
-
-        packet_size = packet_player_update_king(&packet);
-        client_writeto_all_gui_clients(&packet, packet_size);
-    }
-    */
+    if (king_player != old_king)
+        player_send_king_update(SEND_BROADCAST);
 }
 
 void player_there_is_no_king() {
-    //player_t *old_king = king_player;
+    player_t *old_king = king_player;
     king_player = NULL;
 
-    /*
-    if (old_king) {
-        // Network Sync
-        packet_t packet; int packet_size;
-
-        packet_size = packet_player_update_king(&packet);
-        client_writeto_all_gui_clients(&packet, packet_size);
-    }
-    */
+    if (old_king) 
+        player_send_king_update(SEND_BROADCAST);
 }
 
 player_t *player_king() {
@@ -780,6 +778,8 @@ void player_send_initial_update(client_t *client) {
 
         player_to_network(player, PLAYER_DIRTY_ALL, client);
     }
+
+    player_send_king_update(client);
 }
 
 void player_to_network(player_t *player, int dirtymask, client_t *client) {
@@ -787,7 +787,7 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
         return;
 
     packet_t packet;
-    packet_reset(&packet);
+    packet_init(&packet, PACKET_PLAYER_UPDATE);
 
     packet_write08(&packet, player_num(player));
     packet_write08(&packet, dirtymask);
@@ -804,7 +804,7 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
     if (dirtymask & PLAYER_DIRTY_SCORE)
         packet_write16(&packet, player->score - PLAYER_KICK_SCORE);
 
-    packet_send(PACKET_PLAYER_UPDATE, &packet, client);
+    client_send_packet(&packet, client);
 }
 
 

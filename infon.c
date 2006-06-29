@@ -30,10 +30,10 @@
 #include "sprite.h"
 #include "misc.h"
 
-//#include "gui_creature.h"
+#include "gui_creature.h"
 #include "gui_world.h"
 #include "gui_scroller.h"
-//#include "gui_player.h"
+#include "gui_player.h"
 
 static int running = 1;
 
@@ -76,13 +76,26 @@ int main(int argc, char *argv[]) {
     sprite_init();
     gui_scroller_init();
     gui_world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
-    //gui_player_init();
-    //gui_creature_init();
+    gui_player_init();
+    gui_creature_init();
 
     game_round = 0;
     game_time  = 0;
 
+    Uint32 lastticks = SDL_GetTicks();
     while (running && client_is_connected()) {
+        Uint32 nowticks = SDL_GetTicks();
+
+        if (nowticks < lastticks || nowticks > lastticks + 1000) {
+            // Timewarp?
+            lastticks = nowticks;
+            SDL_Delay(5);
+            continue;
+        } else if (nowticks - lastticks < 10) {
+            SDL_Delay(5);
+            continue;
+        }
+
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -111,15 +124,15 @@ int main(int argc, char *argv[]) {
 
         // Anzeigen
         gui_world_draw();
-        creature_draw();
+        gui_creature_draw();
         gui_scroller_draw();
-        player_draw();
+        gui_player_draw();
 
         video_flip();
     }
     
-    //gui_creature_shutdown();
-    //gui_player_shutdown();
+    gui_creature_shutdown();
+    gui_player_shutdown();
     gui_world_shutdown();
     gui_scroller_shutdown();
 

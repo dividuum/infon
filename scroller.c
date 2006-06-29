@@ -23,11 +23,12 @@
 
 #include "scroller.h"
 #include "packet.h"
+#include "server.h"
 
 void add_to_scroller(const char* msg) {
     // Network Sync
     packet_t packet;
-    packet_reset(&packet);
+    packet_init(&packet, PACKET_SCROLLER_MSG);
     packet_writeXX(&packet, msg, strlen(msg));
-    packet_send(PACKET_SCROLLER_MSG, &packet, PACKET_BROADCAST);
+    client_send_packet(&packet, SEND_BROADCAST);
 }

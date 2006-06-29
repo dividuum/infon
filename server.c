@@ -34,10 +34,10 @@
 #include <lauxlib.h>
 #include <event.h>
 
+#include "server.h"
 #include "packet.h"
 #include "global.h"
 #include "player.h"
-#include "server.h"
 #include "world.h"
 #include "listener.h"
 #include "misc.h"
@@ -202,6 +202,14 @@ void client_writeto_all_gui_clients(const void *data, size_t size) {
     } while (client != guiclients);
 }
 
+void client_send_packet(packet_t *packet, client_t *client) {
+    packet->len  = packet->offset;
+    if (!client) 
+        client_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
+    else
+        client_writeto(client, packet, 1 + 1 + packet->len);
+}
+
 static void client_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
@@ -230,9 +238,9 @@ void client_destroy(client_t *client, char *reason) {
     // Versuchen, den Rest rauszuschreiben.
     if (client->is_gui_client) {
         packet_t packet;
-        packet_reset(&packet);
+        packet_init(&packet, PACKET_QUIT_MSG);
         packet_writeXX(&packet, reason, strlen(reason));
-        packet_send(PACKET_QUIT_MSG, &packet, client);
+        client_send_packet(&packet, client);
     } else {
         evbuffer_add(client->out_buf, "\nconnection terminating: ", 25);
         evbuffer_add(client->out_buf, reason, strlen(reason));

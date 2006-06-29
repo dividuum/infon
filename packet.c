@@ -28,17 +28,13 @@
 #include "scroller.h"
 #include "creature.h"
 
-void packet_reset(packet_t *packet) {
+void packet_rewind(packet_t *packet) {
     packet->offset = 0;
 }
 
-void packet_send(int type, packet_t *packet, client_t *client) {
-    packet->len  = packet->offset;
-    packet->type = type;
-    if (!client) 
-        client_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
-    else
-        client_writeto(client, packet, 1 + 1 + packet->len);
+void packet_init(packet_t *packet, int type) {
+	packet->type = type;
+	packet_rewind(packet);
 }
 
 int packet_read08(packet_t *packet, uint8_t *data) {

@@ -29,7 +29,7 @@ lua_State *L;
 Uint32     game_time;
 int        game_round;
 
-#define GAME_NAME "Infon Battle Arena 'GPN-5-Release'"
+#define GAME_NAME "Infon Battle Arena 'Network Edition'"
 
 // Pfadsuche, bei der mehrere beieinanderliegende
 // Tiles zu einem Area zusammengefasst werden. Die

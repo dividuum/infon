@@ -23,6 +23,7 @@
 #include <assert.h>
 
 #include "gui_world.h"
+#include "video.h"
 
 static int           world_w;
 static int           world_h;
@@ -31,42 +32,21 @@ static int           koth_x;
 static int           koth_y;
 
 static int          *map_sprites;
-static int          *map_food;
+static sprite_t    **map_food;
 static int           displaymode;
 
 void gui_world_draw() {
     for (int y = 0; y < world_h; y++) {
         for (int x = 0; x < world_w; x++) {
-            int val;
-            switch (displaymode) {
-                case 0:
-                    video_draw(x * SPRITE_TILE_SIZE, 
-                               y * SPRITE_TILE_SIZE, 
-                               sprite_get(map_sprites[y * world_w + x]));
-                    break;
-                case 1:
-                    val = (int)MAP_TILE(map_pathfind, x, y)->area;
-                    video_rect(x * SPRITE_TILE_SIZE, 
-                               y * SPRITE_TILE_SIZE,
-                               (x+1) * SPRITE_TILE_SIZE,
-                               (y+1) * SPRITE_TILE_SIZE,
-                               val % 206, -val / 200, val, 0xFF);
-                    break;
-                case 2:
-                    val = MAP_TILE(map_pathfind, x, y)->region;
-                    video_rect(x * SPRITE_TILE_SIZE, 
-                               y * SPRITE_TILE_SIZE,
-                               (x+1) * SPRITE_TILE_SIZE,
-                               (y+1) * SPRITE_TILE_SIZE,
-                               val * 206, -val * 200, val, 0xFF);
-                    break;
-            }
+            video_draw(x * SPRITE_TILE_SIZE, 
+                       y * SPRITE_TILE_SIZE, 
+                       sprite_get(map_sprites[y * world_w + x]));
 
-            int food = map_food[y * world_w + x];
-            if (food > 0) {
+            sprite_t *food_sprite = map_food[y * world_w + x];
+            if (food_sprite) {
                 video_draw(x * SPRITE_TILE_SIZE, 
                            y * SPRITE_TILE_SIZE, 
-                           sprite_get(SPRITE_FOOD + food / 1000));
+                           food_sprite);
             }
         }
     }
@@ -87,10 +67,14 @@ void gui_world_from_network(packet_t *packet) {
     if (!packet_read08(packet, &spriteno))  goto failed; 
     if (!sprite_exists(spriteno))           goto failed; 
     map_sprites[x + world_w * y] = spriteno;
-    uint16_t food; 
-    if (!packet_read16(packet, &food))      goto failed;
-    if (food > MAX_TILE_FOOD)               goto failed;
-    map_food[x + world_w * y] = food;
+    uint8_t food; 
+    if (!packet_read08(packet, &food))      goto failed;
+    if (food == 0xFF) {
+        map_food[x + world_w * y] = NULL;
+    } else {
+        if (food >= SPRITE_NUM_FOOD)        goto failed;
+        map_food[x + world_w * y] = sprite_get(SPRITE_FOOD + food);
+    }
     return;
 failed:    
     printf("parsing world update packet failed\n");
@@ -106,7 +90,7 @@ void gui_world_init(int w, int h) {
 
     map_sprites = malloc(w * h * sizeof(int));
 
-    map_food    = malloc(w * h * sizeof(int));
+    map_food    = malloc(w * h * sizeof(sprite_t*));
     memset(map_food, 0, w * h * sizeof(int));
 
     // Tile Texturen setzen

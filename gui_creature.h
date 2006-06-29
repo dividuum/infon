@@ -18,31 +18,34 @@
 
 */
 
-#ifndef GUI_PLAYER_H
-#define GUI_PLAYER_H
+#ifndef GUI_CREATURE_H
+#define GUI_CREATURE_H
 
-#include <string.h>
-
+#include "common_creature.h"
 #include "packet.h"
 
-typedef struct gui_player_s {
-	int 		  used;
-    char          name[16];
-    int           color;
+typedef struct gui_creature_s {
+    int             used;
+    int             x;
+    int             y;
+    int             dir;
+    int             type;
+    int             food;
+    int             health;
+    int             target;
+    int             color;
+    creature_state  state;
 
-    int           score;
-    int           cpu_usage;
+    char message[9];
+    int  last_msg_set; // XXX use me!
+} gui_creature_t;
 
-    unsigned char dirtymask;
-} gui_player_t;
-
-void        gui_player_draw();
+void        gui_creature_draw();
 
 /* Network */
-void        gui_player_from_network(packet_t *packet);
-void        gui_player_king_from_network(packet_t *packet);
+void gui_creature_from_network(packet_t *packet);
 
-void        gui_player_init();
-void        gui_player_shutdown();
+void        gui_creature_init();
+void        gui_creature_shutdown();
 
 #endif

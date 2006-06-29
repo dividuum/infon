@@ -26,7 +26,11 @@
 
 #include <event.h>
 
+#include "packet.h"
+
 #define MAXCLIENTS 1024
+
+#define SEND_BROADCAST NULL
 
 typedef struct client_s {
     struct event rd_event;
@@ -51,6 +55,9 @@ int  client_accept(int fd, struct sockaddr_in *peer);
 void client_writeto(client_t *client, const void *data, size_t size);
 void client_writeto_all_gui_clients(const void *data, size_t size);
 void client_destroy(client_t *client, char *reason);
+
+void client_send_packet(packet_t *packet, client_t *client);
+
 
 void server_tick();
 

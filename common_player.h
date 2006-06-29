@@ -21,3 +21,15 @@
 #ifndef COMMON_PLAYER_H
 #define COMMON_PLAYER_H
 
+#define MAXPLAYERS 32
+
+#define PLAYER_DIRTY_ALIVE   (1 << 0)
+#define PLAYER_DIRTY_NAME    (1 << 1)
+#define PLAYER_DIRTY_COLOR   (1 << 2)
+#define PLAYER_DIRTY_CPU     (1 << 3)
+#define PLAYER_DIRTY_SCORE   (1 << 4)
+
+#define PLAYER_DIRTY_ALL         0x1F
+#define PLAYER_DIRTY_NONE        0x00
+
+#endif

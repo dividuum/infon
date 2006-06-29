@@ -122,68 +122,6 @@ creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
     return nearest;
 }
 
-#ifdef SERVER_GUI
-void creature_draw() {
-    creature_t *creature = &creatures[0];
-    for (int i = 0; i < MAXCREATURES; i++, creature++) {
-        if (!CREATURE_USED(creature)) 
-            continue;
-        
-        const int x = X_TO_SCREENX(creature->x) - 7;
-        const int y = Y_TO_SCREENY(creature->y) - 7;
-        const int hw = creature->network_health * 16 / 100;
-        const int fw = creature->network_food   * 16 / 100;
-
-        if (fw != 16) video_rect(x + fw, y - 4, x + 16, y - 2, 0x00, 0x00, 0x00, 0xB0);
-        if (fw !=  0) video_rect(x,      y - 4, x + fw, y - 2, 0xFF, 0xFF, 0xFF, 0xB0);
-                                               
-        if (hw != 16) video_rect(x + hw, y - 2, x + 16, y,     0xFF, 0x00, 0x00, 0xB0);
-        if (hw !=  0) video_rect(x,      y - 2, x + hw, y,     0x00, 0xFF, 0x00, 0xB0);
-
-        video_draw(x, y, sprite_get(CREATURE_SPRITE(creature->player->color,
-                                                    creature->type,
-                                                    creature->dir,
-                                                    (game_time >> 7) % 2)));
-        
-        //if (game_time > creature->last_state_change +  300 && 
-        //    game_time < creature->last_state_change + 1000)
-            video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + creature->state));
-
-        if (game_time < creature->last_msg_set + 2000) 
-            video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, creature->message);
-        
-        /*
-        if (creature->path) {
-            int lastx = X_TO_SCREENX(creature->x);
-            int lasty = Y_TO_SCREENY(creature->y);
-            pathnode_t *node = creature->path;
-            while (node) {
-                int curx = node->x * SPRITE_TILE_SIZE / TILE_WIDTH;
-                int cury = node->y * SPRITE_TILE_SIZE / TILE_HEIGHT;
-                video_line(lastx, lasty, curx, cury);
-                lastx = curx, lasty = cury;
-                node = node->next;
-            }
-        }
-        */
-
-        if (creature->state == CREATURE_ATTACK && creature->spawn_time != game_time) {
-            assert(creature->target >= 0 && creature->target < MAXCREATURES);
-            const creature_t *target = &creatures[creature->target];
-            if (target) { // Das Angegriffene Vieh koennte in dieser Runde bereits getoetet sein.
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3, Y_TO_SCREENY(target->y) - 3);
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3, Y_TO_SCREENY(target->y) + 3);
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3, Y_TO_SCREENY(target->y) - 3);
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3, Y_TO_SCREENY(target->y) + 3);
-            }
-        }
-    }
-}
-#else
-void creature_draw() {
-}
-#endif
-
 
 // ------------- Bewegung -------------
 
@@ -294,8 +232,8 @@ void creature_do_heal(creature_t *creature, int delta) {
     if (max_heal > creature->food)
         max_heal = creature->food;
 
-    creature->health += max_heal;    
-    creature->food   -= max_heal;    
+    creature->health += max_heal;
+    creature->food -= max_heal;
 
     if (max_heal == 0)
         creature_set_state(creature, CREATURE_IDLE);
@@ -437,7 +375,9 @@ void creature_do_convert(creature_t *creature, int delta) {
             creature->health = creature_max_health(creature);
         if (creature->food   > creature_max_food(creature))
             creature->food   = creature_max_food(creature);
-        creature->dirtymask |= CREATURE_DIRTY_TYPE;
+        creature->dirtymask |= CREATURE_DIRTY_TYPE   | 
+                               CREATURE_DIRTY_HEALTH |
+                               CREATURE_DIRTY_FOOD;
         creature_set_state(creature, CREATURE_IDLE);
     }
 }
@@ -727,31 +667,39 @@ next_creature: ;
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature)) 
             continue;
-        
+
         // Leben/Food Prozentangaben aktualisieren
-        int newhealth = 100 * creature->health / creature_max_health(creature);
+        int newhealth = 16 * creature->health / creature_max_health(creature);
         if (newhealth != creature->network_health) {
             creature->network_health = newhealth;
             creature->dirtymask |= CREATURE_DIRTY_HEALTH;
         }
 
-        int newfood = 100 * creature->food   / creature_max_food(creature);
+        int newfood = 16 * creature->food   / creature_max_food(creature);
         if (newfood != creature->network_food) {
             creature->network_food = newfood;
             creature->dirtymask |= CREATURE_DIRTY_FOOD;
         }
 
-        if (creature->x   != creature->network_x ||
-            creature->y   != creature->network_y ||
-            creature->dir != creature->network_dir) 
-        { 
-             creature->network_x   = creature->x;  
-             creature->network_y   = creature->y; 
-             creature->network_dir = creature->dir;
-             creature->dirtymask |= CREATURE_DIRTY_POS;
+        int newx = creature->x / CREATURE_NETWORK_RESOLUTION;
+        if (newx != creature->network_x) {
+            creature->network_x = newx;
+            creature->dirtymask |= CREATURE_DIRTY_POS;
+        }
+        
+        int newy = creature->y / CREATURE_NETWORK_RESOLUTION; 
+        if (newy != creature->network_y) {
+            creature->network_y = newy;
+            creature->dirtymask |= CREATURE_DIRTY_POS;
         }
 
-        creature_to_network(creature, creature->dirtymask, PACKET_BROADCAST);
+        int newdir= creature->dir; 
+        if (newdir != creature->network_dir) {
+            creature->network_dir = newdir;
+            creature->dirtymask |= CREATURE_DIRTY_POS;
+        }
+
+        creature_to_network(creature, creature->dirtymask, SEND_BROADCAST);
         creature->dirtymask = CREATURE_DIRTY_NONE;
     }
 
@@ -789,9 +737,8 @@ int creature_set_path(creature_t *creature, int x, int y) {
 }
 
 void creature_set_message(creature_t *creature, const char *message) {
-    if (strcmp(creature->message, message)) {
+    if (strncmp(creature->message, message, sizeof(creature->message) - 1)) {
         snprintf(creature->message, sizeof(creature->message), "%s", message);
-        creature->last_msg_set = game_time;
         creature->dirtymask |= CREATURE_DIRTY_MESSAGE;
     }
 }
@@ -818,7 +765,6 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
     creature->convert_type = type;
     creature->spawn_food   = 0;
     creature->message[0]   = '\0';
-    creature->last_msg_set = 0;
     creature->spawn_time   = game_time;
 
     creature->last_state_change = game_time;
@@ -826,15 +772,9 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
 
     creature->dirtymask     = 0;
 
-    creature->network_x      = x;
-    creature->network_y      = y;
-    creature->network_dir    = 0;
-    creature->network_health = 100;
-    creature->network_food   = 0;
-
     player_on_creature_spawned(player, creature_num(creature), points);
 
-    creature_to_network(creature, CREATURE_DIRTY_ALL, PACKET_BROADCAST);
+    creature_to_network(creature, CREATURE_DIRTY_ALL, SEND_BROADCAST);
     return creature;
 }
 
@@ -854,7 +794,7 @@ void creature_kill(creature_t *creature, creature_t *killer) {
     path_delete(creature->path);
     creature->player = NULL;
     
-    creature_to_network(creature, CREATURE_DIRTY_ALIVE, PACKET_BROADCAST);
+    creature_to_network(creature, CREATURE_DIRTY_ALIVE, SEND_BROADCAST);
 }
 
 void creature_kill_all_players_creatures(player_t *player) {
@@ -883,13 +823,13 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
         return;
 
     packet_t packet;
-    packet_reset(&packet);
+    packet_init(&packet, PACKET_CREATURE_UPDATE);
 
     packet_write16(&packet, creature_num(creature));
     packet_write08(&packet, dirtymask);
     if (dirtymask & CREATURE_DIRTY_ALIVE) {
         if (CREATURE_USED(creature))
-            packet_write08(&packet, player_num(creature->player));
+            packet_write08(&packet, creature->player->color);
         else
             packet_write08(&packet, 0xFF);
     }
@@ -913,7 +853,7 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
         packet_writeXX(&packet, &creature->message, strlen(creature->message));
     }
     
-    packet_send(PACKET_CREATURE_UPDATE, &packet, client);
+    client_send_packet(&packet, client);
 }
 
 

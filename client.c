@@ -36,12 +36,12 @@
 
 #include "packet.h"
 #include "global.h"
-#include "player.h"
 #include "server.h"
-#include "world.h"
 #include "misc.h"
-#include "scroller.h"
-#include "creature.h"
+#include "gui_player.h"
+#include "gui_world.h"
+#include "gui_scroller.h"
+#include "gui_creature.h"
 
 static int serverfd;
 static struct event rd_event;
@@ -57,14 +57,16 @@ static void server_handle_packet(packet_t *packet) {
     //printf("ptype=%d\n", packet->type);
     switch (packet->type) {
         case PACKET_PLAYER_UPDATE:  
-            player_from_network(packet);
+            gui_player_from_network(packet);
             break;
         case PACKET_WORLD_UPDATE:  
-            world_from_network(packet);
+            gui_world_from_network(packet);
             break;
-        //case PACKET_CREATURE_UPDATE: creature_f                                    
+        case PACKET_CREATURE_UPDATE: 
+			gui_creature_from_network(packet);
+			break;
         case PACKET_SCROLLER_MSG:   
-            scroller_from_network(packet);
+            gui_scroller_from_network(packet);
             break;
         case PACKET_WELCOME_MSG:    
             server_writeto("guiclient\n", 10);
@@ -73,6 +75,9 @@ static void server_handle_packet(packet_t *packet) {
             printf("server wants us to disconnect: %.*s\n",
                    packet->len, packet->data);
             server_destroy("done");
+            break;
+        case PACKET_KOTH_UPDATE:
+            gui_player_king_from_network(packet);
             break;
         default:
             printf("packet->type %d unknown\n", packet->type);
@@ -95,7 +100,7 @@ static void server_readable(int fd, short event, void *arg) {
             packet_t packet;
             memcpy(&packet,EVBUFFER_DATA(in_buf), (int)EVBUFFER_DATA(in_buf)[0] + 2);
             int len = packet.len + 2;
-            packet_reset(&packet);
+            packet_rewind(&packet);
             server_handle_packet(&packet);
             if (!client_is_connected()) 
                 return;
