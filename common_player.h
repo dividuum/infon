@@ -18,9 +18,6 @@
 
 */
 
-#ifndef SCROLLER_H
-#define SCROLLER_H
+#ifndef COMMON_PLAYER_H
+#define COMMON_PLAYER_H
 
-void add_to_scroller(const char* msg);
-
-#endif

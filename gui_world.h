@@ -18,9 +18,21 @@
 
 */
 
-#ifndef SCROLLER_H
-#define SCROLLER_H
+#ifndef GUI_WORLD_H
+#define GUI_WORLD_H
 
-void add_to_scroller(const char* msg);
+#include "packet.h"
+
+// Begrenzt durch die Anzahl vorhandener Food Sprites
+#define MAX_TILE_FOOD 9999
+
+void        gui_world_draw();
+void        gui_world_set_display_mode(int mode);
+
+/* Network */
+void        gui_world_from_network(packet_t *packet);
+
+void        gui_world_init(int w, int h);
+void        gui_world_shutdown();
 
 #endif

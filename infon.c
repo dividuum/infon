@@ -26,12 +26,14 @@
 
 #include "global.h"
 #include "client.h"
-#include "world.h"
 #include "video.h"
 #include "sprite.h"
-#include "creature.h"
-#include "scroller.h"
 #include "misc.h"
+
+//#include "gui_creature.h"
+#include "gui_world.h"
+#include "gui_scroller.h"
+//#include "gui_player.h"
 
 static int running = 1;
 
@@ -72,10 +74,10 @@ int main(int argc, char *argv[]) {
 
     video_init(width, height);
     sprite_init();
-    scroller_init();
-    world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
-    player_init();
-    creature_init();
+    gui_scroller_init();
+    gui_world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
+    //gui_player_init();
+    //gui_creature_init();
 
     game_round = 0;
     game_time  = 0;
@@ -108,18 +110,19 @@ int main(int argc, char *argv[]) {
         client_tick();
 
         // Anzeigen
-        world_draw();
+        gui_world_draw();
         creature_draw();
-        scroller_draw();
+        gui_scroller_draw();
         player_draw();
 
         video_flip();
     }
     
-    creature_shutdown();
-    player_shutdown();
-    world_shutdown();
-    scroller_shutdown();
+    //gui_creature_shutdown();
+    //gui_player_shutdown();
+    gui_world_shutdown();
+    gui_scroller_shutdown();
+
     sprite_shutdown();
     video_shutdown();
     client_shutdown();

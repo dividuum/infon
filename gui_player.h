@@ -18,14 +18,13 @@
 
 */
 
-#ifndef PLAYER_H
-#define PLAYER_H
+#ifndef GUI_PLAYER_H
+#define GUI_PLAYER_H
 
 #include <string.h>
 
 #include <lua.h>
 
-#include "server.h"
 #include "packet.h"
 
 #define MAXPLAYERS 32
@@ -84,6 +83,7 @@ player_t   *player_create(const char *pass);
 void        player_mark_for_kill(player_t *player);
 
 void        player_think();
+void        player_draw();
 
 void        player_is_king_of_the_hill(player_t *player, int delta);
 void        player_there_is_no_king();
@@ -92,6 +92,8 @@ player_t   *player_king();
 /* Network */
 void        player_send_initial_update(client_t *client);
 void        player_to_network(player_t *player, int dirtymask, client_t *client);
+void        player_from_network(packet_t *packet);
+
 
 void        player_init();
 void        player_shutdown();

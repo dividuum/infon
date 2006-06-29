@@ -50,15 +50,9 @@ int         world_koth_y();
 pathnode_t *world_findpath(int x1, int y1, int x2, int y2);
 void        world_find_digged(int *x, int *y);
 
-void        world_set_display_mode(int mode);
-
-void        world_draw();
-
 /* Network */
 void        world_send_initial_update(client_t *client);
-
 void        world_to_network(int x, int y, client_t *client);
-void        world_from_network(packet_t *packet);
 
 void        world_init(int w, int h);
 void        world_shutdown();

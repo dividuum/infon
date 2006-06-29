@@ -30,8 +30,6 @@
 #include "global.h"
 #include "server.h"
 #include "world.h"
-#include "video.h"
-#include "sprite.h"
 #include "creature.h"
 #include "scroller.h"
 
@@ -42,25 +40,9 @@ void sighandler(int sig) {
     running = 0;
 }
 
-void print_fps() {
-    static Uint32 frames = 0;
-    static Uint32 ticks  = 0;
-    frames++;
-    if(SDL_GetTicks() >= ticks + 1000) {
-        static int iteration = 0;
-        if (++iteration % 35 == 0) {
-            static char buf[16];
-            snprintf(buf, sizeof(buf), "%d fps", frames);
-            add_to_scroller(buf);
-        }
-        frames = 0;
-        ticks = SDL_GetTicks();
-    }
-}   
-
 int main(int argc, char *argv[]) {
     // const int width = 320, height = 208;
-    const int width = 640, height = 480;
+    const int width = 640/16, height = 480/16;
     // const int width = 800, height = 600;
     // const int width = 1024, height = 768;
     // const int width = 1280, height = 1024;
@@ -81,12 +63,7 @@ int main(int argc, char *argv[]) {
 
     lua_dofile(L, "config.lua");
 
-#ifdef SERVER_GUI
-    video_init(width, height);
-    sprite_init();
-#endif
-    scroller_init();
-    world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
+    world_init(width, height - 2);
     server_init();
     player_init();
     creature_init();
@@ -112,49 +89,6 @@ int main(int argc, char *argv[]) {
 
         lastticks = nowticks;
 
-#ifdef SERVER_GUI
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_KEYDOWN:
-                    switch (event.key.keysym.sym) {
-                        case SDLK_RETURN:
-                            if (event.key.keysym.mod & KMOD_ALT)
-                                video_fullscreen_toggle();
-                            break;
-                        case SDLK_ESCAPE:
-                            running = 0;
-                            break;
-                        case SDLK_1: world_set_display_mode(0); break;
-                        case SDLK_2: world_set_display_mode(1); break;
-                        case SDLK_3: world_set_display_mode(2); break;
-                        case SDLK_SPACE: paused = !paused;      break;
-                        default: ;
-                    }
-                    break;
-                case SDL_MOUSEMOTION:
-                    if (event.motion.state == 1) {
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE, SOLID);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE, SOLID);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE, event.motion.y / SPRITE_TILE_SIZE + 1, SOLID);
-                        world_dig(event.motion.x / SPRITE_TILE_SIZE + 1, event.motion.y / SPRITE_TILE_SIZE + 1, SOLID);
-                        printf("%d %d %d\n", 
-                               event.motion.x * TILE_SCALE / SPRITE_TILE_SIZE,
-                               event.motion.y * TILE_SCALE / SPRITE_TILE_SIZE, 
-                                world_get_food(event.motion.x / SPRITE_TILE_SIZE,
-                                               event.motion.y / SPRITE_TILE_SIZE));
-
-                    }
-                    break;
-                case SDL_QUIT:
-                    running = 0;
-                    break;
-            }
-        }
-#endif
-
-        print_fps();
-
         // Zeit weiterlaufen lassen
         if (!paused)    
             game_time += delta;
@@ -169,30 +103,12 @@ int main(int argc, char *argv[]) {
             // Viecher bewegen
             creature_moveall(delta);
         }
-
-#ifdef SERVER_GUI
-        // Anzeigen
-        world_draw();
-        creature_draw();
-        scroller_draw();
-        player_draw();
-
-        video_flip();
-#endif
-
-        // GUI Client aktualisieren 
-        // TODO: implement me
     }
     
     creature_shutdown();
     player_shutdown();
     server_shutdown();
     world_shutdown();
-    scroller_shutdown();
-#ifdef SERVER_GUI
-    sprite_shutdown();
-    video_shutdown();
-#endif
 
     lua_close(L);
 

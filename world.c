@@ -19,13 +19,13 @@
 */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
 #include "world.h"
-#include "video.h"
-#include "path.h"
 #include "sprite.h"
+#include "path.h"
 
 static int           world_w;
 static int           world_h;
@@ -37,52 +37,6 @@ static map_t        *map_pathfind;
 static pathfinder_t  finder;
 static int          *map_sprites;
 static int          *map_food;
-//static maptype_e    *map_type;
-static int           displaymode;
-
-#ifdef SERVER_GUI
-void world_draw() {
-    for (int y = 0; y < world_h; y++) {
-        for (int x = 0; x < world_w; x++) {
-            int val;
-            switch (displaymode) {
-                case 0:
-                    video_draw(x * SPRITE_TILE_SIZE, 
-                               y * SPRITE_TILE_SIZE, 
-                               sprite_get(map_sprites[y * world_w + x]));
-                    break;
-                case 1:
-                    val = (int)MAP_TILE(map_pathfind, x, y)->area;
-                    video_rect(x * SPRITE_TILE_SIZE, 
-                               y * SPRITE_TILE_SIZE,
-                               (x+1) * SPRITE_TILE_SIZE,
-                               (y+1) * SPRITE_TILE_SIZE,
-                               val % 206, -val / 200, val, 0xFF);
-                    break;
-                case 2:
-                    val = MAP_TILE(map_pathfind, x, y)->region;
-                    video_rect(x * SPRITE_TILE_SIZE, 
-                               y * SPRITE_TILE_SIZE,
-                               (x+1) * SPRITE_TILE_SIZE,
-                               (y+1) * SPRITE_TILE_SIZE,
-                               val * 206, -val * 200, val, 0xFF);
-                    break;
-            }
-
-            int food = map_food[y * world_w + x];
-            if (food > 0) {
-                video_draw(x * SPRITE_TILE_SIZE, 
-                           y * SPRITE_TILE_SIZE, 
-                           sprite_get(SPRITE_FOOD + food / 1000));
-            }
-        }
-    }
-}
-#else
-void world_draw() {
-}
-#endif
-
 
 int world_walkable(int x, int y) {
     return MAP_IS_ON_MAP(map_pathfind, x, y) &&
@@ -103,11 +57,6 @@ int world_dig(int x, int y, maptype_e type) {
     
     world_to_network(x, y, PACKET_BROADCAST);
     return 1;
-}
-
-void world_set_display_mode(int mode) {
-    if (mode >= 0 && mode <= 2)
-        displaymode = mode;
 }
 
 pathnode_t *world_findpath(int x1, int y1, int x2, int y2) {
@@ -199,28 +148,6 @@ void world_to_network(int x, int y, client_t *client) {
     packet_write16(&packet, map_food[x + world_w * y]);
     packet_send(PACKET_WORLD_UPDATE, &packet, client);
 }
-
-#ifdef CLIENT
-void world_from_network(packet_t *packet) {
-    uint8_t x; uint8_t y;
-    if (!packet_read08(packet, &x))         goto failed; 
-    if (!packet_read08(packet, &y))         goto failed; 
-    if (x >= world_w)                       goto failed;
-    if (y >= world_h)                       goto failed;
-    uint8_t spriteno;
-    if (!packet_read08(packet, &spriteno))  goto failed; 
-    if (!sprite_exists(spriteno))           goto failed; 
-    map_sprites[x + world_w * y] = spriteno;
-    uint16_t food; 
-    if (!packet_read16(packet, &food))      goto failed;
-    if (food > MAX_TILE_FOOD)               goto failed;
-    map_food[x + world_w * y] = food;
-    return;
-failed:    
-    printf("parsing world update packet failed\n");
-    return;
-}
-#endif
 
 void world_init(int w, int h) {
     world_w = w;

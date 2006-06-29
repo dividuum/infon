@@ -30,7 +30,9 @@
 #include "player.h"
 #include "server.h"
 #include "creature.h"
+#include "sprite.h"
 #include "world.h"
+#include "video.h"
 #include "misc.h"
 #include "rules.h"
 #include "scroller.h"
@@ -727,6 +729,99 @@ void player_think() {
     }
 }
 
+#ifdef SERVER_GUI
+static int player_sort_by_score(const void *a, const void *b) {
+    const player_t *pa = *(player_t **)a;
+    const player_t *pb = *(player_t **)b;
+    return -(pa->score > pb->score) + (pa->score < pb->score);
+}
+
+void player_draw() {
+    static int lastturn = 0;
+    static int page = 0;
+
+    if (SDL_GetTicks() > lastturn + 5000) {
+        lastturn = SDL_GetTicks();
+        page++;
+    }
+
+    int per_page    = video_width() / 128; 
+    if (per_page == 0) per_page = 1;
+
+    int n;
+    int player_displayed = 0;
+
+    int num_players = 0;
+    player_t *sorted[MAXPLAYERS];
+
+    for (n = 0; n < MAXPLAYERS; n++) {
+        player_t *player = &players[n];
+
+        if (!PLAYER_USED(player))
+            continue;
+        sorted[num_players++] = player;
+    }
+    //printf("%d\n", num_players);
+
+    player_t *king   = player_king();
+
+    if (king) king->score += 1000000; // HACKHACK
+    qsort(sorted, num_players, sizeof(creature_t*), player_sort_by_score);
+    if (king) king->score -= 1000000;
+
+    int offset = per_page * page;
+    if (offset >= num_players) {
+        page    = 0;
+        offset  = 0;
+    }
+
+    int num = num_players - offset;
+    if (num > per_page)
+        num = per_page;
+
+    video_rect(0, video_height() - 32, video_width(), video_height() - 16, 0, 0, 0, 0);
+
+    for (n = offset; n < offset + num; n++) {
+        player_t *player = sorted[n];
+        assert(PLAYER_USED(player));
+
+        // King in dieser Runde?
+        if (player == king) {
+            video_draw(player_displayed * 128 + 10,
+                       video_height() - 86 - 20 * abs(sin(M_PI / 750.0 * (SDL_GetTicks() % 750))), 
+                       sprite_get(SPRITE_CROWN));
+        }
+        
+        // Rotierendes Vieh
+        video_draw(player_displayed * 128,
+                   video_height() - 32, 
+                   sprite_get(CREATURE_SPRITE(player->color,
+                                              0, 
+                                              (SDL_GetTicks() / 1000) % CREATURE_DIRECTIONS,
+                                              (SDL_GetTicks() /  123) % 2)));
+        // CPU Auslastung Anzeigen
+        const int cpu = 80 * player->cpu_usage / 100;
+        video_rect(player_displayed * 128 + 16, 
+                   video_height() - 32, 
+                   player_displayed * 128 + 16 + cpu,
+                   video_height() - 16,
+                   2 * cpu, 160 - 2 * cpu , 0x00, 0x00);
+
+        // Name / Punkte
+        static char buf[18];
+        snprintf(buf, sizeof(buf), "%2d. %4d %s", n + 1, player->score, player->name);
+        video_write(player_displayed * 128 + 16,
+                    video_height() - 30, 
+                    buf);
+                
+        player_displayed++;
+    }
+}
+#else
+void player_draw() {
+}
+#endif
+
 void player_is_king_of_the_hill(player_t *player, int delta) {
     //player_t *old_king = king_player;
 
@@ -807,6 +902,78 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
     packet_send(PACKET_PLAYER_UPDATE, &packet, client);
 }
 
+void player_from_network(packet_t *packet) {
+    uint8_t playerno   = 0;
+
+    if (!packet_read08(packet, &playerno))      goto failed; 
+    if (playerno >= MAXPLAYERS)                 goto failed;
+    player_t *player = &players[playerno]; 
+           
+    uint8_t  updatemask;
+    if (!packet_read08(packet, &updatemask))    goto failed;
+
+    if (updatemask & PLAYER_DIRTY_ALIVE) {
+        uint8_t alive;
+        if (!packet_read08(packet, &alive))     goto failed;
+        player->L = alive ? (void*)0x1 : NULL;
+        if (!alive)
+            return;
+    }
+
+    if (!PLAYER_USED(player))                   goto failed;
+
+    if (updatemask & PLAYER_DIRTY_NAME) {
+        uint8_t len; char buf[256];
+        if (!packet_read08(packet, &len))       goto failed;
+        if (!packet_readXX(packet, buf, len))   goto failed;
+        buf[len] = '\0';
+        snprintf(player->name, sizeof(player->name), "%s", buf);
+    }
+    if (updatemask & PLAYER_DIRTY_COLOR) { 
+        uint8_t col;
+        if (!packet_read08(packet, &col))       goto failed;
+        if (col >= CREATURE_COLORS)             goto failed;
+        player->color = col;
+    }
+    if (updatemask & PLAYER_DIRTY_CPU) {
+        uint8_t cpu;
+        if (!packet_read08(packet, &cpu))       goto failed;
+        if (cpu > 100)                          goto failed;
+        player->cpu_usage = cpu;
+    }
+    if (updatemask & PLAYER_DIRTY_SCORE) {
+        uint16_t score;
+        if (!packet_read16(packet, &score))     goto failed;
+        player->score = score + PLAYER_KICK_SCORE;
+    }
+    return;
+failed:
+    printf("parsing player update packet failed\n");
+    return;
+}
+
+/*
+int packet_player_update_king(packet_t *packet) {
+    packet->type = PACKET_PLAYER_KING;
+    if (player_king()) {
+        packet->player_update_king.king_player = player_num(player_king());
+    } else {
+        packet->player_update_king.king_player = 0xFF;
+    }
+    return sizeof(packet_player_update_king_t);
+}
+
+void packet_handle_player_update_king(packet_t *packet) {
+    assert(packet->type == PACKET_PLAYER_KING);
+    if (packet->player_update_king.king_player == 0xFF) {
+        king_player = NULL;
+        return;
+    }
+    if (packet->player_update_king.king_player >= MAXPLAYERS) 
+        return;
+    king_player = &players[packet->player_update_king.king_player];
+}
+*/
 
 void player_init() {
     memset(players, 0, sizeof(players));
@@ -815,7 +982,8 @@ void player_init() {
 void player_shutdown() {
     int playerno;
     for (playerno = 0; playerno < MAXPLAYERS; playerno++) {
-        if (PLAYER_USED(&players[playerno]))
+        if (PLAYER_USED(&players[playerno]) &&
+            players[playerno].L != (void*)0x1)
             player_destroy(&players[playerno]);
     }
 }

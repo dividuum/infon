@@ -18,9 +18,15 @@
 
 */
 
-#ifndef SCROLLER_H
-#define SCROLLER_H
+#ifndef GUI_SCROLLER_H
+#define GUI_SCROLLER_H
 
-void add_to_scroller(const char* msg);
+void gui_scroller_draw();
+
+/* Network */
+void gui_scroller_from_network(packet_t *packet);
+
+void gui_scroller_init();
+void gui_scroller_shutdown();
 
 #endif
