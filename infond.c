@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
             lastticks = nowticks;
             SDL_Delay(5);
             continue;
-        } else if (delta < 10) {
+        } else if (delta < 50) {
             SDL_Delay(5);
             continue;
         }

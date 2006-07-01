@@ -18,34 +18,10 @@
 
 */
 
-#ifndef GUI_CREATURE_H
-#define GUI_CREATURE_H
+#ifndef COMMON_WORLD_H
+#define COMMON_WORLD_H
 
-#include "common_creature.h"
-#include "packet.h"
-
-typedef struct gui_creature_s {
-    int             used;
-    int             x;
-    int             y;
-    int             dir;
-    int             type;
-    int             food;
-    int             health;
-    int             target;
-    int             color;
-    creature_state  state;
-
-    char message[9];
-    int  last_msg_set;
-} gui_creature_t;
-
-void        gui_creature_draw();
-
-/* Network */
-void gui_creature_from_network(packet_t *packet);
-
-void        gui_creature_init();
-void        gui_creature_shutdown();
+// Begrenzt durch die Anzahl vorhandener Food Sprites
+#define MAX_TILE_FOOD 9999
 
 #endif

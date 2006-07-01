@@ -33,6 +33,7 @@ static gui_creature_t creatures[MAXCREATURES];
 #define CREATURE_USED(creature) ((creature)->used)
 
 void gui_creature_draw() {
+    Uint32 time = SDL_GetTicks();
     gui_creature_t *creature = &creatures[0];
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature)) 
@@ -43,22 +44,22 @@ void gui_creature_draw() {
         const int hw = creature->health;
         const int fw = creature->food;
 
-        if (fw != 16) video_rect(x + fw, y - 4, x + 16, y - 2, 0x00, 0x00, 0x00, 0xB0);
+        if (fw != 15) video_rect(x + fw, y - 4, x + 15, y - 2, 0x00, 0x00, 0x00, 0xB0);
         if (fw !=  0) video_rect(x,      y - 4, x + fw, y - 2, 0xFF, 0xFF, 0xFF, 0xB0);
                                                
-        if (hw != 16) video_rect(x + hw, y - 2, x + 16, y,     0xFF, 0x00, 0x00, 0xB0);
+        if (hw != 15) video_rect(x + hw, y - 2, x + 15, y,     0xFF, 0x00, 0x00, 0xB0);
         if (hw !=  0) video_rect(x,      y - 2, x + hw, y,     0x00, 0xFF, 0x00, 0xB0);
 
         video_draw(x, y, sprite_get(CREATURE_SPRITE(creature->color,
                                                     creature->type,
                                                     creature->dir,
-                                                    (game_time >> 7) % 2)));
+                                                    (time >> 7) % 2)));
         
         //if (game_time > creature->last_state_change +  300 && 
         //    game_time < creature->last_state_change + 1000)
             video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + creature->state));
 
-        if (game_time < creature->last_msg_set + 2000) 
+        if (time < creature->last_msg_set + 2000) 
             video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, creature->message);
         
         /*
@@ -135,18 +136,12 @@ void gui_creature_from_network(packet_t *packet) {
         creature->type = type;
     }
 
-    if (updatemask & CREATURE_DIRTY_FOOD) {
-        uint8_t food;
-        if (!packet_read08(packet, &food))      goto failed;
-        if (food > 16)                          goto failed;
-        creature->food = food;
-    }
-
-    if (updatemask & CREATURE_DIRTY_HEALTH) {
-        uint8_t health;
-        if (!packet_read08(packet, &health))    goto failed;
-        if (health > 16)                        goto failed;
-        creature->health = health;
+    if (updatemask & CREATURE_DIRTY_FOOD_HEALTH) {
+        uint8_t food_health;
+        if (!packet_read08(packet, &food_health)) 
+                                                goto failed;
+        creature->food   = food_health >> 4;
+        creature->health = food_health & 0x0F;
     }
 
     if (updatemask & CREATURE_DIRTY_STATE) {
@@ -169,8 +164,8 @@ void gui_creature_from_network(packet_t *packet) {
         if (!packet_readXX(packet, buf, len))   goto failed;
         buf[len] = '\0';
         snprintf(creature->message, sizeof(creature->message), "%s", buf);
+        creature->last_msg_set = SDL_GetTicks();
     }
-
     return;
 failed:
     printf("parsing creature packet failed\n");

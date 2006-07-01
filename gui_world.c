@@ -31,18 +31,17 @@ static int           world_h;
 static int           koth_x;
 static int           koth_y;
 
-static int          *map_sprites;
-static sprite_t    **map_food;
-static int           displaymode;
+static sprite_t    **map_sprites  = NULL;
+static sprite_t    **food_sprites = NULL;
 
 void gui_world_draw() {
     for (int y = 0; y < world_h; y++) {
         for (int x = 0; x < world_w; x++) {
             video_draw(x * SPRITE_TILE_SIZE, 
                        y * SPRITE_TILE_SIZE, 
-                       sprite_get(map_sprites[y * world_w + x]));
+                       map_sprites[y * world_w + x]);
 
-            sprite_t *food_sprite = map_food[y * world_w + x];
+            sprite_t *food_sprite = food_sprites[y * world_w + x];
             if (food_sprite) {
                 video_draw(x * SPRITE_TILE_SIZE, 
                            y * SPRITE_TILE_SIZE, 
@@ -50,11 +49,6 @@ void gui_world_draw() {
             }
         }
     }
-}
-
-void gui_world_set_display_mode(int mode) {
-    if (mode >= 0 && mode <= 2)
-        displaymode = mode;
 }
 
 void gui_world_from_network(packet_t *packet) {
@@ -66,14 +60,14 @@ void gui_world_from_network(packet_t *packet) {
     uint8_t spriteno;
     if (!packet_read08(packet, &spriteno))  goto failed; 
     if (!sprite_exists(spriteno))           goto failed; 
-    map_sprites[x + world_w * y] = spriteno;
+    map_sprites[x + world_w * y] = sprite_get(spriteno);
     uint8_t food; 
     if (!packet_read08(packet, &food))      goto failed;
     if (food == 0xFF) {
-        map_food[x + world_w * y] = NULL;
+        food_sprites[x + world_w * y] = NULL;
     } else {
         if (food >= SPRITE_NUM_FOOD)        goto failed;
-        map_food[x + world_w * y] = sprite_get(SPRITE_FOOD + food);
+        food_sprites[x + world_w * y] = sprite_get(SPRITE_FOOD + food);
     }
     return;
 failed:    
@@ -88,22 +82,21 @@ void gui_world_init(int w, int h) {
     koth_x = w / 2;
     koth_y = h / 2;
 
-    map_sprites = malloc(w * h * sizeof(int));
+    map_sprites  = malloc(w * h * sizeof(sprite_t*));
+    food_sprites = malloc(w * h * sizeof(sprite_t*));
 
-    map_food    = malloc(w * h * sizeof(sprite_t*));
-    memset(map_food, 0, w * h * sizeof(int));
+    memset(food_sprites, 0, w * h * sizeof(int));
 
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
-            map_sprites[x + w * y] = SPRITE_BORDER;
+            map_sprites[x + w * y] = sprite_get(SPRITE_BORDER);
         }
     }
-
 }
 
 void gui_world_shutdown() {
     free(map_sprites);
-    free(map_food);
+    free(food_sprites);
 }
 

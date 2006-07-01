@@ -22,12 +22,9 @@
 #define GUI_WORLD_H
 
 #include "packet.h"
-
-// Begrenzt durch die Anzahl vorhandener Food Sprites
-#define MAX_TILE_FOOD 9999
+#include "common_world.h"
 
 void        gui_world_draw();
-void        gui_world_set_display_mode(int mode);
 
 /* Network */
 void        gui_world_from_network(packet_t *packet);

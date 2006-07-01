@@ -24,9 +24,7 @@
 #include "path.h"
 #include "packet.h"
 #include "server.h"
-
-// Begrenzt durch die Anzahl vorhandener Food Sprites
-#define MAX_TILE_FOOD 9999
+#include "common_world.h"
 
 // XXX
 typedef enum {

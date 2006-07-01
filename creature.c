@@ -29,6 +29,7 @@
 #include "world.h"
 #include "video.h"
 #include "map.h"
+#include "misc.h"
 
 static creature_t creatures[MAXCREATURES];
 
@@ -375,9 +376,7 @@ void creature_do_convert(creature_t *creature, int delta) {
             creature->health = creature_max_health(creature);
         if (creature->food   > creature_max_food(creature))
             creature->food   = creature_max_food(creature);
-        creature->dirtymask |= CREATURE_DIRTY_TYPE   | 
-                               CREATURE_DIRTY_HEALTH |
-                               CREATURE_DIRTY_FOOD;
+        creature->dirtymask |= CREATURE_DIRTY_TYPE;
         creature_set_state(creature, CREATURE_IDLE);
     }
 }
@@ -669,16 +668,11 @@ next_creature: ;
             continue;
 
         // Leben/Food Prozentangaben aktualisieren
-        int newhealth = 16 * creature->health / creature_max_health(creature);
-        if (newhealth != creature->network_health) {
-            creature->network_health = newhealth;
-            creature->dirtymask |= CREATURE_DIRTY_HEALTH;
-        }
-
-        int newfood = 16 * creature->food   / creature_max_food(creature);
-        if (newfood != creature->network_food) {
-            creature->network_food = newfood;
-            creature->dirtymask |= CREATURE_DIRTY_FOOD;
+        int new_food_health = min(15, 16 * creature->food   / creature_max_food(creature)) << 4 |
+                              min(15, 16 * creature->health / creature_max_health(creature));
+        if (new_food_health != creature->network_food_health) {
+            creature->network_food_health = new_food_health;
+            creature->dirtymask |= CREATURE_DIRTY_FOOD_HEALTH;
         }
 
         int newx = creature->x / CREATURE_NETWORK_RESOLUTION;
@@ -840,10 +834,8 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     }
     if (dirtymask & CREATURE_DIRTY_TYPE) 
         packet_write08(&packet, creature->type);
-    if (dirtymask & CREATURE_DIRTY_FOOD)
-        packet_write08(&packet, creature->network_food);
-    if (dirtymask & CREATURE_DIRTY_HEALTH)
-        packet_write08(&packet, creature->network_health);
+    if (dirtymask & CREATURE_DIRTY_FOOD_HEALTH)
+        packet_write08(&packet, creature->network_food_health);
     if (dirtymask & CREATURE_DIRTY_STATE)
         packet_write08(&packet, creature->state);
     if (dirtymask & CREATURE_DIRTY_TARGET)
@@ -855,21 +847,6 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     
     client_send_packet(&packet, client);
 }
-
-
-/*
-void packet_handle_creature_spawndie(packet_t *packet) {
-    assert(packet->type == PACKET_CREATURE_SPAWNDIE);
-    int creatureno = ntohs(packet->creature_spawndie.creatureno);
-    if (creatureno >= MAXCREATURES) 
-        return;
-    creature_t *creature = &creatures[creatureno];
-    if (packet->creature_spawndie.spawn_or_die) 
-        creature->player = (void*)0x1; // HACKHACK: Als benutzt markieren
-    else
-        creature->player = NULL;
-}
-*/
 
 void creature_init() {
     for (int i = 0; i < MAXCREATURES; i++) {

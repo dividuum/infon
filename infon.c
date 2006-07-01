@@ -57,7 +57,7 @@ void print_fps() {
 
 int main(int argc, char *argv[]) {
     if (argc != 2)
-        die("%s <ip:port>");
+        die("<ip:port>");
 
     // const int width = 320, height = 208;
     const int width = 640, height = 480;
@@ -82,19 +82,8 @@ int main(int argc, char *argv[]) {
     game_round = 0;
     game_time  = 0;
 
-    Uint32 lastticks = SDL_GetTicks();
     while (running && client_is_connected()) {
-        Uint32 nowticks = SDL_GetTicks();
-
-        if (nowticks < lastticks || nowticks > lastticks + 1000) {
-            // Timewarp?
-            lastticks = nowticks;
-            SDL_Delay(5);
-            continue;
-        } else if (nowticks - lastticks < 10) {
-            SDL_Delay(5);
-            continue;
-        }
+        SDL_Delay(5);
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {

@@ -48,8 +48,7 @@ typedef struct creature_s {
     char message[9];
     unsigned char dirtymask;
 
-    int         network_food;
-    int         network_health;
+    int         network_food_health;
     int         network_x;
     int         network_y;
     int         network_dir;
