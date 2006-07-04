@@ -21,12 +21,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "packet.h"
-#include "player.h"
-#include "world.h"
-#include "scroller.h"
-#include "creature.h"
 
 void packet_rewind(packet_t *packet) {
     packet->offset = 0;

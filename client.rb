@@ -1,5 +1,5 @@
 require 'socket'
-TCPSocket.open('localhost', 1234) { |socket|
+TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
     class << socket
         alias_method :orig_read, :read 
         attr_reader :traffic

@@ -167,6 +167,8 @@ void client_init(char *addr) {
     struct sockaddr_in serveraddr;                                   
     memset(&serveraddr, 0, sizeof(serveraddr)); 
                                                                    
+    fprintf(stderr, "resolving %s\n", addr);
+
     host = gethostbyname(addr);
     if (!host)
         die("gethostbyname failed: %s", strerror(errno));
@@ -178,7 +180,7 @@ void client_init(char *addr) {
     serveraddr.sin_port   = htons(port);     
     memcpy(&serveraddr.sin_addr, host->h_addr_list[0], host->h_length);
 
-    printf("connecting to %s:%d (%s:%d)\n", addr, port, inet_ntoa(serveraddr.sin_addr), port);
+    fprintf(stderr, "connecting to %s:%d (%s:%d)\n", addr, port, inet_ntoa(serveraddr.sin_addr), port);
 
     /* Socket erzeugen */
     serverfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -189,6 +191,8 @@ void client_init(char *addr) {
 
     if (connect(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
         die("cannot connect socket: %s", strerror(errno));
+
+    fprintf(stderr, "connected!\n");
 
     /* Non Blocking setzen */
     if (fcntl(serverfd, F_SETFL, O_NONBLOCK) < 0) 
