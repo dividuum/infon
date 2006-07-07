@@ -18,8 +18,14 @@
 
 */
 
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#endif
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -68,7 +74,10 @@ int client_accept(int fd, struct sockaddr_in *peer) {
         return 0;
     }
 
-    sprintf(address, "%s:%d", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+    if (peer)
+        sprintf(address, "%s:%d", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+    else
+        sprintf(address, "locale console");
 
     lua_pushliteral(L, "on_new_client");  /* funcname */
     lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
@@ -94,17 +103,19 @@ int client_accept(int fd, struct sockaddr_in *peer) {
         return 0;
     }
 
-    /* TCP_NODELAY setzen. Dadurch werden Daten frühestmöglich versendet */
-    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) < 0) {
-        fprintf(stderr, "cannot enable TCP_NODELAY: %s\n", strerror(errno));
-        return 0;
-    }
+    if (peer) { 
+        /* TCP_NODELAY setzen. Dadurch werden Daten frühestmöglich versendet */
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) < 0) {
+            fprintf(stderr, "cannot enable TCP_NODELAY: %s\n", strerror(errno));
+            return 0;
+        }
 
-    /* SO_LINGER setzen. Falls sich noch Daten in der Sendqueue der Verbindung
-       befinden, werden diese verworfen. */
-    if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l)) == -1) {
-        fprintf(stderr, "cannot set SO_LINGER: %s\n", strerror(errno));
-        return 0;
+        /* SO_LINGER setzen. Falls sich noch Daten in der Sendqueue der Verbindung
+           befinden, werden diese verworfen. */
+        if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l)) == -1) {
+            fprintf(stderr, "cannot set SO_LINGER: %s\n", strerror(errno));
+            return 0;
+        }
     }
 
     client_create(fd, address);
@@ -213,6 +224,8 @@ void client_send_packet(packet_t *packet, client_t *client) {
 static void client_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
+
+    if (fd == 0) fd = 1; // HACK
 
     int ret = evbuffer_write(client->out_buf, fd);
     if (ret < 0) {
@@ -462,6 +475,13 @@ void server_tick() {
 }
 
 void server_init() {
+#ifdef WIN32
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) 
+        die("WSAStartup failed");
+    WSACleanup();
+#endif
+
     event_init();
 
     if (!listener_init()) 
@@ -499,6 +519,8 @@ void server_init() {
     lua_pushliteral(L, "GAME_NAME");
     lua_pushliteral(L, GAME_NAME);
     lua_rawset(L, LUA_GLOBALSINDEX);
+
+    client_accept(0, NULL); // XXX: HACK: stdin client starten
 }
 
 void server_shutdown() {
@@ -509,5 +531,9 @@ void server_shutdown() {
     }
 
     listener_shutdown();
+
+#ifdef WIN32
+    WSACleanup();
+#endif
 }
 

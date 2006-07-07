@@ -29,7 +29,6 @@
 typedef struct creature_s {
     int         x;
     int         y;
-    int         dir;
     int         type;
     int         food;
     int         health;
@@ -42,16 +41,17 @@ typedef struct creature_s {
     creature_state state;
 
     int  age_action_deltas;
-    int  last_state_change;
     int  spawn_time;
 
     char message[9];
     unsigned char dirtymask;
 
     int         network_food_health;
-    int         network_x;
-    int         network_y;
-    int         network_dir;
+    int         network_state;
+    int         network_path_x;
+    int         network_path_y;
+    int         network_speed;
+    int         network_target;
 } creature_t;
 
 int         creature_num(const creature_t *creature);

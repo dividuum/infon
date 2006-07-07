@@ -116,7 +116,7 @@ void video_write(Sint16 x, Sint16 y, const char *text) {
 }
 
 void video_tiny(Sint16 x, Sint16 y, const char *text) {
-    stringRGBA(screen, x,   y,   text, 0, 0, 0, 128);
+    stringRGBA(screen, x,   y,   text,   0,   0,   0, 128);
     stringRGBA(screen, x+1, y+1, text, 255, 255, 255, 128);
 }
 

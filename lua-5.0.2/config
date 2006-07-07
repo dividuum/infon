@@ -108,7 +108,13 @@ EXTRA_LIBS= -lm
 # You need an ANSI C compiler. gcc is a popular one. We do not use -ansi in
 # WARN because it disables POSIX features used in the libraries.
 #
-CC= gcc
+ifdef WINDOWS
+    CC = /opt/xmingw/bin/i386-mingw32msvc-gcc
+else
+    CC = gcc
+endif
+
+
 WARN= -Wall 
 
 # ------------------------------------------------------------------ C options
@@ -119,7 +125,7 @@ WARN= -Wall
 # debug information. If you only want the shared libraries, you may want to
 # add -fPIC to MYCFLAGS.
 #
-MYCFLAGS= -O0 -ggdb '-Dapi_check(L,o)=assert(o)'
+#MYCFLAGS= -O0 -ggdb '-Dapi_check(L,o)=assert(o)'
 #MYCFLAGS= -O3 -fomit-frame-pointer -DNDEBUG # -fPIC
 
 # Write here any options you may need for your C linker.

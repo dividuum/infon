@@ -82,8 +82,23 @@ int main(int argc, char *argv[]) {
     game_round = 0;
     game_time  = 0;
 
+    Uint32 lastticks = SDL_GetTicks();
     while (running && client_is_connected()) {
-        SDL_Delay(5);
+        game_round++;
+        Uint32 nowticks = SDL_GetTicks();
+        Uint32 delta = nowticks - lastticks;
+
+        if (nowticks < lastticks || nowticks > lastticks + 1000) {
+            // Timewarp?
+            lastticks = nowticks;
+            SDL_Delay(5);
+            continue;
+        } else if (delta < 20) {
+            SDL_Delay(5);
+            continue;
+        }
+
+        lastticks = nowticks;
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -106,10 +121,13 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        game_time += delta;
+
         print_fps();
 
         // IO Lesen/Schreiben
         client_tick();
+        gui_creature_move(delta);
 
         // Anzeigen
         gui_world_draw();

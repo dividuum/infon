@@ -165,31 +165,7 @@ again:
     const int dx = creature->path->x - creature->x;
     const int dy = creature->path->y - creature->y;
 
-    int winkel_to_waypoint = 16 * ((atan2(-dx, dy == 0 ? 1 : dy) + M_PI) / M_PI);
-    if (winkel_to_waypoint == 32) winkel_to_waypoint = 0;
-
-    assert(winkel_to_waypoint >= 0 && winkel_to_waypoint < 32);
-    int dw = winkel_to_waypoint - creature->dir;
-
-    if (dw < -16) dw += 32;
-    if (dw >  16) dw -= 32;
-
-    if (dw < 0) {
-        creature->dir -= -dw > creature_turnspeed(creature) ? creature_turnspeed(creature) : -dw;
-    } else if (dw > 0) {
-        creature->dir +=  dw > creature_turnspeed(creature) ? creature_turnspeed(creature) :  dw;
-    }
-
-    if (creature->dir >= 32)
-        creature->dir -= 32;
-
-    if (creature->dir < 0)
-        creature->dir += 32;
-
-    if (dw > 6 || dw < -6)
-        return;
-    
-    int dist_to_waypoint = sqrt(dx*dx + dy*dy);
+    const int dist_to_waypoint = sqrt(dx*dx + dy*dy);
 
     if (travelled >= dist_to_waypoint) {
         creature->x = creature->path->x;
@@ -272,13 +248,15 @@ void creature_do_eat(creature_t *creature, int delta) {
 
 // ------------- Attack -------------
 
-int creature_can_attack(const creature_t *creature) {
-    switch (creature->type) {
-        case 0: 
-            return 0;
-        default:
-            return 1;
-    }
+static const int attack_possible[CREATURE_TYPES][CREATURE_TYPES] = 
+                               // TARGET
+    { {    0,      0,      0,      0 },// ATTACKER
+      {    1,      1,      0,      0 },
+      {    0,      0,      0,      0 },
+      {    0,      0,      0,      0 } };
+
+int creature_can_attack(const creature_t *creature, const creature_t *target) {
+    return attack_possible[creature->type][target->type];
 }
 
 int creature_hitpoints(const creature_t *creature) {
@@ -308,6 +286,10 @@ void creature_do_attack(creature_t *creature, int delta) {
 
     // Nicht gefunden?
     if (!target) 
+        goto finished_attacking;
+
+    // Kann nicht angreifen?
+    if (creature_can_attack(creature, target))
         goto finished_attacking;
     
     // Ziel zu jung?
@@ -525,7 +507,6 @@ int creature_set_target(creature_t *creature, int target) {
     // Runde toeten koennte und daher ein true hier nicht heisst,
     // dass tatsaechlich attackiert/gefuettert werden kann.
     creature->target = target;
-    creature->dirtymask |= CREATURE_DIRTY_TARGET;
     return 1;
 }
 
@@ -554,8 +535,8 @@ int creature_set_state(creature_t *creature, int newstate) {
                 return 0;
             break;
         case CREATURE_ATTACK:
-            if (!creature_can_attack(creature))
-                return 0;
+            // if (!creature_can_attack(creature))
+            //    return 0;
             break;
         case CREATURE_CONVERT:
             if (creature_conversion_food(creature, creature->convert_type) == 0)
@@ -589,10 +570,57 @@ int creature_set_state(creature_t *creature, int newstate) {
     }
 
     creature->state = newstate;
-    creature->last_state_change = game_time;
-    creature->dirtymask |= CREATURE_DIRTY_STATE;
     return 1;
 }
+
+void creature_update_network_variables(creature_t *creature) {
+    // Leben/Food Prozentangaben aktualisieren
+    int new_food_health = min(15, 16 * creature->food   / creature_max_food(creature)) << 4 |
+                          min(15, 16 * creature->health / creature_max_health(creature));
+    if (new_food_health != creature->network_food_health) {
+        creature->network_food_health = new_food_health;
+        creature->dirtymask |= CREATURE_DIRTY_FOOD_HEALTH;
+    }
+
+    if (creature->state != creature->network_state) {
+        creature->network_state = creature->state;
+        creature->dirtymask |= CREATURE_DIRTY_STATE;
+    }
+
+    int path_x, path_y;
+    if (creature->state == CREATURE_WALK) {
+        assert(creature->path);
+        path_x = creature->path->x / CREATURE_NETWORK_RESOLUTION;
+        path_y = creature->path->y / CREATURE_NETWORK_RESOLUTION;
+    } else {
+        path_x = creature->x / CREATURE_NETWORK_RESOLUTION;
+        path_y = creature->y / CREATURE_NETWORK_RESOLUTION;
+    }
+        
+    if (path_x != creature->network_path_x ||
+        path_y != creature->network_path_y) {
+        creature->network_path_x = path_x;
+        creature->network_path_y = path_y;
+        creature->dirtymask |= CREATURE_DIRTY_POS;
+    }
+
+    int new_speed = (creature_speed(creature) + 2) / 4;
+    if (creature->state == CREATURE_WALK && 
+        new_speed != creature->network_speed) 
+    {
+        creature->network_speed = new_speed;
+        creature->dirtymask |= CREATURE_DIRTY_SPEED;
+    }
+
+    if ((creature->state == CREATURE_ATTACK ||
+         creature->state == CREATURE_FEED) &&
+        creature->network_target != creature->target)
+    {
+        creature->network_target = creature->target;
+        creature->dirtymask |= CREATURE_DIRTY_TARGET;
+    }
+}
+
 
 void creature_moveall(int delta) {
     int koth_score               = 1;
@@ -667,32 +695,8 @@ next_creature: ;
         if (!CREATURE_USED(creature)) 
             continue;
 
-        // Leben/Food Prozentangaben aktualisieren
-        int new_food_health = min(15, 16 * creature->food   / creature_max_food(creature)) << 4 |
-                              min(15, 16 * creature->health / creature_max_health(creature));
-        if (new_food_health != creature->network_food_health) {
-            creature->network_food_health = new_food_health;
-            creature->dirtymask |= CREATURE_DIRTY_FOOD_HEALTH;
-        }
-
-        int newx = creature->x / CREATURE_NETWORK_RESOLUTION;
-        if (newx != creature->network_x) {
-            creature->network_x = newx;
-            creature->dirtymask |= CREATURE_DIRTY_POS;
-        }
+        creature_update_network_variables(creature);
         
-        int newy = creature->y / CREATURE_NETWORK_RESOLUTION; 
-        if (newy != creature->network_y) {
-            creature->network_y = newy;
-            creature->dirtymask |= CREATURE_DIRTY_POS;
-        }
-
-        int newdir= creature->dir; 
-        if (newdir != creature->network_dir) {
-            creature->network_dir = newdir;
-            creature->dirtymask |= CREATURE_DIRTY_POS;
-        }
-
         creature_to_network(creature, creature->dirtymask, SEND_BROADCAST);
         creature->dirtymask = CREATURE_DIRTY_NONE;
     }
@@ -734,7 +738,7 @@ void creature_set_message(creature_t *creature, const char *message) {
     if (strncmp(creature->message, message, sizeof(creature->message) - 1)) {
         snprintf(creature->message, sizeof(creature->message), "%s", message);
         creature->dirtymask |= CREATURE_DIRTY_MESSAGE;
-    }
+    } 
 }
 
 creature_t *creature_spawn(player_t *player, int x, int y, int type, int points) {
@@ -746,9 +750,10 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
     if (!creature)
         return NULL;
 
+    memset(creature, 0, sizeof(creature_t));
+
     creature->x      = x;
     creature->y      = y;
-    creature->dir    = 0;
     creature->type   = type;
     creature->food   = 0;
     creature->health = creature_max_health(creature);
@@ -758,17 +763,19 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
     creature->convert_food = 0;
     creature->convert_type = type;
     creature->spawn_food   = 0;
+    creature->state        = CREATURE_IDLE;
     creature->message[0]   = '\0';
     creature->spawn_time   = game_time;
 
-    creature->last_state_change = game_time;
     creature->age_action_deltas = 0;
 
-    creature->dirtymask     = 0;
+    creature_update_network_variables(creature);
 
     player_on_creature_spawned(player, creature_num(creature), points);
 
     creature_to_network(creature, CREATURE_DIRTY_ALL, SEND_BROADCAST);
+    creature->dirtymask = CREATURE_DIRTY_NONE;
+
     return creature;
 }
 
@@ -822,28 +829,32 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     packet_write16(&packet, creature_num(creature));
     packet_write08(&packet, dirtymask);
     if (dirtymask & CREATURE_DIRTY_ALIVE) {
-        if (CREATURE_USED(creature))
+        if (CREATURE_USED(creature)) {
             packet_write08(&packet, creature->player->color);
-        else
+            packet_write16(&packet, creature->x / CREATURE_NETWORK_RESOLUTION);
+            packet_write16(&packet, creature->y / CREATURE_NETWORK_RESOLUTION);
+        } else {
             packet_write08(&packet, 0xFF);
+        }
     }
     if (dirtymask & CREATURE_DIRTY_POS) {
-        packet_write16(&packet, creature->network_x);
-        packet_write16(&packet, creature->network_y);
-        packet_write08(&packet, creature->network_dir);
+        packet_write16(&packet, creature->network_path_x);
+        packet_write16(&packet, creature->network_path_y);
     }
     if (dirtymask & CREATURE_DIRTY_TYPE) 
         packet_write08(&packet, creature->type);
     if (dirtymask & CREATURE_DIRTY_FOOD_HEALTH)
         packet_write08(&packet, creature->network_food_health);
     if (dirtymask & CREATURE_DIRTY_STATE)
-        packet_write08(&packet, creature->state);
+        packet_write08(&packet, creature->network_state);
     if (dirtymask & CREATURE_DIRTY_TARGET)
-        packet_write16(&packet, creature->target);
+        packet_write16(&packet, creature->network_target);
     if (dirtymask & CREATURE_DIRTY_MESSAGE) {
         packet_write08(&packet, strlen(creature->message));
         packet_writeXX(&packet, &creature->message, strlen(creature->message));
     }
+    if (dirtymask & CREATURE_DIRTY_SPEED) 
+        packet_write08(&packet, creature->network_speed);
     
     client_send_packet(&packet, client);
 }

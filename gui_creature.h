@@ -26,8 +26,16 @@
 
 typedef struct gui_creature_s {
     int             used;
+
     int             x;
     int             y;
+    int             speed;
+
+    int             old_x;
+    int             old_y;
+    int             path_x;
+    int             path_y;
+
     int             dir;
     int             type;
     int             food;
@@ -37,10 +45,10 @@ typedef struct gui_creature_s {
     creature_state  state;
 
     char message[9];
-    int  last_msg_set;
 } gui_creature_t;
 
 void        gui_creature_draw();
+void        gui_creature_move(int delta);
 
 /* Network */
 void gui_creature_from_network(packet_t *packet);

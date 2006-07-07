@@ -226,10 +226,14 @@ function Client:gui_client_menu()
 end
 
 function Client:handler()
-    self:welcome("Press <enter>")
-    if self:readln() == "guiclient" then
-        self:turn_into_guiclient()
-        self:gui_client_menu()
+    if self.fd == 0 then -- XXX: HACK, stdin client
+        self:writeln("")
+    else
+        self:welcome("Press <enter>")
+        if self:readln() == "guiclient" then
+            self:turn_into_guiclient()
+            self:gui_client_menu()
+        end
     end
     self:centerln("Hello " .. self.addr .. "!")
     self:centerln("Welcome to " .. GAME_NAME)

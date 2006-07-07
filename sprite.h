@@ -51,7 +51,7 @@
 #define SPRITE_TILE_SIZE 16
 
 // Food Konstanten
-#define SPRITE_FOOD         (SPRITE_KOTH + SPRITE_NUM_KOTH)
+#define SPRITE_FOOD         256
 #define SPRITE_NUM_FOOD     10
 
 // Thought Konstanten
@@ -66,9 +66,7 @@
 #define SPRITE_LOGO         (SPRITE_CROWN + SPRITE_NUM_CROWN)
 #define SPRITE_NUM_LOGO     1
 
-
-
-#define SPRITE_CREATURE 256
+#define SPRITE_CREATURE     512
 
 // Creature Konstanten
 #define CREATURE_SPRITE(color, type, direction, anim) \

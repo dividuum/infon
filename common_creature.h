@@ -50,6 +50,7 @@ typedef enum {
 #define CREATURE_DIRTY_STATE        (1 << 4)
 #define CREATURE_DIRTY_TARGET       (1 << 5)
 #define CREATURE_DIRTY_MESSAGE      (1 << 6)
+#define CREATURE_DIRTY_SPEED        (1 << 7)
 
 #define CREATURE_DIRTY_ALL         0xFF
 #define CREATURE_DIRTY_NONE        0x00

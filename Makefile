@@ -1,9 +1,22 @@
 LUADIR=lua-5.0.2
-SDLDIR=$(shell sdl-config --prefix)
 
-CFLAGS   = -I$(LUADIR)/include/ -I$(SDLDIR)/include/SDL -std=gnu99 -Wall 
-# CFLAGS  += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
-CFLAGS  += -ggdb
+REVISION=$(shell svn info |grep Revision| cut -b 11-)
+
+COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)"
+# COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
+COMMON_CFLAGS += -ggdb -I$(LUADIR)/include/ 
+
+ifdef WINDOWS
+	MINGW  = $(HOME)/progs/mingw32/
+	SDLDIR = $(MINGW)
+	CC     = /opt/xmingw/bin/i386-mingw32msvc-gcc
+	CFLAGS = $(COMMON_CFLAGS) -I$(MINGW)/include
+else
+	SDLDIR = $(shell sdl-config --prefix)
+	CFLAGS = $(COMMON_CFLAGS)
+endif
+
+CFLAGS     += -I$(SDLDIR)/include/SDL 
 
 LDFLAGS 	= -L$(LUADIR)/lib -levent -lSDL -llua -llualib -lm
 GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lSDL -lSDL_image -lSGE -lSDL_gfx

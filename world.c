@@ -50,7 +50,7 @@ int world_dig(int x, int y, maptype_e type) {
     
     if (map_walkable(map_pathfind, x, y))
         return 1;
-    printf("world_dig(%d, %d)\n", x, y);
+    fprintf(stderr, "world_dig(%d, %d)\n", x, y);
 
     map_dig(map_pathfind, x, y);
     map_sprites[y * world_w + x] = SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN;

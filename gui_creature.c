@@ -38,7 +38,7 @@ void gui_creature_draw() {
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature)) 
             continue;
-        
+
         const int x = X_TO_SCREENX(creature->x) - 7;
         const int y = Y_TO_SCREENY(creature->y) - 7;
         const int hw = creature->health;
@@ -59,7 +59,7 @@ void gui_creature_draw() {
         //    game_time < creature->last_state_change + 1000)
             video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + creature->state));
 
-        if (time < creature->last_msg_set + 2000) 
+        //if (time < creature->last_msg_set + 2000) 
             video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, creature->message);
         
         /*
@@ -90,6 +90,49 @@ void gui_creature_draw() {
     }
 }
 
+void gui_creature_move(int delta) {
+    gui_creature_t *creature = &creatures[0];
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
+
+        if (!CREATURE_USED(creature)) 
+            continue;
+
+        const int dx = creature->path_x - creature->x;
+        const int dy = creature->path_y - creature->y;
+        //printf("%d,%d\n", creature->x, creature->y);
+        const int dist_to_waypoint = sqrt(dx*dx + dy*dy);
+        if (dist_to_waypoint < 16) {
+            creature->x = creature->path_x;
+            creature->y = creature->path_y;
+            continue;
+        }
+
+        //printf("%d %d\n", creature->health, gui_creature_speed(creature));
+        const int travelled = creature->speed * delta / 1000;
+
+        creature->x += dx * travelled / dist_to_waypoint;
+        creature->y += dy * travelled / dist_to_waypoint;
+
+        int winkel_to_waypoint = 16 * ((atan2(-dx, dy == 0 ? 1 : dy) + M_PI) / M_PI);
+        int dw = winkel_to_waypoint - creature->dir;
+
+        if (dw < -16) dw += 32;
+        if (dw >  16) dw -= 32;
+
+        if (dw < 0) {
+            creature->dir -= 1;
+        } else if (dw > 0) {
+            creature->dir += 1; 
+        }
+
+        if (creature->dir >= 32)
+            creature->dir -= 32;
+
+        if (creature->dir < 0)
+            creature->dir += 32;
+    }
+}
+
 void gui_creature_from_network(packet_t *packet) {
     uint16_t creatureno;
 
@@ -111,6 +154,13 @@ void gui_creature_from_network(packet_t *packet) {
             memset(creature, 0, sizeof(gui_creature_t));
             creature->used = 1;
             creature->color = alive;
+
+            uint16_t x, y;
+            if (!packet_read16(packet, &x))     goto failed;
+            if (!packet_read16(packet, &y))     goto failed;
+            // XXX: x, y checken?
+            creature->x = creature->old_x = x * CREATURE_NETWORK_RESOLUTION;
+            creature->y = creature->old_y = y * CREATURE_NETWORK_RESOLUTION;
         }
     }
     
@@ -118,15 +168,11 @@ void gui_creature_from_network(packet_t *packet) {
 
     if (updatemask & CREATURE_DIRTY_POS) {
         uint16_t x, y;
-        uint8_t dir;
         if (!packet_read16(packet, &x))         goto failed;
         if (!packet_read16(packet, &y))         goto failed;
-        if (!packet_read08(packet, &dir))       goto failed;
-        if (dir >= CREATURE_DIRECTIONS)         goto failed;
         // XXX: x, y checken?
-        creature->x = x * CREATURE_NETWORK_RESOLUTION;
-        creature->y = y * CREATURE_NETWORK_RESOLUTION;
-        creature->dir = dir;
+        creature->path_x = x * CREATURE_NETWORK_RESOLUTION;
+        creature->path_y = y * CREATURE_NETWORK_RESOLUTION;
     }
 
     if (updatemask & CREATURE_DIRTY_TYPE) {
@@ -164,7 +210,13 @@ void gui_creature_from_network(packet_t *packet) {
         if (!packet_readXX(packet, buf, len))   goto failed;
         buf[len] = '\0';
         snprintf(creature->message, sizeof(creature->message), "%s", buf);
-        creature->last_msg_set = SDL_GetTicks();
+        // creature->last_msg_set = SDL_GetTicks();
+    }
+
+    if (updatemask & CREATURE_DIRTY_SPEED) {
+        uint8_t speed;
+        if (!packet_read08(packet, &speed))     goto failed;
+        creature->speed = speed * 4;
     }
     return;
 failed:
