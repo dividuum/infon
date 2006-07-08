@@ -27,6 +27,7 @@
 #include "gui_creature.h"
 #include "gui_world.h"
 #include "video.h"
+#include "misc.h"
 
 static gui_creature_t creatures[MAXCREATURES];
 
@@ -108,7 +109,7 @@ void gui_creature_move(int delta) {
         }
 
         //printf("%d %d\n", creature->health, gui_creature_speed(creature));
-        const int travelled = creature->speed * delta / 1000;
+        const int travelled = min(creature->speed * delta / 1000, dist_to_waypoint);
 
         creature->x += dx * travelled / dist_to_waypoint;
         creature->y += dy * travelled / dist_to_waypoint;
@@ -120,9 +121,9 @@ void gui_creature_move(int delta) {
         if (dw >  16) dw -= 32;
 
         if (dw < 0) {
-            creature->dir -= 1;
+            creature->dir -= 2;
         } else if (dw > 0) {
-            creature->dir += 1; 
+            creature->dir += 2; 
         }
 
         if (creature->dir >= 32)

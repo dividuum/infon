@@ -289,7 +289,7 @@ void creature_do_attack(creature_t *creature, int delta) {
         goto finished_attacking;
 
     // Kann nicht angreifen?
-    if (creature_can_attack(creature, target))
+    if (!creature_can_attack(creature, target))
         goto finished_attacking;
     
     // Ziel zu jung?
