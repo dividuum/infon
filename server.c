@@ -18,14 +18,6 @@
 
 */
 
-#ifdef WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#endif
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -225,7 +217,9 @@ static void client_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
-    if (fd == 0) fd = 1; // HACK
+    // HACK um die Ausgabe des Consolenclients an
+    // stdout statt stdin zu schicken.
+    if (fd == STDIN_FILENO) fd = STDOUT_FILENO; 
 
     int ret = evbuffer_write(client->out_buf, fd);
     if (ret < 0) {
@@ -445,7 +439,6 @@ static int luaPlayerKillAllCreatures(lua_State *L) {
 }
 
 static int luaPlayerExecute(lua_State *L) {
-    // TODO: Yield faehig machen!
     int clientno = luaL_checklong(L, 1);
     const char *code = luaL_checkstring(L, 2);
 
@@ -479,7 +472,6 @@ void server_init() {
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) 
         die("WSAStartup failed");
-    WSACleanup();
 #endif
 
     event_init();
@@ -520,7 +512,8 @@ void server_init() {
     lua_pushliteral(L, GAME_NAME);
     lua_rawset(L, LUA_GLOBALSINDEX);
 
-    client_accept(0, NULL); // XXX: HACK: stdin client starten
+    // XXX: HACK: stdin client starten
+    client_accept(STDIN_FILENO, NULL); 
 }
 
 void server_shutdown() {

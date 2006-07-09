@@ -18,12 +18,18 @@
 
 */
 
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netdb.h>
+#endif
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -63,8 +69,8 @@ static void server_handle_packet(packet_t *packet) {
             gui_world_from_network(packet);
             break;
         case PACKET_CREATURE_UPDATE: 
-			gui_creature_from_network(packet);
-			break;
+            gui_creature_from_network(packet);
+            break;
         case PACKET_SCROLLER_MSG:   
             gui_scroller_from_network(packet);
             break;
@@ -153,12 +159,25 @@ void client_tick() {
 }
 
 void client_init(char *addr) {
+#ifdef WIN32
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) 
+        die("WSAStartup failed");
+#endif
+
     event_init();
 
     int    port = 1234;                                             
     struct hostent *host;
 
+#ifdef WIN32
+    char *colon = addr;
+    while (*colon && *colon != ':') 
+        colon++;
+    if (!*colon) colon = NULL;
+#else
     char *colon = index(addr, ':');
+#endif
     if (colon) {                                       
         *colon = '\0';                                            
         port = atoi(colon + 1);                                  
@@ -166,18 +185,22 @@ void client_init(char *addr) {
 
     struct sockaddr_in serveraddr;                                   
     memset(&serveraddr, 0, sizeof(serveraddr)); 
+    serveraddr.sin_family = AF_INET;
+    serveraddr.sin_port   = htons(port);     
                                                                    
     fprintf(stderr, "resolving %s\n", addr);
 
     host = gethostbyname(addr);
     if (!host)
-        die("gethostbyname failed: %s", strerror(errno));
+#ifdef WIN32
+        die("gethostbyname failed: %d", WSAGetLastError());
+#else
+        die("gethostbyname failed: %s", hstrerror(h_errno));
+#endif
 
     if (host->h_length != 4) 
         die("h_length != 4");
 
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_port   = htons(port);     
     memcpy(&serveraddr.sin_addr, host->h_addr_list[0], host->h_length);
 
     fprintf(stderr, "connecting to %s:%d (%s:%d)\n", addr, port, inet_ntoa(serveraddr.sin_addr), port);
@@ -186,18 +209,33 @@ void client_init(char *addr) {
     serverfd = socket(AF_INET, SOCK_STREAM, 0);
 
     /* Fehler beim Socket erzeugen? */
+#ifdef WIN32
+    if (serverfd == INVALID_SOCKET)
+        die("cannot open socket: Error %d", WSAGetLastError());
+#else
     if (serverfd == -1) 
         die("cannot open socket: %s", strerror(errno));
+#endif
 
+#ifdef WIN32
+    if (connect(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+        die("cannot connect socket: Error %d", WSAGetLastError());
+#else
     if (connect(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
         die("cannot connect socket: %s", strerror(errno));
+#endif
 
     fprintf(stderr, "connected!\n");
 
     /* Non Blocking setzen */
+#ifdef WIN32
+    DWORD notblock = 1;
+    ioctlsocket(serverfd, FIONBIO, &notblock);
+#else
     if (fcntl(serverfd, F_SETFL, O_NONBLOCK) < 0) 
         die("cannot set socket nonblocking: %s", strerror(errno));
-
+#endif
+    
     event_set(&rd_event, serverfd, EV_READ,  server_readable, &rd_event);
     event_set(&wr_event, serverfd, EV_WRITE, server_writable, &wr_event);
     in_buf  = evbuffer_new();
@@ -209,5 +247,8 @@ void client_init(char *addr) {
 void client_shutdown() {
     if (client_is_connected())
         server_destroy("shutdown");
+#ifdef WIN32
+    WSACleanup();
+#endif
 }
 

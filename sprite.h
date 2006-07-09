@@ -23,7 +23,7 @@
 
 #include <SDL.h>
 
-#include "creature.h"
+#include "common_creature.h"
 
 #define SPRITE_NUM 8192
 

@@ -135,12 +135,20 @@ WARN= -Wall
 
 # This should work in all Unix systems.
 #
-AR= ar rcu
+ifdef WINDOWS
+    AR= /opt/xmingw/bin/i386-mingw32msvc-ar rcu
+else
+    AR= ar rcu
+endif
 
 # If your system doesn't have (or need) ranlib, use RANLIB=true.
 # On some systems, "ar s" does what ranlib would do.
 #
-RANLIB= ranlib
+ifdef WINDOWS
+    RANLIB= /opt/xmingw/bin/i386-mingw32msvc-ranlib
+else
+    RANLIB= ranlib
+endif
 #RANLIB= ar s
 #RANLIB= true
 

@@ -21,8 +21,14 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#endif
 
 #include <event.h>
 

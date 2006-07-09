@@ -22,12 +22,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 void die(char *fmt, ...) {
+#ifdef WIN32
+    char buf[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    MessageBoxA(GetActiveWindow(), buf, "Fatal Error", MB_ICONSTOP);
+#else
     va_list ap;
     va_start(ap, fmt);
     printf("FATAL: ");
     vprintf(fmt, ap);
     printf("\n");
     va_end(ap);
+#endif
     exit(1);
 }

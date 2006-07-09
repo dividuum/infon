@@ -69,7 +69,7 @@ void gui_player_draw() {
     //printf("%d\n", num_players);
 
     if (king_player) king_player->score += 1000000; // HACKHACK
-    qsort(sorted, num_players, sizeof(creature_t*), player_sort_by_score);
+    qsort(sorted, num_players, sizeof(gui_player_t*), player_sort_by_score);
     if (king_player) king_player->score -= 1000000;
 
     int offset = per_page * page;

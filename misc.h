@@ -21,10 +21,6 @@
 #ifndef MISC_H
 #define MISC_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void die(char *fmt, ...);
 
 #ifndef abs
@@ -37,10 +33,6 @@ void die(char *fmt, ...);
 
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

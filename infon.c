@@ -65,8 +65,10 @@ int main(int argc, char *argv[]) {
     // const int width = 1024, height = 768;
     // const int width = 1280, height = 1024;
 
+#ifndef WIN32
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
+#endif
 
     srand(time(0));
 
@@ -149,4 +151,20 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS; 
 }
+
+#ifdef WIN32
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance,
+                           LPSTR lpszArgument,      int nFunsterStil)
+{
+    if (strlen(lpszArgument) == 0) {
+        die("Programm muss als erster Parameter der\n"
+            "Hostname des Servers uebergeben werden.\n\n"
+            "Beispiel: 'infon bl0rg.net'");
+    }
+    char *argv[] = { "foobar", lpszArgument, NULL };
+    return main(2, argv);
+}
+#endif
+
 

@@ -1,0 +1,29 @@
+#include <windows.h>
+
+A ICON MOVEABLE PURE LOADONCALL DISCARDABLE "infon.ico"
+
+1 VERSIONINFO
+// FILEVERSION 0,1,1,1
+// PRODUCTVERSION 0,1,1,1
+FILETYPE VFT_APP
+{
+  BLOCK "StringFileInfo"
+     {
+         BLOCK "040904E4"
+         {
+             VALUE "CompanyName", "fw@dividuum.de"
+             VALUE "FileVersion", ""
+             VALUE "FileDescription", "Infon Battle Arena Client"
+             VALUE "InternalName", "infon"
+             VALUE "LegalCopyright", ""
+             VALUE "LegalTrademarks", ""
+             VALUE "OriginalFilename", ""
+             VALUE "ProductName", "infon"
+             VALUE "ProductVersion", ""
+         }
+     }
+//  BLOCK "VarFileInfo"
+//   {
+//       VALUE "Translation", 0x0409, 1252
+//   }
+}

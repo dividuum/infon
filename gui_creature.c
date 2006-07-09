@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
 #include <assert.h>
 
 #include "global.h"
@@ -28,6 +29,7 @@
 #include "gui_world.h"
 #include "video.h"
 #include "misc.h"
+#include "map.h"
 
 static gui_creature_t creatures[MAXCREATURES];
 
@@ -120,9 +122,9 @@ void gui_creature_move(int delta) {
         if (dw < -16) dw += 32;
         if (dw >  16) dw -= 32;
 
-        if (dw < 0) {
+        if (dw < 1) {
             creature->dir -= 2;
-        } else if (dw > 0) {
+        } else if (dw > 1) {
             creature->dir += 2; 
         }
 

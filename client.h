@@ -21,11 +21,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
-#include <event.h>
-
 void client_tick();
 int  client_is_connected();
 

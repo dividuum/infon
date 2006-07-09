@@ -18,8 +18,12 @@
 
 */
 
+#ifdef WIN32
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
-#include <netinet/in.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 

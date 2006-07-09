@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 
+#pragma pack (push, 1)
 typedef struct {
 // Wire Data    
     uint8_t  len;
@@ -37,7 +38,12 @@ typedef struct {
     uint8_t  data[256];
 // Mgmt Data    
     uint8_t  offset;
-} packet_t __attribute__((packed));
+} packet_t 
+#ifndef WIN32
+__attribute__((packed))
+#endif
+;
+#pragma pack (pop)
 
 void packet_rewind(packet_t *packet);
 void packet_init  (packet_t *packet, int type);

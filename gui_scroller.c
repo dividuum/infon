@@ -21,6 +21,16 @@
 #include <SDL.h>
 #include <assert.h>
 
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <sys/types.h>
+#include <sys/time.h>
+#include <string.h>
+#endif
+
+#include <event.h>
+
 #include "video.h"
 #include "scroller.h"
 #include "packet.h"
