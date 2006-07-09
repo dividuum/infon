@@ -122,8 +122,6 @@ void gui_creature_move(int delta) {
         if (dw < -16) dw += 32;
         if (dw >  16) dw -= 32;
 
-        printf("%d\n", dw);
-
         if (dw < -1) {
             creature->dir += 2;
         } else if (dw > 1) {
