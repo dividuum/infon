@@ -27,17 +27,22 @@ ifdef WINDOWS
                    $(MINGW)/lib/libSDL_image.a $(MINGW)/lib/libSDL_gfx.a  $(MINGW)/lib/libSDL.a \
 	               -lmingw32 -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
 	RES=infon.res				   
+	GUI_EXECUTABLE=infon.exe
 else
 	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lSDL -lSDL_image -lSGE -lSDL_gfx
+	GUI_EXECUTABLE=infon
 endif
 
-all: infond infon
+all: infond $(GUI_EXECUTABLE)
+
+dist: $(GUI_EXECUTABLE)
+	zip infon-win32-r$(REVISION).zip $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.gif gfx/*.png gfx/*.bmp 
 
 infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o 
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 
-infon: lua-5.0.2/lib/liblua.a infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o video.o sprite.o $(RES)
+$(GUI_EXECUTABLE): lua-5.0.2/lib/liblua.a infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o video.o sprite.o $(RES)
 	$(CC) $^ $(GUI_LDFLAGS) -o $@ 
 
 infon.res: infon.rc
@@ -48,4 +53,4 @@ lua-5.0.2/lib/liblua.a:
 
 clean:
 	$(MAKE) -C $(LUADIR) clean
-	-rm -f *.o infond infond-static infon tags
+	-rm -f *.o infond infond-static infon infon.exe infon*.zip tags 

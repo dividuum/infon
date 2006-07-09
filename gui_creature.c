@@ -117,15 +117,19 @@ void gui_creature_move(int delta) {
         creature->y += dy * travelled / dist_to_waypoint;
 
         int winkel_to_waypoint = 16 * ((atan2(-dx, dy == 0 ? 1 : dy) + M_PI) / M_PI);
-        int dw = winkel_to_waypoint - creature->dir;
+        int dw = creature->dir - winkel_to_waypoint;
 
         if (dw < -16) dw += 32;
         if (dw >  16) dw -= 32;
 
-        if (dw < 1) {
-            creature->dir -= 2;
+        printf("%d\n", dw);
+
+        if (dw < -1) {
+            creature->dir += 2;
         } else if (dw > 1) {
-            creature->dir += 2; 
+            creature->dir -= 2; 
+        } else {
+            creature->dir = winkel_to_waypoint;
         }
 
         if (creature->dir >= 32)
