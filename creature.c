@@ -856,7 +856,7 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     if (dirtymask & CREATURE_DIRTY_SPEED) 
         packet_write08(&packet, creature->network_speed);
     
-    client_send_packet(&packet, client);
+    server_send_packet(&packet, client);
 }
 
 void creature_init() {

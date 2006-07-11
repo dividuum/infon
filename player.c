@@ -508,7 +508,7 @@ void player_writeto(player_t *player, const void *data, size_t size) {
             
     client_t *client = player->clients;
     do {
-        client_writeto(client, data, size);
+        server_writeto(client, data, size);
         client = client->next;
     } while (client != player->clients);
 }
@@ -736,7 +736,7 @@ void player_send_king_update(client_t *client) {
         packet_write08(&packet, player_num(king_player));
     else
         packet_write08(&packet, 0xFF);
-    client_send_packet(&packet, client); 
+    server_send_packet(&packet, client); 
 }
 
 void player_is_king_of_the_hill(player_t *player, int delta) {
@@ -804,7 +804,7 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
     if (dirtymask & PLAYER_DIRTY_SCORE)
         packet_write16(&packet, player->score - PLAYER_KICK_SCORE);
 
-    client_send_packet(&packet, client);
+    server_send_packet(&packet, client);
 }
 
 

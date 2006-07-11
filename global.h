@@ -40,4 +40,7 @@ int        game_round;
 // der Tiles komische Pfade.
 #define PATHFIND_AREA_MERGE 
 
+// Netzwerk Protokol
+#define PROTOCOL_VERSION 1
+
 #endif

@@ -42,19 +42,22 @@ dist:
 	$(MAKE) linux-client-dist linux-server-dist
 
 win32-client-dist: $(GUI_EXECUTABLE)
+	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
 	zip      infon-win32-r$(REVISION).zip $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.gif gfx/*.png gfx/*.bmp 
 
 linux-client-dist: $(GUI_EXECUTABLE)
+	strip $(GUI_EXECUTABLE)
 	tar cfvz infon-linux-r$(REVISION).tgz $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.gif gfx/*.png gfx/*.bmp 
 
 linux-server-dist: infond
+	strip infond infond-static
 	tar cfvz infond-linux-r$(REVISION).tgz infond infond-static *.lua
 
 infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o 
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 
-$(GUI_EXECUTABLE): lua-5.0.2/lib/liblua.a infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o video.o sprite.o $(RES)
+$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o video.o sprite.o $(RES)
 	$(CC) $^ $(GUI_LDFLAGS) -o $@ 
 
 infon.res: infon.rc

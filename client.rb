@@ -15,7 +15,9 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         end
 
         def read16
-            read(2).unpack("n")[0]
+            ret  = read8
+            ret |= read8 << 7 if ret & 0x80 != 0 
+            ret
         end
 
         def read32
@@ -67,6 +69,8 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         when 32:
             socket.write("guiclient\n")
             puts  "welcome: %s"     % socket.read(len).delete("\n").strip
+        when 255:
+            puts  "protocol %d"     % socket.read8
         else
             puts  "???: #{type}"
         end

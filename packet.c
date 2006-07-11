@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "packet.h"
 
@@ -48,17 +49,18 @@ int packet_read08(packet_t *packet, uint8_t *data) {
     return 1;
 }
 
-int  packet_read16(packet_t *packet, uint16_t *data) {
-    if (packet->len - packet->offset < 2) {
-        printf("reading beyond end\n");
-        return 0;
+int packet_read16(packet_t *packet, uint16_t *data) {
+    uint8_t byte;
+    if (!packet_read08(packet, &byte))     return 0;
+    *data = byte & 0x7F;
+    if (byte & 0x80) {
+        if (!packet_read08(packet, &byte)) return 0;
+        *data |= byte << 7;
     }
-    *data = ntohs(*(uint16_t*)&packet->data[packet->offset]);
-    packet->offset += 2;
     return 1;
 }
 
-int  packet_read32(packet_t *packet, uint32_t *data) {
+int packet_read32(packet_t *packet, uint32_t *data) {
     if (packet->len - packet->offset < 4) {
         printf("reading beyond end\n");
         return 0;
@@ -68,7 +70,7 @@ int  packet_read32(packet_t *packet, uint32_t *data) {
     return 1;
 }
 
-int  packet_readXX(packet_t *packet, void *data, int len) {
+int packet_readXX(packet_t *packet, void *data, int len) {
     if (packet->len - packet->offset < len) {
         printf("reading beyond end\n");
         return 0;
@@ -89,13 +91,12 @@ int packet_write08(packet_t *packet, uint8_t data) {
 }
 
 int packet_write16(packet_t *packet, uint16_t data) {
-    if (sizeof(packet->data) - packet->offset <= 2) {
-        printf("packet too full\n");
-        return 0;
-    }
-    *((uint16_t*)&packet->data[packet->offset]) = htons(data);
-    packet->offset += 2;
-    return 1;
+    assert(data <= 0x7FFF);
+    if (data <= 0x7F) 
+        return packet_write08(packet, data);
+    else 
+        return packet_write08(packet, (data & 0x7F) | 0x80) &&
+               packet_write08(packet,  data >> 7);
 }
 
 int packet_write32(packet_t *packet, uint32_t data) {

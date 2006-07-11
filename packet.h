@@ -35,6 +35,7 @@ typedef struct {
 #define PACKET_QUIT_MSG          4
 #define PACKET_KOTH_UPDATE       5
 #define PACKET_WELCOME_MSG      32
+#define PACKET_HANDSHAKE       255
     uint8_t  data[256];
 // Mgmt Data    
     uint8_t  offset;

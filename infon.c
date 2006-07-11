@@ -158,9 +158,9 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance,
                            LPSTR lpszArgument,      int nFunsterStil)
 {
     if (strlen(lpszArgument) == 0) {
-        die("Programm muss als erster Parameter der\n"
-            "Hostname des Servers uebergeben werden.\n\n"
-            "Beispiel: 'infon bl0rg.net'");
+        die("you must supply the gameserver hostname\n"
+            "as command line parameter.\n\n"
+            "example: 'infon.exe bl0rg.net'");
     }
     char *argv[] = { "foobar", lpszArgument, NULL };
     return main(2, argv);

@@ -57,12 +57,12 @@ typedef struct client_s {
 
 client_t clients[MAXCLIENTS];
 
-int  client_accept(int fd, struct sockaddr_in *peer);
-void client_writeto(client_t *client, const void *data, size_t size);
-void client_writeto_all_gui_clients(const void *data, size_t size);
-void client_destroy(client_t *client, char *reason);
+int  server_accept(int fd, struct sockaddr_in *peer);
+void server_writeto(client_t *client, const void *data, size_t size);
+void server_writeto_all_gui_clients(const void *data, size_t size);
+void server_destroy(client_t *client, char *reason);
 
-void client_send_packet(packet_t *packet, client_t *client);
+void server_send_packet(packet_t *packet, client_t *client);
 
 
 void server_tick();

@@ -42,24 +42,38 @@
 
 #include "packet.h"
 #include "global.h"
-#include "server.h"
+#include "client.h"
 #include "misc.h"
 #include "gui_player.h"
 #include "gui_world.h"
 #include "gui_scroller.h"
 #include "gui_creature.h"
 
-static int serverfd;
+static int clientfd;
 static struct event rd_event;
 static struct event wr_event;
 static struct evbuffer *in_buf;
 static struct evbuffer *out_buf;
 
-void server_destroy(char *reason);
-void server_writeto(const void *data, size_t size);
+void client_destroy(char *reason);
+void client_writeto(const void *data, size_t size);
 int  client_is_connected();
 
-static void server_handle_packet(packet_t *packet) {
+static void client_read_handshake(packet_t *packet) {
+    uint8_t serverprotocol;
+    if (!packet_read08(packet, &serverprotocol)) goto failed; 
+    if (serverprotocol != PROTOCOL_VERSION) {
+        die("server has %s protocol version %d. I have %d.\n"
+            "visit the infon homepage for more information.",
+               serverprotocol < PROTOCOL_VERSION ? "older" : "newer",
+               serverprotocol,  PROTOCOL_VERSION);
+    }
+    return;
+failed:
+    printf("parsing player update packet failed\n");
+}
+
+static void client_handle_packet(packet_t *packet) {
     //printf("ptype=%d\n", packet->type);
     switch (packet->type) {
         case PACKET_PLAYER_UPDATE:  
@@ -75,15 +89,18 @@ static void server_handle_packet(packet_t *packet) {
             gui_scroller_from_network(packet);
             break;
         case PACKET_WELCOME_MSG:    
-            server_writeto("guiclient\n", 10);
+            client_writeto("guiclient\n", 10);
             break;
         case PACKET_QUIT_MSG:
             printf("server wants us to disconnect: %.*s\n",
                    packet->len, packet->data);
-            server_destroy("done");
+            client_destroy("done");
             break;
         case PACKET_KOTH_UPDATE:
             gui_player_king_from_network(packet);
+            break;
+        case PACKET_HANDSHAKE:
+            client_read_handshake(packet);
             break;
         default:
             printf("packet->type %d unknown\n", packet->type);
@@ -91,23 +108,23 @@ static void server_handle_packet(packet_t *packet) {
     }
 }
 
-static void server_readable(int fd, short event, void *arg) {
+static void client_readable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
 
     int ret = evbuffer_read(in_buf, fd, 260);
     if (ret < 0) {
-        server_destroy(strerror(errno));
+        client_destroy(strerror(errno));
     } else if (ret == 0) {
-        server_destroy("eof reached");
+        client_destroy("eof reached");
     } else if (EVBUFFER_LENGTH(in_buf) > 8192) {
-        server_destroy("line too long. strange server.");
+        client_destroy("line too long. strange server.");
     } else {
         while (EVBUFFER_LENGTH(in_buf) >= (int)EVBUFFER_DATA(in_buf)[0] + 2) {
             packet_t packet;
             memcpy(&packet,EVBUFFER_DATA(in_buf), (int)EVBUFFER_DATA(in_buf)[0] + 2);
             int len = packet.len + 2;
             packet_rewind(&packet);
-            server_handle_packet(&packet);
+            client_handle_packet(&packet);
             if (!client_is_connected()) 
                 return;
             evbuffer_drain(in_buf, len);
@@ -116,21 +133,21 @@ static void server_readable(int fd, short event, void *arg) {
     }
 }
 
-static void server_writable(int fd, short event, void *arg) {
+static void client_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
 
     int ret = evbuffer_write(out_buf, fd);
     if (ret < 0) {
-        server_destroy(strerror(errno));
+        client_destroy(strerror(errno));
     } else if (ret == 0) {
-        server_destroy("null write?");
+        client_destroy("null write?");
     } else {
         if (EVBUFFER_LENGTH(out_buf) > 0) 
             event_add(cb_event, NULL);
     }
 }
 
-void server_writeto(const void *data, size_t size) {
+void client_writeto(const void *data, size_t size) {
     if (size == 0) 
         return;
     if (EVBUFFER_LENGTH(in_buf) > 1024*1024)
@@ -139,19 +156,19 @@ void server_writeto(const void *data, size_t size) {
     event_add(&wr_event, NULL);
 }
 
-void server_destroy(char *reason) {
-    assert(serverfd != -1);
+void client_destroy(char *reason) {
+    assert(clientfd != -1);
     printf("disconnected from server: %s\n", reason);
     evbuffer_free(in_buf);
     evbuffer_free(out_buf);
     event_del(&rd_event);
     event_del(&wr_event);
-    close(serverfd);
-    serverfd = -1;
+    close(clientfd);
+    clientfd = -1;
 }
 
 int  client_is_connected() {
-    return serverfd != -1;
+    return clientfd != -1;
 }
 
 void client_tick() {
@@ -206,22 +223,22 @@ void client_init(char *addr) {
     fprintf(stderr, "connecting to %s:%d (%s:%d)\n", addr, port, inet_ntoa(serveraddr.sin_addr), port);
 
     /* Socket erzeugen */
-    serverfd = socket(AF_INET, SOCK_STREAM, 0);
+    clientfd = socket(AF_INET, SOCK_STREAM, 0);
 
     /* Fehler beim Socket erzeugen? */
 #ifdef WIN32
-    if (serverfd == INVALID_SOCKET)
+    if (clientfd == INVALID_SOCKET)
         die("cannot open socket: Error %d", WSAGetLastError());
 #else
-    if (serverfd == -1) 
+    if (clientfd == -1) 
         die("cannot open socket: %s", strerror(errno));
 #endif
 
 #ifdef WIN32
-    if (connect(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+    if (connect(clientfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
         die("cannot connect socket: Error %d", WSAGetLastError());
 #else
-    if (connect(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
+    if (connect(clientfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
         die("cannot connect socket: %s", strerror(errno));
 #endif
 
@@ -230,14 +247,14 @@ void client_init(char *addr) {
     /* Non Blocking setzen */
 #ifdef WIN32
     DWORD notblock = 1;
-    ioctlsocket(serverfd, FIONBIO, &notblock);
+    ioctlsocket(clientfd, FIONBIO, &notblock);
 #else
-    if (fcntl(serverfd, F_SETFL, O_NONBLOCK) < 0) 
+    if (fcntl(clientfd, F_SETFL, O_NONBLOCK) < 0) 
         die("cannot set socket nonblocking: %s", strerror(errno));
 #endif
     
-    event_set(&rd_event, serverfd, EV_READ,  server_readable, &rd_event);
-    event_set(&wr_event, serverfd, EV_WRITE, server_writable, &wr_event);
+    event_set(&rd_event, clientfd, EV_READ,  client_readable, &rd_event);
+    event_set(&wr_event, clientfd, EV_WRITE, client_writable, &wr_event);
     in_buf  = evbuffer_new();
     out_buf = evbuffer_new();
 
@@ -246,7 +263,7 @@ void client_init(char *addr) {
 
 void client_shutdown() {
     if (client_is_connected())
-        server_destroy("shutdown");
+        client_destroy("shutdown");
 #ifdef WIN32
     WSACleanup();
 #endif

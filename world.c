@@ -155,7 +155,7 @@ void world_to_network(int x, int y, client_t *client) {
     } else {
         packet_write08(&packet, map_food[x + world_w * y] / 1000);
     }
-    client_send_packet(&packet, client);
+    server_send_packet(&packet, client);
 }
 
 void world_init(int w, int h) {

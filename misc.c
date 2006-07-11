@@ -37,9 +37,9 @@ void die(char *fmt, ...) {
 #else
     va_list ap;
     va_start(ap, fmt);
-    printf("FATAL: ");
+    printf("--[ FATAL ERROR ]-----------\n");
     vprintf(fmt, ap);
-    printf("\n");
+    printf("\n----------------------------\n");
     va_end(ap);
 #endif
     exit(1);

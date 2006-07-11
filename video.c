@@ -57,7 +57,7 @@ void video_init(int w, int h) {
 
     font = sge_BF_OpenFont("gfx/font.bmp", SGE_BFTRANSP|SGE_BFPALETTE);
     if(!font)
-        die("Cannot open font font.bmp: %s\n", SDL_GetError());
+        die("Cannot open font font.bmp: %s", SDL_GetError());
 
     /* Load a font and draw with it */
     FILE *file = fopen("gfx/5x7.fnt","r");

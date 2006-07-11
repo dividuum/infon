@@ -60,7 +60,7 @@ static void listener_cb(int fd, short event, void *arg) {
         goto error;
     }
 
-    if (!client_accept(clientfd, &peer))
+    if (!server_accept(clientfd, &peer))
         goto error; 
 
     event_add(cb_event, NULL);

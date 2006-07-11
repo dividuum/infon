@@ -30,5 +30,5 @@ void add_to_scroller(const char* msg) {
     packet_t packet;
     packet_init(&packet, PACKET_SCROLLER_MSG);
     packet_writeXX(&packet, msg, strlen(msg));
-    client_send_packet(&packet, SEND_BROADCAST);
+    server_send_packet(&packet, SEND_BROADCAST);
 }

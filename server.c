@@ -46,17 +46,14 @@
 
 static client_t *guiclients = NULL;
 
-
-static void client_readable(int fd, short event, void *arg);
-static void client_writable(int fd, short event, void *arg);
-
-static void client_create    (int fd,       const char *addr);
+static void server_readable(int fd, short event, void *arg);
+static void server_writable(int fd, short event, void *arg);
 
 int client_num(client_t *client) {
     return client - clients;
 }
 
-int client_accept(int fd, struct sockaddr_in *peer) {
+int server_accept(int fd, struct sockaddr_in *peer) {
     static struct linger l = { 1, 0 };
     static const int one = 1;
     static char address[128];
@@ -110,13 +107,9 @@ int client_accept(int fd, struct sockaddr_in *peer) {
         }
     }
 
-    client_create(fd, address);
-    return 1;
-}
-
-static void client_create(int fd, const char *addr) {
-    event_set(&clients[fd].rd_event, fd, EV_READ,  client_readable, &clients[fd].rd_event);
-    event_set(&clients[fd].wr_event, fd, EV_WRITE, client_writable, &clients[fd].wr_event);
+    // Aktivieren
+    event_set(&clients[fd].rd_event, fd, EV_READ,  server_readable, &clients[fd].rd_event);
+    event_set(&clients[fd].wr_event, fd, EV_WRITE, server_writable, &clients[fd].wr_event);
     clients[fd].in_buf  = evbuffer_new();
     clients[fd].out_buf = evbuffer_new();
     clients[fd].player  = NULL;
@@ -131,25 +124,27 @@ static void client_create(int fd, const char *addr) {
     lua_pushliteral(L, "on_client_accepted");
     lua_rawget(L, LUA_GLOBALSINDEX);
     lua_pushnumber(L, fd);
-    lua_pushstring(L, addr);
+    lua_pushstring(L, address);
 
     if (lua_pcall(L, 2, 0, 0) != 0) 
         fprintf(stderr, "error calling on_client_accepted: %s\n", lua_tostring(L, -1));
 
     event_add(&clients[fd].rd_event, NULL);
+    return 1;
 }
 
-static void client_readable(int fd, short event, void *arg) {
+// TODO: Teilweise durch libevent Bufferfunktionen ersetzbar?
+static void server_readable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
     int ret = evbuffer_read(client->in_buf, fd, 128);
     if (ret < 0) {
-        client_destroy(client, strerror(errno));
+        server_destroy(client, strerror(errno));
     } else if (ret == 0) {
-        client_destroy(client, "eof reached");
+        server_destroy(client, "eof reached");
     } else if (EVBUFFER_LENGTH(client->in_buf) > 8192) {
-        client_destroy(client, "line too long. go away.");
+        server_destroy(client, "line too long. go away.");
     } else {
         int pos;
 
@@ -169,12 +164,12 @@ nextline:
                 
                 if (lua_pcall(L, 2, 1, 0) != 0) {
                     fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
-                    client_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
+                    server_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
                 }
 
                 if (!lua_toboolean(L, -1)) {
                     lua_pop(L, 1);
-                    client_destroy(client, "user closed");
+                    server_destroy(client, "user closed");
                     return;
                 }
 
@@ -188,32 +183,7 @@ nextline:
     }
 }
 
-void client_writeto(client_t *client, const void *data, size_t size) {
-    if (size == 0) 
-        return;
-    if (EVBUFFER_LENGTH(client->in_buf) > 1024*1024)
-        return;
-    evbuffer_add(client->out_buf, (void*)data, size);
-    event_add(&client->wr_event, NULL);
-}
-
-void client_writeto_all_gui_clients(const void *data, size_t size) {
-    client_t *client = guiclients;
-    if (client) do {
-        client_writeto(client, data, size);
-        client = client->next_gui;
-    } while (client != guiclients);
-}
-
-void client_send_packet(packet_t *packet, client_t *client) {
-    packet->len  = packet->offset;
-    if (!client) 
-        client_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
-    else
-        client_writeto(client, packet, 1 + 1 + packet->len);
-}
-
-static void client_writable(int fd, short event, void *arg) {
+static void server_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
@@ -223,16 +193,41 @@ static void client_writable(int fd, short event, void *arg) {
 
     int ret = evbuffer_write(client->out_buf, fd);
     if (ret < 0) {
-        client_destroy(client, strerror(errno));
+        server_destroy(client, strerror(errno));
     } else if (ret == 0) {
-        client_destroy(client, "null write?");
+        server_destroy(client, "null write?");
     } else {
         if (EVBUFFER_LENGTH(client->out_buf) > 0) 
             event_add(cb_event, NULL);
     }
 }
 
-void client_destroy(client_t *client, char *reason) {
+void server_writeto(client_t *client, const void *data, size_t size) {
+    if (size == 0) 
+        return;
+    if (EVBUFFER_LENGTH(client->in_buf) > 1024*1024)
+        return;
+    evbuffer_add(client->out_buf, (void*)data, size);
+    event_add(&client->wr_event, NULL);
+}
+
+void server_writeto_all_gui_clients(const void *data, size_t size) {
+    client_t *client = guiclients;
+    if (client) do {
+        server_writeto(client, data, size);
+        client = client->next_gui;
+    } while (client != guiclients);
+}
+
+void server_send_packet(packet_t *packet, client_t *client) {
+    packet->len  = packet->offset;
+    if (!client) 
+        server_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
+    else
+        server_writeto(client, packet, 1 + 1 + packet->len);
+}
+
+void server_destroy(client_t *client, char *reason) {
     int fd = client_num(client);
 
     lua_pushliteral(L, "on_client_close");
@@ -247,9 +242,9 @@ void client_destroy(client_t *client, char *reason) {
         packet_t packet;
         packet_init(&packet, PACKET_QUIT_MSG);
         packet_writeXX(&packet, reason, strlen(reason));
-        client_send_packet(&packet, client);
+        server_send_packet(&packet, client);
     } else {
-        evbuffer_add(client->out_buf, "\nconnection terminating: ", 25);
+        evbuffer_add(client->out_buf, "connection terminating: ", 25);
         evbuffer_add(client->out_buf, reason, strlen(reason));
         evbuffer_add(client->out_buf, "\n", 1);
     }
@@ -282,6 +277,12 @@ void client_destroy(client_t *client, char *reason) {
 }
 
 static void initial_update(client_t *client) {
+    // Protokoll Version senden
+    packet_t packet;
+    packet_init(&packet, PACKET_HANDSHAKE);
+    packet_write08(&packet, PROTOCOL_VERSION);
+    server_send_packet(&packet, client);
+
     world_send_initial_update(client);
     player_send_initial_update(client);
     creature_send_initial_update(client);
@@ -314,7 +315,7 @@ static client_t *client_get_checked_lua(lua_State *L, int clientno) {
 static int luaWriteToClient(lua_State *L) {
     int clientno = luaL_checklong(L, 1);
     size_t msglen; const char *msg = luaL_checklstring(L, 2, &msglen);
-    client_writeto(client_get_checked_lua(L, clientno), msg, msglen);
+    server_writeto(client_get_checked_lua(L, clientno), msg, msglen);
     return 0;
 }
 
@@ -513,14 +514,14 @@ void server_init() {
     lua_rawset(L, LUA_GLOBALSINDEX);
 
     // XXX: HACK: stdin client starten
-    client_accept(STDIN_FILENO, NULL); 
+    server_accept(STDIN_FILENO, NULL); 
 }
 
 void server_shutdown() {
     int clientno;
     for (clientno = 0; clientno < MAXCLIENTS; clientno++) {
         if (CLIENT_USED(&clients[clientno])) 
-            client_destroy(&clients[clientno], "server shutdown");
+            server_destroy(&clients[clientno], "server shutdown");
     }
 
     listener_shutdown();
