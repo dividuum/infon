@@ -590,11 +590,11 @@ void creature_update_network_variables(creature_t *creature) {
     int path_x, path_y;
     if (creature->state == CREATURE_WALK) {
         assert(creature->path);
-        path_x = creature->path->x / CREATURE_NETWORK_RESOLUTION;
-        path_y = creature->path->y / CREATURE_NETWORK_RESOLUTION;
+        path_x = creature->path->x / CREATURE_POS_RESOLUTION;
+        path_y = creature->path->y / CREATURE_POS_RESOLUTION;
     } else {
-        path_x = creature->x / CREATURE_NETWORK_RESOLUTION;
-        path_y = creature->y / CREATURE_NETWORK_RESOLUTION;
+        path_x = creature->x / CREATURE_POS_RESOLUTION;
+        path_y = creature->y / CREATURE_POS_RESOLUTION;
     }
         
     if (path_x != creature->network_path_x ||
@@ -604,7 +604,7 @@ void creature_update_network_variables(creature_t *creature) {
         creature->dirtymask |= CREATURE_DIRTY_POS;
     }
 
-    int new_speed = (creature_speed(creature) + 2) / 4;
+    int new_speed = (creature_speed(creature) + 2) / CREATURE_SPEED_RESOLUTION;
     if (creature->state == CREATURE_WALK && 
         new_speed != creature->network_speed) 
     {
@@ -831,15 +831,11 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     if (dirtymask & CREATURE_DIRTY_ALIVE) {
         if (CREATURE_USED(creature)) {
             packet_write08(&packet, creature->player->color);
-            packet_write16(&packet, creature->x / CREATURE_NETWORK_RESOLUTION);
-            packet_write16(&packet, creature->y / CREATURE_NETWORK_RESOLUTION);
+            packet_write16(&packet, creature->x / CREATURE_POS_RESOLUTION);
+            packet_write16(&packet, creature->y / CREATURE_POS_RESOLUTION);
         } else {
             packet_write08(&packet, 0xFF);
         }
-    }
-    if (dirtymask & CREATURE_DIRTY_POS) {
-        packet_write16(&packet, creature->network_path_x);
-        packet_write16(&packet, creature->network_path_y);
     }
     if (dirtymask & CREATURE_DIRTY_TYPE) 
         packet_write08(&packet, creature->type);
@@ -847,6 +843,10 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
         packet_write08(&packet, creature->network_food_health);
     if (dirtymask & CREATURE_DIRTY_STATE)
         packet_write08(&packet, creature->network_state);
+    if (dirtymask & CREATURE_DIRTY_POS) {
+        packet_write16(&packet, creature->network_path_x);
+        packet_write16(&packet, creature->network_path_y);
+    }
     if (dirtymask & CREATURE_DIRTY_TARGET)
         packet_write16(&packet, creature->network_target);
     if (dirtymask & CREATURE_DIRTY_MESSAGE) {

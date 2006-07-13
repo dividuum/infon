@@ -35,8 +35,8 @@ void packet_rewind(packet_t *packet) {
 }
 
 void packet_init(packet_t *packet, int type) {
-	packet->type = type;
-	packet_rewind(packet);
+    packet->type = type;
+    packet_rewind(packet);
 }
 
 int packet_read08(packet_t *packet, uint8_t *data) {

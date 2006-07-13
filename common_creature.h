@@ -30,7 +30,8 @@
 
 #define CREATURE_STATES      8
 
-#define CREATURE_NETWORK_RESOLUTION 16
+#define CREATURE_POS_RESOLUTION   16
+#define CREATURE_SPEED_RESOLUTION  4
 
 typedef enum {
     CREATURE_IDLE,
@@ -44,10 +45,10 @@ typedef enum {
 } creature_state;
 
 #define CREATURE_DIRTY_ALIVE        (1 << 0) 
-#define CREATURE_DIRTY_POS          (1 << 1) 
-#define CREATURE_DIRTY_TYPE         (1 << 2)
-#define CREATURE_DIRTY_FOOD_HEALTH  (1 << 3)
-#define CREATURE_DIRTY_STATE        (1 << 4)
+#define CREATURE_DIRTY_TYPE         (1 << 1)
+#define CREATURE_DIRTY_FOOD_HEALTH  (1 << 2)
+#define CREATURE_DIRTY_STATE        (1 << 3)
+#define CREATURE_DIRTY_POS          (1 << 4) 
 #define CREATURE_DIRTY_TARGET       (1 << 5)
 #define CREATURE_DIRTY_MESSAGE      (1 << 6)
 #define CREATURE_DIRTY_SPEED        (1 << 7)

@@ -80,7 +80,7 @@ typedef struct sprite_s {
 } sprite_t;
 
 sprite_t   *sprite_get(int i);
-int 		sprite_exists(int i);
+int         sprite_exists(int i);
 int         sprite_num(sprite_t *sprite);
 
 void        sprite_init();

@@ -133,7 +133,6 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     return 1;
 }
 
-// TODO: Teilweise durch libevent Bufferfunktionen ersetzbar?
 static void server_readable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
@@ -146,38 +145,26 @@ static void server_readable(int fd, short event, void *arg) {
     } else if (EVBUFFER_LENGTH(client->in_buf) > 8192) {
         server_destroy(client, "line too long. go away.");
     } else {
-        int pos;
-
-nextline:
-        for (pos = 0; pos < EVBUFFER_LENGTH(client->in_buf); pos++) {
-            if (EVBUFFER_DATA(client->in_buf)[pos] == '\n') {
-                lua_pushliteral(L, "on_client_input");   
-                lua_rawget(L, LUA_GLOBALSINDEX);      
-                lua_pushnumber(L, fd);               
-                if (pos > 0 && EVBUFFER_DATA(client->in_buf)[pos - 1] == '\r') {
-                    lua_pushlstring(L, (char*)EVBUFFER_DATA(client->in_buf), pos - 1);
-                } else if (pos > 0 && EVBUFFER_DATA(client->in_buf)[0] == '\r') {
-                    lua_pushlstring(L, (char*)EVBUFFER_DATA(client->in_buf) + 1, pos - 1);
-                } else {
-                    lua_pushlstring(L, (char*)EVBUFFER_DATA(client->in_buf), pos);
-                }
+        char *line;
+        while ((line = evbuffer_readline(client->in_buf))) {
+            lua_pushliteral(L, "on_client_input");   
+            lua_rawget(L, LUA_GLOBALSINDEX);      
+            lua_pushnumber(L, fd);               
+            lua_pushstring(L, line);
+            free(line);
                 
-                if (lua_pcall(L, 2, 1, 0) != 0) {
-                    fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
-                    server_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
-                }
-
-                if (!lua_toboolean(L, -1)) {
-                    lua_pop(L, 1);
-                    server_destroy(client, "user closed");
-                    return;
-                }
-
-                lua_pop(L, 1);
-
-                evbuffer_drain(client->in_buf, pos + 1);
-                goto nextline;
+            if (lua_pcall(L, 2, 1, 0) != 0) {
+                fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
+                server_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
             }
+
+            if (!lua_toboolean(L, -1)) {
+                lua_pop(L, 1);
+                server_destroy(client, "user closed");
+                return;
+            }
+
+            lua_pop(L, 1);
         }
         event_add(cb_event, NULL);
     }

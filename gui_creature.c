@@ -64,21 +64,24 @@ void gui_creature_draw() {
 
         //if (time < creature->last_msg_set + 2000) 
             video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, creature->message);
+            
+        //{ 
+        //  char debug[10]; sprintf(debug, "%d", creature->pathlen); 
+        //  video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, debug);
+        //}
         
-        /*
-        if (creature->path) {
-            int lastx = X_TO_SCREENX(creature->x);
-            int lasty = Y_TO_SCREENY(creature->y);
-            pathnode_t *node = creature->path;
-            while (node) {
-                int curx = node->x * SPRITE_TILE_SIZE / TILE_WIDTH;
-                int cury = node->y * SPRITE_TILE_SIZE / TILE_HEIGHT;
-                video_line(lastx, lasty, curx, cury);
-                lastx = curx, lasty = cury;
-                node = node->next;
-            }
-        }
-        */
+        //if (creature->path) {
+        //    int lastx = X_TO_SCREENX(creature->x);
+        //    int lasty = Y_TO_SCREENY(creature->y);
+        //    gui_pathnode_t *node = creature->path;
+        //    while (node) {
+        //        int curx = node->x * SPRITE_TILE_SIZE / TILE_WIDTH;
+        //        int cury = node->y * SPRITE_TILE_SIZE / TILE_HEIGHT;
+        //        video_line(lastx, lasty, curx, cury);
+        //        lastx = curx, lasty = cury;
+        //        node = node->next;
+        //    }
+        //}
 
         if (creature->state == CREATURE_ATTACK) {
             assert(creature->target >= 0 && creature->target < MAXCREATURES);
@@ -93,6 +96,45 @@ void gui_creature_draw() {
     }
 }
 
+static void gui_creature_add_path(gui_creature_t *creature, int x, int y, int beam) {
+    gui_pathnode_t *node = malloc(sizeof(gui_pathnode_t));
+
+    node->x    = x;
+    node->y    = y;
+    node->beam = beam;
+    node->next = NULL;
+
+    if (creature->pathlen == 0) {
+        assert(!creature->last && !creature->path);
+        creature->last = creature->path = node;
+    } else {
+        assert(creature->last);
+        assert(creature->path);
+        assert(creature->last->next == NULL);
+        creature->last = creature->last->next = node;
+    } 
+
+    creature->pathlen++;
+}
+
+static void gui_creature_del_path(gui_creature_t *creature) {
+    assert(creature->pathlen > 0);
+    assert(creature->path && creature->last);
+    gui_pathnode_t *tmp = creature->path;
+    creature->path = creature->path->next;
+    if (--creature->pathlen == 0) {
+        assert(creature->last == tmp);
+        creature->last = NULL;
+    }
+    free(tmp);
+}
+        
+static void gui_creature_kill(gui_creature_t *creature) {
+    while (creature->path) 
+        gui_creature_del_path(creature);
+    creature->used = 0;
+}
+
 void gui_creature_move(int delta) {
     gui_creature_t *creature = &creatures[0];
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
@@ -100,18 +142,29 @@ void gui_creature_move(int delta) {
         if (!CREATURE_USED(creature)) 
             continue;
 
-        const int dx = creature->path_x - creature->x;
-        const int dy = creature->path_y - creature->y;
-        //printf("%d,%d\n", creature->x, creature->y);
-        const int dist_to_waypoint = sqrt(dx*dx + dy*dy);
-        if (dist_to_waypoint < 16) {
-            creature->x = creature->path_x;
-            creature->y = creature->path_y;
+        int travelled = (creature->speed + 150 * max(0, creature->pathlen - 1)) * delta / 1000;
+again:        
+        if (!creature->path)
             continue;
+
+        if (creature->path->beam) {
+            creature->x = creature->path->x;
+            creature->y = creature->path->y;
+            gui_creature_del_path(creature);
+            goto again;
         }
 
-        //printf("%d %d\n", creature->health, gui_creature_speed(creature));
-        const int travelled = min(creature->speed * delta / 1000, dist_to_waypoint);
+        const int dx = creature->path->x - creature->x;
+        const int dy = creature->path->y - creature->y;
+        const int dist_to_waypoint = sqrt(dx*dx + dy*dy);
+
+        if (travelled >= dist_to_waypoint) {
+            creature->x = creature->path->x;
+            creature->y = creature->path->y;
+            travelled  -= dist_to_waypoint;
+            gui_creature_del_path(creature);
+            goto again;
+        }
 
         creature->x += dx * travelled / dist_to_waypoint;
         creature->y += dy * travelled / dist_to_waypoint;
@@ -152,9 +205,11 @@ void gui_creature_from_network(packet_t *packet) {
         uint8_t alive;
         if (!packet_read08(packet, &alive))     goto failed;
         if (alive == 0xFF) {
-            creature->used = 0;
+            if (!CREATURE_USED(creature))       goto failed;
+            gui_creature_kill(creature);
             return;
         } else {
+            if (CREATURE_USED(creature))        goto failed;
             if (alive >= CREATURE_COLORS)       goto failed;
             memset(creature, 0, sizeof(gui_creature_t));
             creature->used = 1;
@@ -164,21 +219,14 @@ void gui_creature_from_network(packet_t *packet) {
             if (!packet_read16(packet, &x))     goto failed;
             if (!packet_read16(packet, &y))     goto failed;
             // XXX: x, y checken?
-            creature->x = creature->old_x = x * CREATURE_NETWORK_RESOLUTION;
-            creature->y = creature->old_y = y * CREATURE_NETWORK_RESOLUTION;
+            gui_creature_add_path(creature,
+                                  x * CREATURE_POS_RESOLUTION, 
+                                  y * CREATURE_POS_RESOLUTION,
+                                  1);
         }
     }
     
     if (!CREATURE_USED(creature))               goto failed;
-
-    if (updatemask & CREATURE_DIRTY_POS) {
-        uint16_t x, y;
-        if (!packet_read16(packet, &x))         goto failed;
-        if (!packet_read16(packet, &y))         goto failed;
-        // XXX: x, y checken?
-        creature->path_x = x * CREATURE_NETWORK_RESOLUTION;
-        creature->path_y = y * CREATURE_NETWORK_RESOLUTION;
-    }
 
     if (updatemask & CREATURE_DIRTY_TYPE) {
         uint8_t type;
@@ -195,11 +243,39 @@ void gui_creature_from_network(packet_t *packet) {
         creature->health = food_health & 0x0F;
     }
 
+    // Im Server wird beim Wechseln von WALK zu anderem State
+    // das anzulaufende Ziel angepasst: Es muss evtl. nicht mehr
+    // bis zum Ende des Pfades gelaufen werden, da der Wechsel
+    // aus WALK waehrend dem Anlaufen des Ziels passiert. Dies
+    // bedeutet fuer den Client, dass in diesem Fall, und falls 
+    // tatsaechlich ein neues Pfadziel gesetzt wird, dieses
+    // das urspruengliche letzte Ziel des Pfades ersetzt.
+    int walk_state_change = 0;
+    
     if (updatemask & CREATURE_DIRTY_STATE) {
         uint8_t state;
         if (!packet_read08(packet, &state))     goto failed;
         if (state >= CREATURE_STATES)           goto failed;
+        int oldstate = creature->state;
         creature->state = state;
+        if ((oldstate == CREATURE_WALK) ^ (state == CREATURE_WALK))
+            walk_state_change = 1;
+    }
+
+    if (updatemask & CREATURE_DIRTY_POS) {
+        uint16_t x, y;
+        if (!packet_read16(packet, &x))         goto failed;
+        if (!packet_read16(packet, &y))         goto failed;
+        // XXX: x, y checken?
+        if (walk_state_change && creature->last) {
+            creature->last->x = x * CREATURE_POS_RESOLUTION;
+            creature->last->y = y * CREATURE_POS_RESOLUTION;
+        } else {
+            gui_creature_add_path(creature,
+                                  x * CREATURE_POS_RESOLUTION, 
+                                  y * CREATURE_POS_RESOLUTION,
+                                  0);
+        }
     }
 
     if (updatemask & CREATURE_DIRTY_TARGET) {
@@ -221,7 +297,7 @@ void gui_creature_from_network(packet_t *packet) {
     if (updatemask & CREATURE_DIRTY_SPEED) {
         uint8_t speed;
         if (!packet_read08(packet, &speed))     goto failed;
-        creature->speed = speed * 4;
+        creature->speed = speed * CREATURE_SPEED_RESOLUTION;
     }
     return;
 failed:
@@ -233,5 +309,13 @@ void gui_creature_init() {
 }
 
 void gui_creature_shutdown() {
+    gui_creature_t *creature = &creatures[0];
+    for (int i = 0; i < MAXCREATURES; i++, creature++) {
+
+        if (!CREATURE_USED(creature)) 
+            continue;
+
+        gui_creature_kill(creature);
+    }
 }
 

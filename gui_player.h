@@ -26,7 +26,7 @@
 #include "packet.h"
 
 typedef struct gui_player_s {
-	int 		  used;
+    int           used;
     char          name[16];
     int           color;
 

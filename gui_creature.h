@@ -24,17 +24,21 @@
 #include "common_creature.h"
 #include "packet.h"
 
+typedef struct gui_pathnode_s gui_pathnode_t;
+
+struct gui_pathnode_s {
+    int             x;
+    int             y;
+    int             beam;
+    gui_pathnode_t *next;
+};
+
 typedef struct gui_creature_s {
     int             used;
 
     int             x;
     int             y;
     int             speed;
-
-    int             old_x;
-    int             old_y;
-    int             path_x;
-    int             path_y;
 
     int             dir;
     int             type;
@@ -43,6 +47,10 @@ typedef struct gui_creature_s {
     int             target;
     int             color;
     creature_state  state;
+
+    gui_pathnode_t *path;
+    gui_pathnode_t *last;
+    int             pathlen;
 
     char message[9];
 } gui_creature_t;
