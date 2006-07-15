@@ -299,113 +299,36 @@ static client_t *client_get_checked_lua(lua_State *L, int clientno) {
     return &clients[clientno];
 }
 
-static int luaWriteToClient(lua_State *L) {
+static int luaClientWrite(lua_State *L) {
     int clientno = luaL_checklong(L, 1);
     size_t msglen; const char *msg = luaL_checklstring(L, 2, &msglen);
     server_writeto(client_get_checked_lua(L, clientno), msg, msglen);
     return 0;
 }
 
-static int luaAttachClientToPlayer(lua_State *L) {
+static int luaClientAttachToPlayer(lua_State *L) {
     lua_pushboolean(L, player_attach_client(client_get_checked_lua(L, luaL_checklong(L, 1)), 
                                             player_get_checked_lua(L, luaL_checklong(L, 2)), 
                                             luaL_checkstring(L, 3)));
     return 1;
 }
 
-static int luaDetachClientFromPlayer(lua_State *L) {
+static int luaClientDetachFromPlayer(lua_State *L) {
     lua_pushboolean(L, player_detach_client(client_get_checked_lua(L, luaL_checklong(L, 1)), 
                                             player_get_checked_lua(L, luaL_checklong(L, 2)))); 
     return 1;
 }
 
-static int luaPlayerKill(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    player_mark_for_kill(player);
-    return 0;
-}
-
-static int luaCreatePlayer(lua_State *L) {
-    player_t *player = player_create(luaL_checkstring(L, 1));
-    
-    if (player) {
-        lua_pushnumber(L, player_num(player));
-    } else {
-        lua_pushnil(L);
-    }
-    return 1;
-}
-
-static int luaPlayerNumber(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
-    
-    if (!client->player) {
-        lua_pushnil(L);
-    } else {
-        lua_pushnumber(L, player_num(client->player));
-    }
-    return 1;
-}
-
-static int luaPlayerNumClients(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    lua_pushnumber(L, player->num_clients);
-    return 1;
-}
-
-static int luaSetPlayerName(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    player_set_name(player, luaL_checkstring(L, 2));
-    return 0;
-}
-
-static int luaSetPlayerScore(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    player->score = luaL_checklong(L, 2);
-    return 0;
-}
-
-static int luaGetPlayerName(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    lua_pushstring(L, player->name);
-    return 1;
-}
-
-static int luaTurnIntoGuiClient(lua_State *L) {
+static int luaClientMakeGuiClient(lua_State *L) {
     client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
     client_turn_into_gui_client(client);
     return 0;
 }
 
-static int luaIsGuiClient(lua_State *L) {
+static int luaClientIsGuiClient(lua_State *L) {
     client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
     lua_pushboolean(L, client->is_gui_client);
     return 1;
-}
-
-static int luaWorldDig(lua_State *L) {
-    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2), SOLID));
-    return 1;
-}
-
-static int luaWorldAddFood(lua_State *L) {
-    lua_pushnumber(L, world_add_food(luaL_checklong(L, 1), 
-                                     luaL_checklong(L, 2), 
-                                     luaL_checklong(L, 3)));
-    return 1;
-}
-
-static int luaWorldWalkable(lua_State *L) {
-    lua_pushboolean(L, world_walkable(luaL_checklong(L, 1), luaL_checklong(L, 2)));
-    return 1;
-}
-
-static int luaWorldFindDigged(lua_State *L) {
-    int x, y;
-    world_find_digged(&x, &y);
-    lua_pushnumber(L, x);
-    lua_pushnumber(L, y);
-    return 2;
 }
 
 static int luaGameInfo(lua_State *L) {
@@ -420,13 +343,7 @@ static int luaGameTime(lua_State *L) {
     return 1;
 }
 
-static int luaPlayerKillAllCreatures(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    creature_kill_all_players_creatures(player);
-    return 0;
-}
-
-static int luaPlayerExecute(lua_State *L) {
+static int luaClientExecute(lua_State *L) {
     int clientno = luaL_checklong(L, 1);
     const char *code = luaL_checkstring(L, 2);
 
@@ -439,7 +356,18 @@ static int luaPlayerExecute(lua_State *L) {
     return 0;
 }
 
-static int luaAddToScroller(lua_State *L) {
+static int luaClientPlayerNumber(lua_State *L) {
+    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    
+    if (!client->player) {
+        lua_pushnil(L);
+    } else {
+        lua_pushnumber(L, player_num(client->player));
+    }
+    return 1;
+}
+
+static int luaScrollerAdd(lua_State *L) {
     add_to_scroller(luaL_checkstring(L, 1));
     return 0;
 }
@@ -467,30 +395,19 @@ void server_init() {
     if (!listener_init()) 
         die("error initializing listener");
 
-    lua_dofile(L, "server.lua");
-
     memset(clients, 0, sizeof(clients));
-    lua_register(L, "write_to_client",          luaWriteToClient);
-    lua_register(L, "attach_client_to_player",  luaAttachClientToPlayer);
-    lua_register(L, "detach_client_from_player",luaDetachClientFromPlayer);
-    lua_register(L, "create_player",            luaCreatePlayer);
-    lua_register(L, "set_player_name",          luaSetPlayerName);
-    lua_register(L, "get_player_name",          luaGetPlayerName);
-    lua_register(L, "player_number",            luaPlayerNumber);
-    lua_register(L, "player_execute",           luaPlayerExecute);
-    lua_register(L, "player_kill_all_creatures",luaPlayerKillAllCreatures);
-    lua_register(L, "set_player_score",         luaSetPlayerScore);
-    lua_register(L, "player_num_clients",       luaPlayerNumClients);
-    lua_register(L, "turn_into_guiclient",      luaTurnIntoGuiClient);
-    lua_register(L, "world_dig",                luaWorldDig);
-    lua_register(L, "world_add_food",           luaWorldAddFood);
-    lua_register(L, "world_is_walkable",        luaWorldWalkable);
-    lua_register(L, "player_kill",              luaPlayerKill);
+    lua_register(L, "client_write",             luaClientWrite);
+    lua_register(L, "client_attach_to_player",  luaClientAttachToPlayer);
+    lua_register(L, "client_detach_from_player",luaClientDetachFromPlayer);
+    lua_register(L, "client_execute",           luaClientExecute);
+    lua_register(L, "client_make_guiclient",    luaClientMakeGuiClient);
+    lua_register(L, "client_is_gui_client",     luaClientIsGuiClient);
+    lua_register(L, "client_player_number",     luaClientPlayerNumber);
+
+    lua_register(L, "scroller_add",             luaScrollerAdd);
+
     lua_register(L, "game_info",                luaGameInfo);
-    lua_register(L, "find_digged",              luaWorldFindDigged);
-    lua_register(L, "add_to_scroller",          luaAddToScroller);
     lua_register(L, "game_time",                luaGameTime);
-    lua_register(L, "is_gui_client",            luaIsGuiClient);
 
     lua_pushliteral(L, "MAXPLAYERS");
     lua_pushnumber(L,   MAXPLAYERS);

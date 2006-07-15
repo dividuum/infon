@@ -89,7 +89,7 @@ int  video_height() {
 }
 
 void video_draw(int x, int y, sprite_t *sprite) {
-    if (x < 0 || y < 0) return;
+    //if (x < 0 || y < 0) return;
     const int w = sprite->surface->w;
     const int h = sprite->surface->h;
     SDL_Rect dstrect = {x, y, x + w, y + h};

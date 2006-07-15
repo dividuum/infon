@@ -32,7 +32,7 @@ function Client:joinmenu()
     self:writeln("------------------------------")
     local numplayers = 0
     for n = 0, MAXPLAYERS - 1 do 
-        ok, name = pcall(get_player_name, n)
+        ok, name = pcall(player_get_name, n)
         if ok then
             numplayers = numplayers + 1
             self:writeln(string.format("%3d - %s", n, name))
@@ -58,7 +58,7 @@ function Client:joinmenu()
             self:writeln("password empty? aborting")
             return
         end
-        playerno = create_player(password)
+        playerno = player_create(password)
         if playerno == nil then 
             self:writeln("could not join: full?")
             return
@@ -181,8 +181,6 @@ function Client:mainmenu()
             self:execute("restart()")
         elseif input == "i" then
             self:execute("info()")
-     -- elseif input == "x" then
-     --     self:attach_to_player(create_player("bla"), "bla")
         elseif input == "k" then
             self:write("kill all your creatures? [y/N] ")
             if self:readln() == "y" then
@@ -261,41 +259,17 @@ end
 
 
 function ServerMain()
-    require 'level.lua'
-    add_to_scroller("Welcome to " .. GAME_NAME .. "!")
-    add_to_scroller(join_info)
-    food_spawner = {}
-    for s = 0, 10 do
-        local dx, dy = find_digged()
-        food_spawner[s] = { x = dx,
-                            y = dy,
-                            r = math.random(3),
-                            a = math.random(100) + 30,
-                            i = math.random(1000) + 1000,
-                            n = game_info() }
-        world_add_food(food_spawner[s].x, 
-                       food_spawner[s].y, 
-                       10000)
-    end
+    scroller_add("Welcome to " .. GAME_NAME .. "!")
+    scroller_add(join_info)
                         
     info_time = game_info()
     while true do
         if game_info() > info_time + 10000 then
            info_time = game_info() 
            if join_info ~= "" then
-               add_to_scroller(join_info)
+               scroller_add(join_info)
            end
         end
-
-        for n, spawner in food_spawner do
-            if game_info() > spawner.n then 
-                world_add_food(spawner.x + math.random(spawner.r * 2 + 1) - spawner.r,
-                               spawner.y + math.random(spawner.r * 2 + 1) - spawner.r,
-                               spawner.a)
-                spawner.n = spawner.n + spawner.i                               
-            end
-        end
-
         coroutine.yield()
     end
 end

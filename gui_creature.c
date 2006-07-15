@@ -36,14 +36,16 @@ static gui_creature_t creatures[MAXCREATURES];
 #define CREATURE_USED(creature) ((creature)->used)
 
 void gui_creature_draw() {
+    const int xoff = gui_world_x_offset();
+    const int yoff = gui_world_y_offset();
     Uint32 time = SDL_GetTicks();
     gui_creature_t *creature = &creatures[0];
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
         if (!CREATURE_USED(creature)) 
             continue;
 
-        const int x = X_TO_SCREENX(creature->x) - 7;
-        const int y = Y_TO_SCREENY(creature->y) - 7;
+        const int x = X_TO_SCREENX(creature->x) - 7 + xoff;
+        const int y = Y_TO_SCREENY(creature->y) - 7 + yoff;
         const int hw = creature->health;
         const int fw = creature->food;
 

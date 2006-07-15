@@ -82,14 +82,11 @@ static void client_handle_packet(packet_t *packet) {
         case PACKET_WORLD_UPDATE:  
             gui_world_from_network(packet);
             break;
-        case PACKET_CREATURE_UPDATE: 
-            gui_creature_from_network(packet);
-            break;
         case PACKET_SCROLLER_MSG:   
             gui_scroller_from_network(packet);
             break;
-        case PACKET_WELCOME_MSG:    
-            client_writeto("guiclient\n", 10);
+        case PACKET_CREATURE_UPDATE: 
+            gui_creature_from_network(packet);
             break;
         case PACKET_QUIT_MSG:
             printf("server wants us to disconnect: %.*s\n",
@@ -98,6 +95,12 @@ static void client_handle_packet(packet_t *packet) {
             break;
         case PACKET_KOTH_UPDATE:
             gui_player_king_from_network(packet);
+            break;
+        case PACKET_WORLD_INFO:
+            gui_world_info_from_network(packet);
+            break;
+        case PACKET_WELCOME_MSG:    
+            client_writeto("guiclient\n", 10);
             break;
         case PACKET_HANDSHAKE:
             client_read_handshake(packet);

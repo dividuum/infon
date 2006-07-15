@@ -23,9 +23,13 @@
 #include <string.h>
 #include <assert.h>
 
+#include <lauxlib.h>
+
+#include "global.h"
 #include "world.h"
 #include "sprite.h"
 #include "path.h"
+#include "misc.h"
 
 static int           world_w;
 static int           world_h;
@@ -136,6 +140,12 @@ void world_find_digged(int *x, int *y) {
 }
 
 void world_send_initial_update(client_t *client) {
+    packet_t packet;
+    packet_init(&packet, PACKET_WORLD_INFO);
+    packet_write08(&packet, world_w);
+    packet_write08(&packet, world_h);
+    server_send_packet(&packet, client);
+
     for (int x = 0; x < world_w; x++) {
         for (int y = 0; y < world_h; y++) {
             world_to_network(x, y, client);
@@ -158,33 +168,92 @@ void world_to_network(int x, int y, client_t *client) {
     server_send_packet(&packet, client);
 }
 
-void world_init(int w, int h) {
-    world_w = w;
-    world_h = h;
+void world_tick() {
+    lua_pushliteral(L, "world_tick");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        fprintf(stderr, "error calling world_tick: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+}
 
-    koth_x = w / 2;
-    koth_y = h / 2;
+static int luaWorldDig(lua_State *L) {
+    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2), SOLID));
+    return 1;
+}
 
+static int luaWorldAddFood(lua_State *L) {
+    lua_pushnumber(L, world_add_food(luaL_checklong(L, 1), 
+                                     luaL_checklong(L, 2), 
+                                     luaL_checklong(L, 3)));
+    return 1;
+}
+
+static int luaWorldWalkable(lua_State *L) {
+    lua_pushboolean(L, world_walkable(luaL_checklong(L, 1), luaL_checklong(L, 2)));
+    return 1;
+}
+
+static int luaWorldFindDigged(lua_State *L) {
+    int x, y;
+    world_find_digged(&x, &y);
+    lua_pushnumber(L, x);
+    lua_pushnumber(L, y);
+    return 2;
+}
+
+
+void world_init() {
+    lua_dofile(L, "world.lua");
+
+    lua_register(L, "world_dig",            luaWorldDig);
+    lua_register(L, "world_add_food",       luaWorldAddFood);
+    lua_register(L, "world_is_walkable",    luaWorldWalkable);
+    lua_register(L, "world_find_digged",    luaWorldFindDigged);
+    
+    lua_pushliteral(L, "world_init");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 4, 0) != 0) {
+        fprintf(stderr, "error calling world_init: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    world_w = lua_tonumber(L, -4);
+    world_h = lua_tonumber(L, -3);
+
+    koth_x  = lua_tonumber(L, -2);
+    koth_y  = lua_tonumber(L, -1);
+
+    lua_pop(L, 4);
+
+    if (world_w < 10 || world_w > 255 ||
+        world_h < 10 || world_h > 255)
+        die("world size invalid: %d x %d", world_w, world_h);
+
+    if (koth_x <= 0 || koth_x >= world_w - 1 ||
+        koth_y <= 0 || koth_y >= world_h - 1)
+        die("koth pos invalid: %d, %d", koth_x, koth_y);
+    
     map_pathfind = map_alloc();
-    map_init(map_pathfind, w, h);
+    map_init(map_pathfind, world_w, world_h);
     finder_init(&finder);
 
-    map_sprites = malloc(w * h * sizeof(int));
-    map_food    = malloc(w * h * sizeof(int));
-    memset(map_food, 0, w * h * sizeof(int));
+    map_sprites = malloc(world_w * world_h * sizeof(int));
+    map_food    = malloc(world_w * world_h * sizeof(int));
+    memset(map_food, 0, world_w * world_h * sizeof(int));
 
     // Koth Tile freigraben
     world_dig(koth_x, koth_y, SOLID);
 
     // Tile Texturen setzen
-    for (int x = 0; x < w; x++) {
-        for (int y = 0; y < h; y++) {
-            if (x == 0 || x == w - 1 || y == 0 || y == h - 1) {
-                map_sprites[x + w * y] = SPRITE_BORDER + rand() % SPRITE_NUM_BORDER;
+    for (int x = 0; x < world_w; x++) {
+        for (int y = 0; y < world_h; y++) {
+            if (x == 0 || x == world_w - 1 || y == 0 || y == world_h - 1) {
+                map_sprites[x + world_w * y] = SPRITE_BORDER + rand() % SPRITE_NUM_BORDER;
             } else if (x == koth_x && y == koth_y) {
-                map_sprites[x + w * y] = SPRITE_KOTH;
+                map_sprites[x + world_w * y] = SPRITE_KOTH;
             } else {
-                map_sprites[x + w * y] = SPRITE_SOLID + rand() % SPRITE_NUM_SOLID;
+                map_sprites[x + world_w * y] = SPRITE_SOLID + rand() % SPRITE_NUM_SOLID;
             }
         }
     }

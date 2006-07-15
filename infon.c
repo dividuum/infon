@@ -60,8 +60,8 @@ int main(int argc, char *argv[]) {
         die("<ip:port>");
 
     // const int width = 320, height = 208;
-    const int width = 640, height = 480;
-    // const int width = 800, height = 600;
+    // const int width = 640, height = 480;
+    const int width = 800, height = 600;
     // const int width = 1024, height = 768;
     // const int width = 1280, height = 1024;
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     video_init(width, height);
     sprite_init();
     gui_scroller_init();
-    gui_world_init(width / SPRITE_TILE_SIZE, height / SPRITE_TILE_SIZE - 2);
+    gui_world_init();
     gui_player_init();
     gui_creature_init();
 
@@ -111,11 +111,18 @@ int main(int argc, char *argv[]) {
                             if (event.key.keysym.mod & KMOD_ALT)
                                 video_fullscreen_toggle();
                             break;
+                        case SDLK_c:
+                            gui_world_center();
+                            break;
                         case SDLK_ESCAPE:
                             running = 0;
                             break;
                         default: ;
                     }
+                    break;
+               case SDL_MOUSEMOTION: 
+                    if (event.motion.state & 1)
+                    gui_world_center_change(-event.motion.xrel, -event.motion.yrel);
                     break;
                 case SDL_QUIT:
                     running = 0;

@@ -24,34 +24,101 @@
 
 #include "gui_world.h"
 #include "video.h"
+#include "misc.h"
+
+static int           initialized = 0;
 
 static int           world_w;
 static int           world_h;
 
-static int           koth_x;
-static int           koth_y;
+static int           center_x;
+static int           center_y;
+
+static int           offset_x;
+static int           offset_y;
 
 static sprite_t    **map_sprites  = NULL;
 static sprite_t    **food_sprites = NULL;
 
 void gui_world_draw() {
-    for (int y = 0; y < world_h; y++) {
-        for (int x = 0; x < world_w; x++) {
-            video_draw(x * SPRITE_TILE_SIZE, 
-                       y * SPRITE_TILE_SIZE, 
-                       map_sprites[y * world_w + x]);
+    if (!initialized)
+        return;
+
+    int screen_w  = video_width(); 
+    int screen_cx = screen_w / 2;
+
+    int screen_h  = video_height() - 32;
+    int screen_cy = screen_h / 2;
+
+    int mapx1 = offset_x = screen_cx  - center_x;
+    int x1    = 0;
+    if (mapx1 <= -SPRITE_TILE_SIZE) {
+        x1     =  -mapx1 / SPRITE_TILE_SIZE;
+        mapx1 = -(-mapx1 % SPRITE_TILE_SIZE);
+    }
+    int x2 = x1 + (screen_w - mapx1) / SPRITE_TILE_SIZE + 1;
+    if (x2 > world_w) x2 = world_w;
+    int mapx2 = mapx1 + (x2 - x1) * SPRITE_TILE_SIZE;
+    
+    int mapy1 = offset_y = screen_cy - center_y;
+    int y1    = 0;
+    if (mapy1 <= -SPRITE_TILE_SIZE) {
+        y1    =   -mapy1 / SPRITE_TILE_SIZE;
+        mapy1 = -(-mapy1 % SPRITE_TILE_SIZE);
+    }
+    int y2 = y1 + (screen_h - mapy1) / SPRITE_TILE_SIZE + 1;
+    if (y2 > world_h) y2 = world_h;
+    int mapy2 = mapy1 + (y2 - y1) * SPRITE_TILE_SIZE;
+
+    int screenx = mapx1;
+    int screeny = mapy1;
+
+    for (int y = y1; y < y2; y++) {
+        for (int x = x1; x < x2; x++) {
+            video_draw(screenx, screeny, map_sprites[y * world_w + x]);
 
             sprite_t *food_sprite = food_sprites[y * world_w + x];
-            if (food_sprite) {
-                video_draw(x * SPRITE_TILE_SIZE, 
-                           y * SPRITE_TILE_SIZE, 
-                           food_sprite);
-            }
+            if (food_sprite) 
+                video_draw(screenx, screeny, food_sprite);
+            
+            screenx += SPRITE_TILE_SIZE;
         }
+        screeny += SPRITE_TILE_SIZE;
+        screenx  = mapx1;
     }
+
+    if (mapx1 > 0) 
+        video_rect(0, max(0, mapy1), mapx1, min(screen_h, mapy2), 0, 0, 0, 0);
+    if (mapy1 > 0) 
+        video_rect(0, 0, screen_w, mapy1, 0, 0, 0, 0);
+    if (mapx2 <= screen_w) 
+        video_rect(mapx2, max(0, mapy1), screen_w, min(screen_h, mapy2), 0, 0, 0, 0);
+    if (mapy2 <= screen_h) 
+        video_rect(0, mapy2, screen_w, screen_h, 0, 0, 0, 0);
+}
+
+void gui_world_center_change(int dx, int dy) {
+    center_x += dx;
+    center_y += dy;
+}
+
+void gui_world_center() {
+    center_x = world_w * SPRITE_TILE_SIZE / 2;
+    center_y = world_h * SPRITE_TILE_SIZE / 2;
+}
+
+int gui_world_x_offset() {
+    return offset_x;
+}
+
+int gui_world_y_offset() {
+    return offset_y;
 }
 
 void gui_world_from_network(packet_t *packet) {
+    if (!initialized)
+        return;
+
     uint8_t x; uint8_t y;
     if (!packet_read08(packet, &x))         goto failed; 
     if (!packet_read08(packet, &y))         goto failed; 
@@ -72,31 +139,50 @@ void gui_world_from_network(packet_t *packet) {
     return;
 failed:    
     printf("parsing world update packet failed\n");
-    return;
 }
 
-void gui_world_init(int w, int h) {
+void gui_world_info_from_network(packet_t *packet) {
+    if (initialized)                        goto failed;
+
+    uint8_t w; uint8_t h;
+    if (!packet_read08(packet, &w))         goto failed; 
+    if (!packet_read08(packet, &h))         goto failed; 
+    
     world_w = w;
     world_h = h;
-
-    koth_x = w / 2;
-    koth_y = h / 2;
 
     map_sprites  = malloc(w * h * sizeof(sprite_t*));
     food_sprites = malloc(w * h * sizeof(sprite_t*));
 
-    memset(food_sprites, 0, w * h * sizeof(int));
-
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
-            map_sprites[x + w * y] = sprite_get(SPRITE_BORDER);
+            map_sprites [x + w * y] = sprite_get(SPRITE_BORDER);
+            food_sprites[x + w * y] = NULL;
         }
     }
+
+    gui_world_center();
+
+    initialized = 1;
+    return;
+failed:    
+    printf("parsing world update packet failed\n");
+}
+
+void gui_world_init() {
+    center_x = 0;
+    center_y = 0;
+
+    offset_x = 0;
+    offset_y = 0;
 }
 
 void gui_world_shutdown() {
-    free(map_sprites);
-    free(food_sprites);
+    if (initialized) {
+        free(map_sprites);
+        free(food_sprites);
+        initialized = 0;
+    }
 }
 

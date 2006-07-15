@@ -25,11 +25,17 @@
 #include "common_world.h"
 
 void        gui_world_draw();
+void        gui_world_center();
+void        gui_world_center_change(int dx, int dy);
+
+int         gui_world_x_offset();
+int         gui_world_y_offset();
 
 /* Network */
 void        gui_world_from_network(packet_t *packet);
+void        gui_world_info_from_network(packet_t *packet);
 
-void        gui_world_init(int w, int h);
+void        gui_world_init();
 void        gui_world_shutdown();
 
 #endif

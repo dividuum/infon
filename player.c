@@ -807,9 +807,64 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
     server_send_packet(&packet, client);
 }
 
+static int luaPlayerKill(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_mark_for_kill(player);
+    return 0;
+}
+
+static int luaPlayerNumClients(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    lua_pushnumber(L, player->num_clients);
+    return 1;
+}
+
+static int luaPlayerCreate(lua_State *L) {
+    player_t *player = player_create(luaL_checkstring(L, 1));
+    
+    if (player) {
+        lua_pushnumber(L, player_num(player));
+    } else {
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+static int luaPlayerSetName(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_set_name(player, luaL_checkstring(L, 2));
+    return 0;
+}
+
+static int luaPlayerGetName(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    lua_pushstring(L, player->name);
+    return 1;
+}
+
+static int luaPlayerSetScore(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player->score = luaL_checklong(L, 2);
+    return 0;
+}
+
+static int luaPlayerKillAllCreatures(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    creature_kill_all_players_creatures(player);
+    return 0;
+}
+
 
 void player_init() {
     memset(players, 0, sizeof(players));
+
+    lua_register(L, "player_create",                luaPlayerCreate);
+    lua_register(L, "player_num_clients",           luaPlayerNumClients);
+    lua_register(L, "player_kill",                  luaPlayerKill);
+    lua_register(L, "player_set_name",              luaPlayerSetName);
+    lua_register(L, "player_get_name",              luaPlayerGetName);
+    lua_register(L, "player_set_score",             luaPlayerSetScore);
+    lua_register(L, "player_kill_all_creatures",    luaPlayerKillAllCreatures);
 }
 
 void player_shutdown() {

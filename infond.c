@@ -42,10 +42,11 @@ void sighandler(int sig) {
 
 int main(int argc, char *argv[]) {
     // const int width = 320, height = 208;
-    const int width = 640/16, height = 480/16;
+    // const int width = 640/16, height = 480/16;
     // const int width = 800, height = 600;
     // const int width = 1024, height = 768;
     // const int width = 1280, height = 1024;
+    const int width = 128, height = 128;
 
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
@@ -62,14 +63,18 @@ int main(int argc, char *argv[]) {
     lua_mathlibopen(L);
 
     lua_dofile(L, "config.lua");
+    lua_dofile(L, "server.lua");
 
-    world_init(width, height - 2);
+    game_round = 0;
+    game_time  = 0;
+
+    world_init(width, height);
     server_init();
     player_init();
     creature_init();
 
-    game_round = 0;
-    game_time  = 0;
+    // Initialer Worldtick
+    world_tick();
 
     Uint32 lastticks = SDL_GetTicks();
     while (running) {
@@ -82,7 +87,7 @@ int main(int argc, char *argv[]) {
             lastticks = nowticks;
             SDL_Delay(5);
             continue;
-        } else if (delta < 50) {
+        } else if (delta < 100) {
             SDL_Delay(5);
             continue;
         }
@@ -90,13 +95,16 @@ int main(int argc, char *argv[]) {
         lastticks = nowticks;
 
         // Zeit weiterlaufen lassen
-        if (!paused)    
+        if (!paused) 
             game_time += delta;
 
         // IO Lesen/Schreiben
         server_tick();
 
         if (!paused) {
+            // World Zeugs
+            world_tick();
+
             // Spieler Programme ausfuehren
             player_think();
 

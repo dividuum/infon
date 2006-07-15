@@ -88,7 +88,8 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         when 255:
             puts  "server protocol version %d" % socket.read8
         else
-            puts  "???: #{type}"
+            puts  "???: unknown packet type #{type}"
+            socket.readXX(len)
         end
     end
 }

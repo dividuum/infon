@@ -54,7 +54,7 @@ function Client:on_new_client(addr)
     self.addr = addr
     self.finished = false
     print(self.addr .. " accepted")
-    add_to_scroller(self.addr .. " joined")
+    scroller_add(self.addr .. " joined")
     self.thread = coroutine.create(self.handler)
     local ok, msg = coroutine.resume(self.thread, self)
     if not ok then
@@ -64,7 +64,7 @@ end
 
 function Client:on_destroy(reason)
     print(self.addr .. " closed: " .. reason)
-    add_to_scroller(self.addr .. " disconnected: " .. reason)
+    scroller_add(self.addr .. " disconnected: " .. reason)
 end
 
 
@@ -88,15 +88,15 @@ function Client:disconnect()
 end
 
 function Client:write(data) 
-    write_to_client(self.fd, data)
+    client_write(self.fd, data)
 end
 
 function Client:turn_into_guiclient()
-    turn_into_guiclient(self.fd)
+    client_make_guiclient(self.fd)
 end
 
 function Client:attach_to_player(playerno, pass)
-    local ok, ret = pcall(attach_client_to_player, self.fd, playerno, pass)
+    local ok, ret = pcall(client_attach_to_player, self.fd, playerno, pass)
     if not ok then
         return ret
     elseif not ret then
@@ -109,21 +109,21 @@ end
 function Client:detach()
     local playerno = self:get_player()
     if playerno then
-        detach_client_from_player(self.fd, playerno)
+        client_detach_from_player(self.fd, playerno)
     end
 end
 
 function Client:get_player()
-    return player_number(self.fd)
+    return client_player_number(self.fd)
 end
 
 function Client:set_player_name(name)
     local playerno = self:get_player()
-    if playerno and get_player_name(playerno) ~= name and name ~= '' then
-        local oldname = get_player_name(playerno)
-        set_player_name(playerno, name)
-        local newname = get_player_name(playerno)
-        add_to_scroller(oldname .. " renamed to " .. newname)
+    if playerno and player_get_name(playerno) ~= name and name ~= '' then
+        local oldname = player_get_name(playerno)
+        player_set_name(playerno, name)
+        local newname = player_get_name(playerno)
+        scroller_add(oldname .. " renamed to " .. newname)
         return true
     else
         return false
@@ -140,7 +140,7 @@ function Client:kill()
 end
 
 function Client:execute(code)
-    player_execute(self.fd, code)
+    client_execute(self.fd, code)
 end
 
 function Client:writeln(line)
@@ -230,16 +230,16 @@ end
 
 function clientlist(adminfd)
     table.foreach(clients, function (fd, obj)
-                               write_to_client(adminfd, fd .. " - " .. obj.addr .. "\n")
+                               client_write(adminfd, fd .. " - " .. obj.addr .. "\n")
                            end)
 end
 
 function kick(fd, msg)
     -- XXX: momentan bis zur naechsten eingabe delayed...
-    if is_gui_client(fd) then
+    if client_is_gui_client(fd) then
         -- XXX: TODO 
     else
-        write_to_client(fd, msg .. "\n")
+        client_write(fd, msg .. "\n")
     end
     clients[fd].kill_me = true
 end
@@ -253,7 +253,7 @@ end
 function reset()
     killall()
     for n = 0, MAXPLAYERS - 1 do
-        pcall(set_player_score, n, 0)
+        pcall(player_set_score, n, 0)
     end
     wall("Game restarted")
 end
