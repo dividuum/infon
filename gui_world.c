@@ -116,37 +116,31 @@ int gui_world_y_offset() {
 }
 
 void gui_world_from_network(packet_t *packet) {
-    if (!initialized)
-        return;
-
+    if (!initialized)                       PROTOCOL_ERROR();
     uint8_t x; uint8_t y;
-    if (!packet_read08(packet, &x))         goto failed; 
-    if (!packet_read08(packet, &y))         goto failed; 
-    if (x >= world_w)                       goto failed;
-    if (y >= world_h)                       goto failed;
+    if (!packet_read08(packet, &x))         PROTOCOL_ERROR(); 
+    if (!packet_read08(packet, &y))         PROTOCOL_ERROR(); 
+    if (x >= world_w)                       PROTOCOL_ERROR();
+    if (y >= world_h)                       PROTOCOL_ERROR();
     uint8_t spriteno;
-    if (!packet_read08(packet, &spriteno))  goto failed; 
-    if (!sprite_exists(spriteno))           goto failed; 
+    if (!packet_read08(packet, &spriteno))  PROTOCOL_ERROR(); 
+    if (!sprite_exists(spriteno))           PROTOCOL_ERROR(); 
     map_sprites[x + world_w * y] = sprite_get(spriteno);
     uint8_t food; 
-    if (!packet_read08(packet, &food))      goto failed;
+    if (!packet_read08(packet, &food))      PROTOCOL_ERROR();
     if (food == 0xFF) {
         food_sprites[x + world_w * y] = NULL;
     } else {
-        if (food >= SPRITE_NUM_FOOD)        goto failed;
+        if (food >= SPRITE_NUM_FOOD)        PROTOCOL_ERROR();
         food_sprites[x + world_w * y] = sprite_get(SPRITE_FOOD + food);
     }
-    return;
-failed:    
-    printf("parsing world update packet failed\n");
 }
 
 void gui_world_info_from_network(packet_t *packet) {
-    if (initialized)                        goto failed;
-
+    if (initialized)                        PROTOCOL_ERROR();
     uint8_t w; uint8_t h;
-    if (!packet_read08(packet, &w))         goto failed; 
-    if (!packet_read08(packet, &h))         goto failed; 
+    if (!packet_read08(packet, &w))         PROTOCOL_ERROR(); 
+    if (!packet_read08(packet, &h))         PROTOCOL_ERROR(); 
     
     world_w = w;
     world_h = h;
@@ -163,11 +157,7 @@ void gui_world_info_from_network(packet_t *packet) {
     }
 
     gui_world_center();
-
     initialized = 1;
-    return;
-failed:    
-    printf("parsing world update packet failed\n");
 }
 
 void gui_world_init() {

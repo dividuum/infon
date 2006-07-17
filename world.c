@@ -240,7 +240,7 @@ void world_init() {
 
     map_sprites = malloc(world_w * world_h * sizeof(int));
     map_food    = malloc(world_w * world_h * sizeof(int));
-    memset(map_food, 0, world_w * world_h * sizeof(int));
+    memset(map_food, 0,  world_w * world_h * sizeof(int));
 
     // Koth Tile freigraben
     world_dig(koth_x, koth_y, SOLID);

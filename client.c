@@ -61,20 +61,16 @@ int  client_is_connected();
 
 static void client_read_handshake(packet_t *packet) {
     uint8_t serverprotocol;
-    if (!packet_read08(packet, &serverprotocol)) goto failed; 
+    if (!packet_read08(packet, &serverprotocol)) PROTOCOL_ERROR();
     if (serverprotocol != PROTOCOL_VERSION) {
         die("server has %s protocol version %d. I have %d.\n"
             "visit the infon homepage for more information.",
                serverprotocol < PROTOCOL_VERSION ? "older" : "newer",
                serverprotocol,  PROTOCOL_VERSION);
     }
-    return;
-failed:
-    printf("parsing player update packet failed\n");
 }
 
 static void client_handle_packet(packet_t *packet) {
-    //printf("ptype=%d\n", packet->type);
     switch (packet->type) {
         case PACKET_PLAYER_UPDATE:  
             gui_player_from_network(packet);

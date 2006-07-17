@@ -3,8 +3,11 @@ LUADIR=lua-5.0.2
 REVISION=$(shell svn info |grep Revision| cut -b 11-)
 
 COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)" -I$(LUADIR)/include/ 
-# COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
-COMMON_CFLAGS += -ggdb
+ifdef WINDOWS
+	COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
+else
+	COMMON_CFLAGS += -ggdb
+endif
 
 ifdef WINDOWS
 	MINGW  = $(HOME)/progs/mingw32/

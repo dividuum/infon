@@ -124,16 +124,16 @@ void gui_player_draw() {
 void gui_player_from_network(packet_t *packet) {
     uint8_t playerno;
 
-    if (!packet_read08(packet, &playerno))      goto failed; 
-    if (playerno >= MAXPLAYERS)                 goto failed;
+    if (!packet_read08(packet, &playerno))      PROTOCOL_ERROR(); 
+    if (playerno >= MAXPLAYERS)                 PROTOCOL_ERROR();
     gui_player_t *player = &players[playerno]; 
            
     uint8_t  updatemask;
-    if (!packet_read08(packet, &updatemask))    goto failed;
+    if (!packet_read08(packet, &updatemask))    PROTOCOL_ERROR();
 
     if (updatemask & PLAYER_DIRTY_ALIVE) {
         uint8_t alive;
-        if (!packet_read08(packet, &alive))     goto failed;
+        if (!packet_read08(packet, &alive))     PROTOCOL_ERROR();
         if (!alive) {
             return;
         } else {
@@ -142,50 +142,44 @@ void gui_player_from_network(packet_t *packet) {
         }
     }
 
-    if (!PLAYER_USED(player))                   goto failed;
+    if (!PLAYER_USED(player))                   PROTOCOL_ERROR();
 
     if (updatemask & PLAYER_DIRTY_NAME) {
         uint8_t len; char buf[256];
-        if (!packet_read08(packet, &len))       goto failed;
-        if (!packet_readXX(packet, buf, len))   goto failed;
+        if (!packet_read08(packet, &len))       PROTOCOL_ERROR();
+        if (!packet_readXX(packet, buf, len))   PROTOCOL_ERROR();
         buf[len] = '\0';
         snprintf(player->name, sizeof(player->name), "%s", buf);
     }
     if (updatemask & PLAYER_DIRTY_COLOR) { 
         uint8_t col;
-        if (!packet_read08(packet, &col))       goto failed;
-        if (col >= CREATURE_COLORS)             goto failed;
+        if (!packet_read08(packet, &col))       PROTOCOL_ERROR();
+        if (col >= CREATURE_COLORS)             PROTOCOL_ERROR();
         player->color = col;
     }
     if (updatemask & PLAYER_DIRTY_CPU) {
         uint8_t cpu;
-        if (!packet_read08(packet, &cpu))       goto failed;
-        if (cpu > 100)                          goto failed;
+        if (!packet_read08(packet, &cpu))       PROTOCOL_ERROR();
+        if (cpu > 100)                          PROTOCOL_ERROR();
         player->cpu_usage = cpu;
     }
     if (updatemask & PLAYER_DIRTY_SCORE) {
         uint16_t score;
-        if (!packet_read16(packet, &score))     goto failed;
+        if (!packet_read16(packet, &score))     PROTOCOL_ERROR();
         player->score = score + PLAYER_KICK_SCORE;
     }
-    return;
-failed:
-    printf("parsing player update packet failed\n");
 }
 
 void gui_player_king_from_network(packet_t *packet) {
     uint8_t kingno;
-    if (!packet_read08(packet, &kingno))        goto failed; 
+    if (!packet_read08(packet, &kingno))        PROTOCOL_ERROR(); 
     if (kingno == 0xFF) {
         king_player = NULL;  
     } else {
-        if (kingno >= MAXPLAYERS)               goto failed;
-        if (!PLAYER_USED(&players[kingno]))     goto failed;
+        if (kingno >= MAXPLAYERS)               PROTOCOL_ERROR();
+        if (!PLAYER_USED(&players[kingno]))     PROTOCOL_ERROR();
         king_player = &players[kingno];
     }
-    return;
-failed:
-    printf("parsing king update packet failed\n");
 }
 
 void gui_player_init() {

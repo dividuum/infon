@@ -47,6 +47,12 @@ __attribute__((packed))
 ;
 #pragma pack (pop)
 
+#define PROTOCOL_ERROR()                                        \
+do {                                                            \
+    fprintf(stderr, "Packet Error: %s:%d\n",__FILE__, __LINE__);\
+    return;                                                     \
+} while (0)
+
 void packet_rewind(packet_t *packet);
 void packet_init  (packet_t *packet, int type);
 

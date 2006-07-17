@@ -72,7 +72,7 @@ void gui_scroller_draw() {
     while (EVBUFFER_LENGTH(scrollbuffer) <= chars_per_screen + 1) 
         evbuffer_add(scrollbuffer, " ", 1);
 
-    video_rect(0, video_height() - 15, video_width(), video_height(), 0, 0, 0, 0);
+    video_rect(0, video_height() - 16, video_width(), video_height(), 0, 0, 0, 0);
 
     assert(chars_per_screen < EVBUFFER_LENGTH(scrollbuffer));
     char *end = &EVBUFFER_DATA(scrollbuffer)[chars_per_screen];

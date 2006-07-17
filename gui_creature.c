@@ -38,6 +38,10 @@ static gui_creature_t creatures[MAXCREATURES];
 void gui_creature_draw() {
     const int xoff = gui_world_x_offset();
     const int yoff = gui_world_y_offset();
+
+    const int max_x = video_width()  + 10;
+    const int max_y = video_height() - 32 + 10;
+    
     Uint32 time = SDL_GetTicks();
     gui_creature_t *creature = &creatures[0];
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
@@ -46,6 +50,10 @@ void gui_creature_draw() {
 
         const int x = X_TO_SCREENX(creature->x) - 7 + xoff;
         const int y = Y_TO_SCREENY(creature->y) - 7 + yoff;
+
+        if (x < -30 || x > max_x || y < -20 || y > max_y)
+            continue;
+
         const int hw = creature->health;
         const int fw = creature->food;
 
@@ -196,30 +204,30 @@ again:
 void gui_creature_from_network(packet_t *packet) {
     uint16_t creatureno;
 
-    if (!packet_read16(packet, &creatureno))    goto failed;
-    if (creatureno >= MAXCREATURES)             goto failed;
+    if (!packet_read16(packet, &creatureno))    PROTOCOL_ERROR();
+    if (creatureno >= MAXCREATURES)             PROTOCOL_ERROR();
     gui_creature_t *creature = &creatures[creatureno];
 
     uint8_t  updatemask;
-    if (!packet_read08(packet, &updatemask))    goto failed;
+    if (!packet_read08(packet, &updatemask))    PROTOCOL_ERROR();
 
     if (updatemask & CREATURE_DIRTY_ALIVE) {
         uint8_t alive;
-        if (!packet_read08(packet, &alive))     goto failed;
+        if (!packet_read08(packet, &alive))     PROTOCOL_ERROR();
         if (alive == 0xFF) {
-            if (!CREATURE_USED(creature))       goto failed;
+            if (!CREATURE_USED(creature))       PROTOCOL_ERROR();
             gui_creature_kill(creature);
             return;
         } else {
-            if (CREATURE_USED(creature))        goto failed;
-            if (alive >= CREATURE_COLORS)       goto failed;
+            if (CREATURE_USED(creature))        PROTOCOL_ERROR();
+            if (alive >= CREATURE_COLORS)       PROTOCOL_ERROR();
             memset(creature, 0, sizeof(gui_creature_t));
             creature->used = 1;
             creature->color = alive;
 
             uint16_t x, y;
-            if (!packet_read16(packet, &x))     goto failed;
-            if (!packet_read16(packet, &y))     goto failed;
+            if (!packet_read16(packet, &x))     PROTOCOL_ERROR();
+            if (!packet_read16(packet, &y))     PROTOCOL_ERROR();
             // XXX: x, y checken?
             gui_creature_add_path(creature,
                                   x * CREATURE_POS_RESOLUTION, 
@@ -228,19 +236,19 @@ void gui_creature_from_network(packet_t *packet) {
         }
     }
     
-    if (!CREATURE_USED(creature))               goto failed;
+    if (!CREATURE_USED(creature))               PROTOCOL_ERROR();
 
     if (updatemask & CREATURE_DIRTY_TYPE) {
         uint8_t type;
-        if (!packet_read08(packet, &type))      goto failed;
-        if (type >= CREATURE_TYPES)             goto failed;
+        if (!packet_read08(packet, &type))      PROTOCOL_ERROR();
+        if (type >= CREATURE_TYPES)             PROTOCOL_ERROR();
         creature->type = type;
     }
 
     if (updatemask & CREATURE_DIRTY_FOOD_HEALTH) {
         uint8_t food_health;
         if (!packet_read08(packet, &food_health)) 
-                                                goto failed;
+                                                PROTOCOL_ERROR();
         creature->food   = food_health >> 4;
         creature->health = food_health & 0x0F;
     }
@@ -256,8 +264,8 @@ void gui_creature_from_network(packet_t *packet) {
     
     if (updatemask & CREATURE_DIRTY_STATE) {
         uint8_t state;
-        if (!packet_read08(packet, &state))     goto failed;
-        if (state >= CREATURE_STATES)           goto failed;
+        if (!packet_read08(packet, &state))     PROTOCOL_ERROR();
+        if (state >= CREATURE_STATES)           PROTOCOL_ERROR();
         int oldstate = creature->state;
         creature->state = state;
         if ((oldstate == CREATURE_WALK) ^ (state == CREATURE_WALK))
@@ -266,8 +274,8 @@ void gui_creature_from_network(packet_t *packet) {
 
     if (updatemask & CREATURE_DIRTY_POS) {
         uint16_t x, y;
-        if (!packet_read16(packet, &x))         goto failed;
-        if (!packet_read16(packet, &y))         goto failed;
+        if (!packet_read16(packet, &x))         PROTOCOL_ERROR();
+        if (!packet_read16(packet, &y))         PROTOCOL_ERROR();
         // XXX: x, y checken?
         if (walk_state_change && creature->last) {
             creature->last->x = x * CREATURE_POS_RESOLUTION;
@@ -282,15 +290,15 @@ void gui_creature_from_network(packet_t *packet) {
 
     if (updatemask & CREATURE_DIRTY_TARGET) {
         uint16_t target;
-        if (!packet_read16(packet, &target))    goto failed;
-        if (target >= MAXCREATURES)             goto failed;
+        if (!packet_read16(packet, &target))    PROTOCOL_ERROR();
+        if (target >= MAXCREATURES)             PROTOCOL_ERROR();
         creature->target = target;
     }
 
     if (updatemask & CREATURE_DIRTY_MESSAGE) {
         uint8_t len; char buf[256];
-        if (!packet_read08(packet, &len))       goto failed;
-        if (!packet_readXX(packet, buf, len))   goto failed;
+        if (!packet_read08(packet, &len))       PROTOCOL_ERROR();
+        if (!packet_readXX(packet, buf, len))   PROTOCOL_ERROR();
         buf[len] = '\0';
         snprintf(creature->message, sizeof(creature->message), "%s", buf);
         // creature->last_msg_set = SDL_GetTicks();
@@ -298,12 +306,9 @@ void gui_creature_from_network(packet_t *packet) {
 
     if (updatemask & CREATURE_DIRTY_SPEED) {
         uint8_t speed;
-        if (!packet_read08(packet, &speed))     goto failed;
+        if (!packet_read08(packet, &speed))     PROTOCOL_ERROR();
         creature->speed = speed * CREATURE_SPEED_RESOLUTION;
     }
-    return;
-failed:
-    printf("parsing creature packet failed\n");
 }
 
 void gui_creature_init() {

@@ -645,7 +645,7 @@ void creature_moveall(int delta) {
         // Tot?
         if (creature->health <= 0) {
             creature_kill(creature, NULL);
-            goto next_creature;
+            continue;
         }
                 
         // State Aktion
@@ -666,13 +666,13 @@ void creature_moveall(int delta) {
                 creature_do_attack(creature, delta);
                 break;
             case CREATURE_CONVERT:
-                creature_do_convert(creature, delta);;
+                creature_do_convert(creature, delta);
                 break;
             case CREATURE_SPAWN:
-                creature_do_spawn(creature, delta);;
+                creature_do_spawn(creature, delta);
                 break;
             case CREATURE_FEED:
-                creature_do_feed(creature, delta);;
+                creature_do_feed(creature, delta);
                 break;
         }
 
@@ -689,8 +689,6 @@ void creature_moveall(int delta) {
                 creature_on_koth = creature;
             }
         }
-
-next_creature: ;
     }
 
     // Zweite Iteration fuer Network Sync
