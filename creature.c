@@ -198,21 +198,22 @@ int creature_heal_rate(const creature_t *creature) {
 }
 
 void creature_do_heal(creature_t *creature, int delta) {
-    int max_heal = creature_heal_rate(creature) * delta / 1000;
+    int       max_heal = creature_heal_rate(creature) * delta / 1000;
     const int can_heal = creature_max_health(creature) - creature->health;
+    int       finished = 0;
 
     // Nicht mehr als notwendig heilen
-    if (max_heal > can_heal) 
-        max_heal = can_heal;
+    if (max_heal >= can_heal) 
+        max_heal  = can_heal, finished = 1;
 
     // Nicht mehr als moeglich heilen
-    if (max_heal > creature->food)
-        max_heal = creature->food;
+    if (max_heal >= creature->food)
+        max_heal  = creature->food, finished = 1;
 
     creature->health += max_heal;
-    creature->food -= max_heal;
+    creature->food   -= max_heal;
 
-    if (max_heal == 0)
+    if (finished)
         creature_set_state(creature, CREATURE_IDLE);
 }
 
@@ -233,7 +234,7 @@ int creature_eat_rate(const creature_t *creature) {
 }
 
 void creature_do_eat(creature_t *creature, int delta) {
-    int max_eat = creature_eat_rate(creature) * delta / 1000;
+    int       max_eat = creature_eat_rate(creature) * delta / 1000;
     const int can_eat = creature_max_food(creature) - creature->food;
 
     if (max_eat > can_eat)
@@ -350,7 +351,7 @@ void creature_do_convert(creature_t *creature, int delta) {
         creature_set_state(creature, CREATURE_IDLE);
 
     creature->convert_food += used_food;
-    creature->food -= used_food;
+    creature->food         -= used_food;
 
     if (creature->convert_food == creature_conversion_food(creature, creature->convert_type)) {
         creature->type = creature->convert_type;
@@ -460,7 +461,8 @@ int creature_feed_speed(const creature_t *creature) {
 }
 
 void creature_do_feed(creature_t *creature, int delta) {
-    int food = creature_feed_speed(creature) * delta / 1000;
+    int food     = creature_feed_speed(creature) * delta / 1000;
+    int finished = 0;
     
     creature_t *target = creature_by_num(creature->target);
 
@@ -476,18 +478,20 @@ void creature_do_feed(creature_t *creature, int delta) {
     if (creature_dist(creature, target) > creature_feed_distance(creature))
         goto finished_feeding;
 
-    if (food > creature->food) 
-        food = creature->food;
+    if (food >= creature->food) 
+        food  = creature->food, finished = 1;
 
-    if (food + target->food > creature_max_food(target))
-        food = creature_max_food(target) - target->food;
+    if (food >= creature_max_food(target) - target->food)
+        food  = creature_max_food(target) - target->food, finished = 1;
 
     if (food == 0)
         goto finished_feeding;
 
     creature->food -= food;
-    target->food += food;
-    return;
+    target->food   += food;
+
+    if (!finished)
+        return;
 
 finished_feeding:
     creature_set_state(creature, CREATURE_IDLE);
