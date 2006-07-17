@@ -89,10 +89,10 @@ void gui_creature_draw() {
             assert(creature->target >= 0 && creature->target < MAXCREATURES);
             const gui_creature_t *target = &creatures[creature->target];
             if (CREATURE_USED(target)) { // Das Angegriffene Vieh koennte in dieser Runde bereits getoetet sein.
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3, Y_TO_SCREENY(target->y) - 3);
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3, Y_TO_SCREENY(target->y) + 3);
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3, Y_TO_SCREENY(target->y) - 3);
-                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3, Y_TO_SCREENY(target->y) + 3);
+                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3 + xoff, Y_TO_SCREENY(target->y) - 3 + yoff);
+                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3 + xoff, Y_TO_SCREENY(target->y) + 3 + yoff);
+                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + xoff, Y_TO_SCREENY(target->y) - 3 + yoff);
+                video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + xoff, Y_TO_SCREENY(target->y) + 3 + yoff);
             }
         }
     }
