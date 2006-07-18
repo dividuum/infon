@@ -226,7 +226,10 @@ function Creature:restart()
     set_state(self.id, CREATURE_IDLE)
     self.thread = coroutine.create(self.main_restarter)
     if self.onRestart then
-        self:onRestart()
+        local ok, msg = pcall(self.onRestart, self)
+        if not ok then 
+            print(msg)
+        end
     else
         print("onRestart method deleted")
     end
