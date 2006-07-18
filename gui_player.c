@@ -135,6 +135,7 @@ void gui_player_from_network(packet_t *packet) {
         uint8_t alive;
         if (!packet_read08(packet, &alive))     PROTOCOL_ERROR();
         if (!alive) {
+            player->used = 0;
             return;
         } else {
             memset(player, 0, sizeof(gui_player_t));
