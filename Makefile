@@ -26,8 +26,9 @@ LDFLAGS 	= -L$(LUADIR)/lib -levent -lSDL -llua -llualib -lm -lpthread
 
 ifdef WINDOWS
 	MINGW=/home/dividuum/progs/mingw32/
-	GUI_LDFLAGS += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a \
-                   $(MINGW)/lib/libSDL_image.a $(MINGW)/lib/libSDL_gfx.a  $(MINGW)/lib/libSDL.a \
+	GUI_LDFLAGS += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
+				   $(MINGW)/lib/libpng.a $(MINGW)/lib/libz.a     $(MINGW)/lib/libSDL_gfx.a   \
+				   $(MINGW)/lib/libSDL.a \
 	               -lmingw32 -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
 	RES=infon.res				   
 	GUI_EXECUTABLE=infon.exe
@@ -46,11 +47,11 @@ dist:
 
 win32-client-dist: $(GUI_EXECUTABLE)
 	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
-	zip      infon-win32-r$(REVISION).zip $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.gif gfx/*.png gfx/*.bmp 
+	zip      infon-win32-r$(REVISION).zip $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
 
 linux-client-dist: $(GUI_EXECUTABLE)
 	strip $(GUI_EXECUTABLE)
-	tar cfvz infon-linux-r$(REVISION).tgz $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.gif gfx/*.png gfx/*.bmp 
+	tar cfvz infon-linux-r$(REVISION).tgz $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
 
 linux-server-dist: infond
 	strip infond infond-static
