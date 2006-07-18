@@ -32,7 +32,7 @@ static sprite_t sprites[SPRITE_NUM] = {{0}};
 static void sprite_load_background() {
     const int tile_size = SPRITE_TILE_SIZE;
 
-    SDL_Surface *tileset = IMG_Load("gfx/blocks1.gif");
+    SDL_Surface *tileset = IMG_Load("gfx/blocks.png");
     
     if (!tileset)
         die("Couldn't load gfx: %s", SDL_GetError());
@@ -62,7 +62,7 @@ static void sprite_load_background() {
 }
 
 static void sprite_load_creature() {
-    SDL_Surface *tileset = IMG_Load("gfx/invader1.gif");
+    SDL_Surface *tileset = IMG_Load("gfx/invader.png");
     if (!tileset)
         die("Couldn't load gfx: %s", SDL_GetError());
 
@@ -137,7 +137,7 @@ static void sprite_load_creature() {
 }
 
 static void sprite_load_food() {
-    SDL_Surface *tileset = IMG_Load("gfx/food.gif");
+    SDL_Surface *tileset = IMG_Load("gfx/food.png");
     if (!tileset)
         die("Couldn't load gfx: %s", SDL_GetError());
 
@@ -152,7 +152,7 @@ static void sprite_load_food() {
 }
 
 static void sprite_load_thought() {
-    SDL_Surface *tileset = IMG_Load("gfx/states.gif");
+    SDL_Surface *tileset = IMG_Load("gfx/states.png");
     if (!tileset)
         die("Couldn't load gfx: %s", SDL_GetError());
 
