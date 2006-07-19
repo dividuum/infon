@@ -17,15 +17,15 @@ end
 
 
 -- Called by typing 'r' in the console, after creation (after 
--- onSpawned) or by calling self:restart(). No long-running methods calls 
--- here!
+-- onSpawned) or by calling self:restart(). No long-running 
+-- methods calls here!
 function Creature:onRestart()
     
 end
 
 
--- Called after beeing killed. Since the creature is already dead, 
--- self.id should be considered invalid.
+-- Called after beeing killed. Since the creature is already 
+-- dead, self.id cannot be used to call the Lowlevel API.
 function Creature:onKilled(killer)
     if killer == self.id then
         print("Creature " .. self.id .. " suicided")
