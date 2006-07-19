@@ -1,29 +1,32 @@
 --------------------------------------------------------------------------
--- Default Logik 
---
--- Fuer jedes gespawnte Vieh wird eine eigene Creature Klasse instanziiert
+-- Default Code
 --------------------------------------------------------------------------
 
+-- Called after the Creature was created. You cannot 
+-- call long-running methods (like moveto) here.
 function Creature:onSpawned()
-    -- Hier keine langlaufenden Aktionen ausfuehren!
     print("Creature " .. self.id .. " spawned")
 end
 
+
+-- Called each round for every attacker on this
+-- creature. No long-running methods here!
 function Creature:onAttacked(attacker)
-    -- Hier keine langlaufenden Aktionen ausfuehren!
-    -- Wird pro Angreifer einmal aufgerufen.
-    print("Help! Creature " .. self.id .. " is attacked by Creature " .. attacker)
+    -- print("Help! Creature " .. self.id .. " is attacked by Creature " .. attacker)
 end
 
+
+-- Called by typing 'r' in the console, after creation (after 
+-- onSpawned) or by calling self:restart(). No long-running methods calls 
+-- here!
 function Creature:onRestart()
-    -- Methode wird nach Eingabe von 'r' ausgefuehrt
-    -- Hier keine langlaufenden Aktionen ausfuehren!
+    
 end
 
+
+-- Called after beeing killed. Since the creature is already dead, 
+-- self.id should be considered invalid.
 function Creature:onKilled(killer)
-    -- Die getoetete Kreatur existiert hier bereits nicht mehr.
-    -- => die in self.id stehende Kreatur ist nicht mehr vorhanden,
-    --    bzw gehoert einem anderen Spieler.
     if killer == self.id then
         print("Creature " .. self.id .. " suicided")
     elseif killer then 
@@ -33,7 +36,9 @@ function Creature:onKilled(killer)
     end
 end
 
+
+-- Your Creature Logic here :-)
 function Creature:main()
-    -- Dein Programm hier
+    
 end
 
