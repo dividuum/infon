@@ -29,14 +29,20 @@
 
 static sprite_t sprites[SPRITE_NUM] = {{0}};
 
+static SDL_Surface *sprite_load_surface(const char *filename) {
+    SDL_Surface *ret = IMG_Load(filename);
+    if (!ret) 
+        die("Cannot load file %s: %s", filename, SDL_GetError());
+    return ret;
+}
+
+
+
 static void sprite_load_background() {
     const int tile_size = SPRITE_TILE_SIZE;
 
-    SDL_Surface *tileset = IMG_Load("gfx/blocks.png");
+    SDL_Surface *tileset = sprite_load_surface("gfx/blocks.png");
     
-    if (!tileset)
-        die("Couldn't load gfx: %s", SDL_GetError());
-
     const int tilepos[][2] = { // SOLID
                                {  0,  6 }, {  1,  6 }, {  2,  6 }, {  3,  6 }, 
                                {  4,  6 }, {  5,  6 }, {  6,  6 }, {  7,  6 }, 
@@ -62,9 +68,7 @@ static void sprite_load_background() {
 }
 
 static void sprite_load_creature() {
-    SDL_Surface *tileset = IMG_Load("gfx/invader.png");
-    if (!tileset)
-        die("Couldn't load gfx: %s", SDL_GetError());
+    SDL_Surface *tileset = sprite_load_surface("gfx/invader.png");
 
     const int creaturepos[CREATURE_TYPES][CREATURE_ANIMS][2] = { 
                                                                  { {   3, 155 }, {  20, 155 } },
@@ -137,10 +141,7 @@ static void sprite_load_creature() {
 }
 
 static void sprite_load_food() {
-    SDL_Surface *tileset = IMG_Load("gfx/food.png");
-    if (!tileset)
-        die("Couldn't load gfx: %s", SDL_GetError());
-
+    SDL_Surface *tileset = sprite_load_surface("gfx/food.png");
     for (int f = 0; f < SPRITE_NUM_FOOD; f++) {
         // XXX: Geht nicht mit video_new_surface? alpha kaputt
         sprites[SPRITE_FOOD + f].surface = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
@@ -152,10 +153,7 @@ static void sprite_load_food() {
 }
 
 static void sprite_load_thought() {
-    SDL_Surface *tileset = IMG_Load("gfx/states.png");
-    if (!tileset)
-        die("Couldn't load gfx: %s", SDL_GetError());
-
+    SDL_Surface *tileset = sprite_load_surface("gfx/states.png");
     for (int t = 0; t < SPRITE_NUM_THOUGHT; t++) {
         // Mit video_new_alpha geht wahrscheinlich das bitgefuddel bei 16 bit nicht mehr.
         sprites[SPRITE_THOUGHT + t].surface = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
@@ -176,13 +174,8 @@ static void sprite_load_thought() {
 }
 
 static void sprite_load_images() {
-    sprites[SPRITE_CROWN].surface = IMG_Load("gfx/koth.png");
-    if (!sprites[SPRITE_CROWN].surface)
-        die("Couldn't load gfx: %s", SDL_GetError());
-
-    sprites[SPRITE_LOGO].surface = IMG_Load("gfx/logo.png");
-    if (!sprites[SPRITE_LOGO].surface)
-        die("Couldn't load gfx: %s", SDL_GetError());
+    sprites[SPRITE_CROWN].surface = sprite_load_surface("gfx/koth.png");
+    sprites[SPRITE_LOGO].surface  = sprite_load_surface("gfx/logo.png");
 }
 
 sprite_t *sprite_get(int i) {
