@@ -317,7 +317,7 @@ static int luaCreatureSetState(lua_State *L) {
     return 1;
 }
 
-static int luaAreaSize(lua_State *L) {
+static int luaWorldSize(lua_State *L) {
     lua_pushnumber(L, TILE_X1(1));
     lua_pushnumber(L, TILE_Y1(1));
     lua_pushnumber(L, TILE_X2(world_width()  - 2));
@@ -343,6 +343,14 @@ static int luaCreatureExists(lua_State *L) {
 
 static int luaPlayerExists(lua_State *L) {
     lua_pushboolean(L, !!player_by_num(luaL_checklong(L, 1)));
+    return 1;
+}
+
+static int luaCreaturePlayer(lua_State *L) {
+    const creature_t *creature = creature_by_num(luaL_checklong(L, 1));
+    if (!creature)
+        return 0;
+    lua_pushnumber(L, player_num(creature->player));
     return 1;
 }
 
@@ -397,34 +405,35 @@ player_t *player_create(const char *pass) {
     lua_strlibopen(player->L);
     lua_mathlibopen(player->L);
 
-    lua_register_player(player, "print",        luaPrint);
-    lua_register_player(player, "suicide",      luaCreatureSuicide);
-    lua_register_player(player, "set_path",     luaCreatureSetPath);
-    lua_register_player(player, "get_pos",      luaCreatureGetPos);
-    lua_register_player(player, "get_state",    luaCreatureGetState);
-    lua_register_player(player, "set_state",    luaCreatureSetState);
-    lua_register_player(player, "set_target",   luaCreatureSetTarget);
-    lua_register_player(player, "set_convert",  luaCreatureSetConvert);
-    lua_register_player(player, "nearest_enemy",luaCreatureNearestEnemy);
-    lua_register_player(player, "get_type",     luaCreatureGetType);
-    lua_register_player(player, "get_food",     luaCreatureGetFood);
-    lua_register_player(player, "get_health",   luaCreatureGetHealth);
-    lua_register_player(player, "get_speed",    luaCreatureGetSpeed);
-    lua_register_player(player, "get_tile_food",luaCreatureGetTileFood);
-    lua_register_player(player, "get_max_food", luaCreatureGetMaxFood);
-    lua_register_player(player, "get_distance", luaCreatureGetDistance);
-    lua_register_player(player, "set_message",        luaCreatureSetMessage);
-    lua_register_player(player, "get_hitpoints",      luaCreatureGetHitpoints);
-    lua_register_player(player, "get_attack_distance",luaCreatureGetAttackDistance);
+    lua_register_player(player, "print",                luaPrint);
+    lua_register_player(player, "suicide",              luaCreatureSuicide);
+    lua_register_player(player, "set_path",             luaCreatureSetPath);
+    lua_register_player(player, "get_pos",              luaCreatureGetPos);
+    lua_register_player(player, "get_state",            luaCreatureGetState);
+    lua_register_player(player, "set_state",            luaCreatureSetState);
+    lua_register_player(player, "set_target",           luaCreatureSetTarget);
+    lua_register_player(player, "set_convert",          luaCreatureSetConvert);
+    lua_register_player(player, "nearest_enemy",        luaCreatureNearestEnemy);
+    lua_register_player(player, "get_type",             luaCreatureGetType);
+    lua_register_player(player, "get_food",             luaCreatureGetFood);
+    lua_register_player(player, "get_health",           luaCreatureGetHealth);
+    lua_register_player(player, "get_speed",            luaCreatureGetSpeed);
+    lua_register_player(player, "get_tile_food",        luaCreatureGetTileFood);
+    lua_register_player(player, "get_max_food",         luaCreatureGetMaxFood);
+    lua_register_player(player, "get_distance",         luaCreatureGetDistance);
+    lua_register_player(player, "set_message",          luaCreatureSetMessage);
+    lua_register_player(player, "get_hitpoints",        luaCreatureGetHitpoints);
+    lua_register_player(player, "get_attack_distance",  luaCreatureGetAttackDistance);
 
-    lua_register(player->L,     "world_size",       luaAreaSize);
-    lua_register(player->L,     "game_time",        luaGameTime);
-    lua_register(player->L,     "get_koth_pos",     luaGetKothPos);
-    lua_register(player->L,     "exists",           luaCreatureExists);
-    lua_register(player->L,     "creature_exists",  luaCreatureExists);
-    lua_register(player->L,     "player_exists",    luaPlayerExists);
-    lua_register(player->L,     "king_player",      luaKingPlayer);
-    lua_register(player->L,     "player_score",     luaPlayerScore);
+    lua_register(player->L,     "world_size",           luaWorldSize);
+    lua_register(player->L,     "game_time",            luaGameTime);
+    lua_register(player->L,     "get_koth_pos",         luaGetKothPos);
+    lua_register(player->L,     "exists",               luaCreatureExists);
+    lua_register(player->L,     "creature_exists",      luaCreatureExists);
+    lua_register(player->L,     "creature_player",      luaCreaturePlayer);
+    lua_register(player->L,     "player_exists",        luaPlayerExists);
+    lua_register(player->L,     "king_player",          luaKingPlayer);
+    lua_register(player->L,     "player_score",         luaPlayerScore);
 
     lua_pushliteral(player->L, "CREATURE_IDLE");
     lua_pushnumber(player->L,   CREATURE_IDLE);
