@@ -51,6 +51,13 @@ void player_score(player_t *player, int scoredelta, char *reason) {
                                
     add_to_scroller(buf);
     player->score += scoredelta;
+
+    if (player->score < PLAYER_KICK_SCORE)
+        player->score = PLAYER_KICK_SCORE;
+
+    if (player->score > 9999)
+        player->score = 9999;
+
     player->dirtymask |= PLAYER_DIRTY_SCORE;
 
     printf("stat: %10d %3d '%10s' %5d: %s\n", game_time, player_num(player), player->name, player->score, reason);
@@ -853,7 +860,9 @@ static int luaPlayerGetName(lua_State *L) {
 
 static int luaPlayerSetScore(lua_State *L) {
     player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
-    player->score = luaL_checklong(L, 2);
+    int newscore = luaL_checklong(L, 2);
+    player->score = 0;
+    player_score(player, newscore, "changed by admin");
     return 0;
 }
 

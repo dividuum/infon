@@ -41,13 +41,6 @@ void sighandler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-    // const int width = 320, height = 208;
-    // const int width = 640/16, height = 480/16;
-    // const int width = 800, height = 600;
-    // const int width = 1024, height = 768;
-    // const int width = 1280, height = 1024;
-    const int width = 128, height = 128;
-
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
 
@@ -68,7 +61,7 @@ int main(int argc, char *argv[]) {
     game_round = 0;
     game_time  = 0;
 
-    world_init(width, height);
+    world_init();
     server_init();
     player_init();
     creature_init();
