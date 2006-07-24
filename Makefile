@@ -1,6 +1,6 @@
 LUADIR=lua-5.0.2
 
-REVISION=$(shell svn info |grep Revision| cut -b 11-)
+REVISION=$(shell svnversion .)
 
 COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)" -I$(LUADIR)/include/ 
 ifdef WINDOWS
@@ -40,10 +40,14 @@ endif
 all: infond $(GUI_EXECUTABLE)
 
 dist:
+	$(MAKE) source-dist
 	$(MAKE) clean
 	WINDOWS=1 $(MAKE) win32-client-dist
 	$(MAKE) clean
 	$(MAKE) linux-client-dist linux-server-dist
+
+source-dist: distclean
+	tar cvz -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
 
 win32-client-dist: $(GUI_EXECUTABLE)
 	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
