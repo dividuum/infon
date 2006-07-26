@@ -328,7 +328,7 @@ static int luaWorldSize(lua_State *L) {
     lua_pushnumber(L, TILE_X1(1));
     lua_pushnumber(L, TILE_Y1(1));
     lua_pushnumber(L, TILE_X2(world_width()  - 2));
-    lua_pushnumber(L, TILE_Y1(world_height() - 2));
+    lua_pushnumber(L, TILE_Y2(world_height() - 2));
     return 4;
 }
 
