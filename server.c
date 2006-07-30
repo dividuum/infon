@@ -31,6 +31,7 @@
 
 #include <lauxlib.h>
 #include <event.h>
+#include <zlib.h>
 
 #include "server.h"
 #include "packet.h"
@@ -110,9 +111,12 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     // Aktivieren
     event_set(&clients[fd].rd_event, fd, EV_READ,  server_readable, &clients[fd].rd_event);
     event_set(&clients[fd].wr_event, fd, EV_WRITE, server_writable, &clients[fd].wr_event);
-    clients[fd].in_buf  = evbuffer_new();
-    clients[fd].out_buf = evbuffer_new();
-    clients[fd].player  = NULL;
+    clients[fd].in_buf    = evbuffer_new();
+    clients[fd].out_buf   = evbuffer_new();
+
+    clients[fd].compress = 0;
+    
+    clients[fd].player   = NULL;
 
     clients[fd].next = NULL;
     clients[fd].prev = NULL;
@@ -178,6 +182,22 @@ static void server_writable(int fd, short event, void *arg) {
     // stdout statt stdin zu schicken.
     if (fd == STDIN_FILENO) fd = STDOUT_FILENO; 
 
+    // Kompressionsrest flushen
+    if (client->compress) {
+        char buf[1024];
+        client->strm.next_in  = NULL;
+        client->strm.avail_in = 0;
+        do {
+            client->strm.next_out  = buf;
+            client->strm.avail_out = sizeof(buf);
+            if (deflate(&client->strm, Z_SYNC_FLUSH) != Z_OK) {
+                fprintf(stderr, "urgh. deflate (Z_SYNC_FLUSH) didn't return Z_OK");
+                // XXX: handle
+            }
+            evbuffer_add(client->out_buf, buf, sizeof(buf) - client->strm.avail_out);
+        } while (client->strm.avail_out == 0);
+    }
+
     int ret = evbuffer_write(client->out_buf, fd);
     if (ret < 0) {
         server_destroy(client, strerror(errno));
@@ -189,12 +209,45 @@ static void server_writable(int fd, short event, void *arg) {
     }
 }
 
+void server_start_compression(client_t *client) {
+    if (client->compress)
+        return;
+
+    packet_t packet;
+    packet_init(&packet, PACKET_START_COMPRESS);
+    server_send_packet(&packet, client);
+
+    client->strm.zalloc = Z_NULL;
+    client->strm.zfree  = Z_NULL;
+    client->strm.opaque = NULL;
+    if (deflateInit(&client->strm, 9) != Z_OK)
+        die("cannot alloc new zstream");
+    client->compress  = 1;
+}
+
 void server_writeto(client_t *client, const void *data, size_t size) {
     if (size == 0) 
         return;
-    if (EVBUFFER_LENGTH(client->in_buf) > 1024*1024)
+    if (EVBUFFER_LENGTH(client->out_buf) > 1024*1024)
         return;
-    evbuffer_add(client->out_buf, (void*)data, size);
+    if (client->compress) {
+        char buf[1024];
+        client->strm.next_in  = (void*)data; // not const?
+        client->strm.avail_in = size;
+        while (client->strm.avail_in > 0) {
+            client->strm.next_out  = buf;
+            client->strm.avail_out = sizeof(buf);
+            int ret = deflate(&client->strm, 0);
+            if (ret != Z_OK) {
+                fprintf(stderr, "urgh. deflate didn't return Z_OK: %d\n", ret);
+                // XXX: handle
+            }
+            evbuffer_add(client->out_buf, buf, sizeof(buf) - client->strm.avail_out);
+        }
+        // printf("%d => %d\n", client->strm.total_in, client->strm.total_out);
+    } else {
+        evbuffer_add(client->out_buf, (void*)data, size);
+    }
     event_add(&client->wr_event, NULL);
 }
 
@@ -230,6 +283,8 @@ void server_destroy(client_t *client, char *reason) {
         packet_init(&packet, PACKET_QUIT_MSG);
         packet_writeXX(&packet, reason, strlen(reason));
         server_send_packet(&packet, client);
+        // TODO: funktioniert momentan nicht, da kein 
+        // FULL_FLUSH vor evbuffer_write
     } else {
         evbuffer_add(client->out_buf, "connection terminating: ", 25);
         evbuffer_add(client->out_buf, reason, strlen(reason));
@@ -239,6 +294,11 @@ void server_destroy(client_t *client, char *reason) {
 
     evbuffer_free(client->in_buf);
     evbuffer_free(client->out_buf);
+
+    if (client->compress) { 
+        deflateEnd(&client->strm);
+    }
+    
     event_del(&client->rd_event);
     event_del(&client->wr_event);
     client->in_buf  = NULL;
@@ -286,6 +346,7 @@ static void client_turn_into_gui_client(client_t *client) {
     } else {
         client->prev_gui = client->next_gui = guiclients = client;
     }
+    server_start_compression(client);
     initial_update(client);
 }
 

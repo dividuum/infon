@@ -52,6 +52,9 @@ typedef struct creature_s {
     int         network_path_y;
     int         network_speed;
     int         network_target;
+
+    int         network_last_x;
+    int         network_last_y;
 } creature_t;
 
 int         creature_num(const creature_t *creature);

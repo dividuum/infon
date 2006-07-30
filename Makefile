@@ -2,7 +2,7 @@ LUADIR=lua-5.0.2
 
 REVISION=$(shell svnversion .)
 
-COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)" -I$(LUADIR)/include/ 
+COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)" -I$(LUADIR)/include/ # -DCHEATS
 ifdef WINDOWS
 	COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
 else
@@ -22,7 +22,7 @@ endif
 
 CFLAGS     += -I$(SDLDIR)/include/SDL 
 
-LDFLAGS 	= -L$(LUADIR)/lib -levent -lSDL -llua -llualib -lm -lpthread
+LDFLAGS 	= -L$(LUADIR)/lib -levent -lSDL -llua -llualib -lm -lpthread -lz
 
 ifdef WINDOWS
 	MINGW=/home/dividuum/progs/mingw32/

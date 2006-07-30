@@ -31,6 +31,7 @@
 #endif
 
 #include <event.h>
+#include <zlib.h>
 
 #include "packet.h"
 
@@ -43,6 +44,9 @@ typedef struct client_s {
     struct event wr_event;
     struct evbuffer *in_buf;
     struct evbuffer *out_buf;
+
+    int              compress;
+    z_stream         strm;
 
     // Verbindung von: 1-player <-> N-client
     struct player_s *player;

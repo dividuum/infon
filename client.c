@@ -39,6 +39,7 @@
 #include <assert.h>
 
 #include <event.h>
+#include <zlib.h>
 
 #include "packet.h"
 #include "global.h"
@@ -49,11 +50,15 @@
 #include "gui_scroller.h"
 #include "gui_creature.h"
 
-static int clientfd;
-static struct event rd_event;
-static struct event wr_event;
+static int              clientfd;
+static struct event     rd_event;
+static struct event     wr_event;
 static struct evbuffer *in_buf;
+static struct evbuffer *packet_buf;
 static struct evbuffer *out_buf;
+
+static int              compression;
+static z_stream         strm;
 
 void client_destroy(char *reason);
 void client_writeto(const void *data, size_t size);
@@ -68,6 +73,15 @@ static void client_read_handshake(packet_t *packet) {
                serverprotocol < PROTOCOL_VERSION ? "older" : "newer",
                serverprotocol,  PROTOCOL_VERSION);
     }
+}
+
+static void client_start_compression() {
+    strm.zalloc = Z_NULL;
+    strm.zfree  = Z_NULL;
+    strm.opaque = NULL;
+    if (inflateInit(&strm) != Z_OK)
+        die("cannot initialize decompression");
+    compression = 1;
 }
 
 static void client_handle_packet(packet_t *packet) {
@@ -98,6 +112,9 @@ static void client_handle_packet(packet_t *packet) {
         case PACKET_WELCOME_MSG:    
             client_writeto("guiclient\n", 10);
             break;
+        case PACKET_START_COMPRESS:
+            client_start_compression();
+            break;
         case PACKET_HANDSHAKE:
             client_read_handshake(packet);
             break;
@@ -110,26 +127,65 @@ static void client_handle_packet(packet_t *packet) {
 static void client_readable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
 
-    int ret = evbuffer_read(in_buf, fd, 260);
+    int ret = evbuffer_read(in_buf, fd, 8192);
     if (ret < 0) {
         client_destroy(strerror(errno));
+        return;
     } else if (ret == 0) {
         client_destroy("eof reached");
-    } else if (EVBUFFER_LENGTH(in_buf) > 8192) {
-        client_destroy("line too long. strange server.");
-    } else {
-        while (EVBUFFER_LENGTH(in_buf) >= (int)EVBUFFER_DATA(in_buf)[0] + 2) {
-            packet_t packet;
-            memcpy(&packet,EVBUFFER_DATA(in_buf), (int)EVBUFFER_DATA(in_buf)[0] + 2);
-            int len = packet.len + 2;
-            packet_rewind(&packet);
-            client_handle_packet(&packet);
-            if (!client_is_connected()) 
-                return;
-            evbuffer_drain(in_buf, len);
-        }
-        event_add(cb_event, NULL);
+        return;
     }
+
+restart:
+    if (compression) {
+        char buf[8192];
+        strm.next_in   = EVBUFFER_DATA(in_buf);
+        strm.avail_in  = EVBUFFER_LENGTH(in_buf);
+        do {
+            strm.next_out  = buf;
+            strm.avail_out = sizeof(buf);
+            if (inflate(&strm, Z_SYNC_FLUSH) != Z_OK) {
+                client_destroy("decompression error");
+                return;
+            }
+            evbuffer_add(packet_buf, buf, sizeof(buf) - strm.avail_out);
+            if (EVBUFFER_LENGTH(packet_buf) > 1024 * 1024) {
+                client_destroy("too much to decompress. funny server?");
+                return;
+            }
+        } while (strm.avail_out == 0);
+        evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf) - strm.avail_in);
+    } else {
+        evbuffer_add_buffer(packet_buf, in_buf);
+        evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf));
+    }
+
+    int old_compression = compression;
+
+    while (EVBUFFER_LENGTH(packet_buf) >= (int)EVBUFFER_DATA(packet_buf)[0] + 2) {
+        // Packet rauspopeln...
+        packet_t packet;
+        memcpy(&packet,EVBUFFER_DATA(packet_buf), (int)EVBUFFER_DATA(packet_buf)[0] + 2);
+        int len = packet.len + 2;
+        packet_rewind(&packet);
+        client_handle_packet(&packet);
+        evbuffer_drain(packet_buf, len);
+
+        // Disconnect Packet?
+        if (!client_is_connected()) 
+            return;
+
+        // Wurde Kompression aktiviert? Dann Rest des packet_buf zurueck 
+        // in den in_buf, da es sich dabei bereits um komprimierte Daten 
+        // handelt und diese oben erst dekomprimiert werden muessen.
+        if (compression != old_compression) {
+            evbuffer_add_buffer(in_buf, packet_buf);
+            evbuffer_drain(packet_buf, EVBUFFER_LENGTH(packet_buf));
+            goto restart;
+        }
+    }
+
+    event_add(cb_event, NULL);
 }
 
 static void client_writable(int fd, short event, void *arg) {
@@ -160,6 +216,10 @@ void client_destroy(char *reason) {
     printf("disconnected from server: %s\n", reason);
     evbuffer_free(in_buf);
     evbuffer_free(out_buf);
+    evbuffer_free(packet_buf);
+    if (compression) {
+        inflateEnd(&strm);
+    }
     event_del(&rd_event);
     event_del(&wr_event);
     close(clientfd);
@@ -254,8 +314,10 @@ void client_init(char *addr) {
     
     event_set(&rd_event, clientfd, EV_READ,  client_readable, &rd_event);
     event_set(&wr_event, clientfd, EV_WRITE, client_writable, &wr_event);
-    in_buf  = evbuffer_new();
-    out_buf = evbuffer_new();
+
+    in_buf      = evbuffer_new();
+    out_buf     = evbuffer_new();
+    packet_buf  = evbuffer_new();
 
     event_add(&rd_event, NULL);
 }

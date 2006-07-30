@@ -52,7 +52,10 @@ typedef struct gui_creature_s {
     gui_pathnode_t *last;
     int             pathlen;
 
-    char message[9];
+    int             last_x;
+    int             last_y;
+
+    char            message[9];
 } gui_creature_t;
 
 void        gui_creature_draw();

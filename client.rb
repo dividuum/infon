@@ -1,12 +1,26 @@
 require 'socket'
+require 'zlib'
+
 TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
     class << socket
         alias_method  :orig_read, :read 
         attr_accessor :traffic
+        attr_accessor :compress
+        attr_accessor :zstream
+        attr_accessor :buf
 
         def read(x)
+            if @compress
+                while @buf.size < x
+                    @buf << @zstream.inflate(orig_read(1))
+                end
+                ret = @buf[0...x]
+                @buf = @buf[x..-1]
+            else
+                ret = orig_read(x)
+            end
             @traffic += x
-            orig_read(x)
+            ret
         end
        
         def read8
@@ -28,12 +42,20 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         end
     end
 
-    socket.traffic = 0
+    socket.traffic  = 0
+    socket.buf      = ""
+    socket.compress = false
+    socket.zstream  = Zlib::Inflate.new
 
     Thread.start do 
         last = socket.traffic
         loop do
-            puts "TRAFFIC: % dbyte/sec" % [socket.traffic - last]
+            print "TRAFFIC: % dbyte/sec" % [socket.traffic - last]
+            if socket.compress
+                puts " (%d => %d)" % [socket.zstream.total_in, socket.zstream.total_out]
+            else
+                puts
+            end
             last = socket.traffic
             sleep 1
         end
@@ -72,7 +94,12 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
                 print "food=%d, health=%d " % [ fh >> 4, fh & 0x0F ]
             end
             print "state=%d "       % socket.read8                      if mask &  8 != 0
-            print "path=%d,%d "     % [socket.read16, socket.read16]    if mask & 16 != 0
+            if mask & 16 != 0
+                dx, dy = socket.read16, socket.read16
+                x = ((dx & 1) == 1 ? -1 : 1) * (dx >> 1)
+                y = ((dy & 1) == 1 ? -1 : 1) * (dy >> 1)
+                print "path=%d,%d => %d,%d "     % [dx, dy, x, y]
+            end
             print "target=%d "      % socket.read16                     if mask & 32 != 0
             print "message=%s "     % socket.readXX(socket.read8)       if mask & 64 != 0
             print "speed=%d "       % socket.read8                      if mask &128 != 0
@@ -87,6 +114,8 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         when 32:
             socket.write("guiclient\n")
             puts  "welcome: %s"     % socket.read(len).delete("\n").strip
+        when 254:
+            socket.compress = true
         when 255:
             puts  "server protocol version %d" % socket.read8
         else

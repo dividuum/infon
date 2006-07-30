@@ -41,6 +41,6 @@ int        game_round;
 #define PATHFIND_AREA_MERGE 
 
 // Netzwerk Protokol
-#define PROTOCOL_VERSION 3
+#define PROTOCOL_VERSION 4
 
 #endif

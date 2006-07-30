@@ -228,10 +228,14 @@ void gui_creature_from_network(packet_t *packet) {
             uint16_t x, y;
             if (!packet_read16(packet, &x))     PROTOCOL_ERROR();
             if (!packet_read16(packet, &y))     PROTOCOL_ERROR();
+
+            creature->last_x = x;
+            creature->last_y = y;
+
             // XXX: x, y checken?
             gui_creature_add_path(creature,
-                                  x * CREATURE_POS_RESOLUTION, 
-                                  y * CREATURE_POS_RESOLUTION,
+                                  creature->last_x * CREATURE_POS_RESOLUTION, 
+                                  creature->last_y * CREATURE_POS_RESOLUTION,
                                   1);
         }
     }
@@ -252,40 +256,30 @@ void gui_creature_from_network(packet_t *packet) {
         creature->food   = food_health >> 4;
         creature->health = food_health & 0x0F;
     }
-
-    // Im Server wird beim Wechseln von WALK zu anderem State
-    // das anzulaufende Ziel angepasst: Es muss evtl. nicht mehr
-    // bis zum Ende des Pfades gelaufen werden, da der Wechsel
-    // aus WALK waehrend dem Anlaufen des Ziels passiert. Dies
-    // bedeutet fuer den Client, dass in diesem Fall, und falls 
-    // tatsaechlich ein neues Pfadziel gesetzt wird, dieses
-    // das urspruengliche letzte Ziel des Pfades ersetzt.
-    int walk_state_change = 0;
     
     if (updatemask & CREATURE_DIRTY_STATE) {
         uint8_t state;
         if (!packet_read08(packet, &state))     PROTOCOL_ERROR();
         if (state >= CREATURE_STATES)           PROTOCOL_ERROR();
-        int oldstate = creature->state;
         creature->state = state;
-        if ((oldstate == CREATURE_WALK) ^ (state == CREATURE_WALK))
-            walk_state_change = 1;
     }
 
-    if (updatemask & CREATURE_DIRTY_POS) {
+    if (updatemask & CREATURE_DIRTY_PATH) {
         uint16_t x, y;
         if (!packet_read16(packet, &x))         PROTOCOL_ERROR();
         if (!packet_read16(packet, &y))         PROTOCOL_ERROR();
+
+        int dx = x >> 1; if (x & 1) dx *= -1;
+        int dy = y >> 1; if (y & 1) dy *= -1;
+
+        creature->last_x += dx;
+        creature->last_y += dy;
+            
         // XXX: x, y checken?
-        if (walk_state_change && creature->last) {
-            creature->last->x = x * CREATURE_POS_RESOLUTION;
-            creature->last->y = y * CREATURE_POS_RESOLUTION;
-        } else {
-            gui_creature_add_path(creature,
-                                  x * CREATURE_POS_RESOLUTION, 
-                                  y * CREATURE_POS_RESOLUTION,
-                                  0);
-        }
+        gui_creature_add_path(creature,
+                              creature->last_x * CREATURE_POS_RESOLUTION, 
+                              creature->last_y * CREATURE_POS_RESOLUTION,
+                              0);
     }
 
     if (updatemask & CREATURE_DIRTY_TARGET) {

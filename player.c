@@ -151,9 +151,19 @@ static int luaPrint(lua_State *L) {
     return 0;
 }
 
-#define get_player_and_creature()                                  \
+static int player_get_cpu_usage(player_t *player) {
+    int cycles_left = lua_getcycles(player->L);
+    if (cycles_left < 0)
+        cycles_left = 0;
+    return 100 * (player->max_cycles - cycles_left) / player->max_cycles;
+}
+
+#define get_player()                                               \
     player_t   *player   = lua_touserdata(L, lua_upvalueindex(1)); \
-    (void)player; /* Unused Warning weg */                         \
+    (void)player; /* Unused Warning weg */                         
+
+#define get_player_and_creature()                                  \
+    get_player();                                                  \
     const int creature_idx     = (int)luaL_checklong(L, 1);        \
     creature_t *creature = creature_by_num(creature_idx);          \
     if (!creature) return luaL_error(L, "%d isn't a valid creature", creature_idx);
@@ -207,7 +217,7 @@ static int luaCreatureSetMessage(lua_State *L) {
     return 0;
 }
 
-static int luaCreatureNearestEnemy(lua_State *L) {
+static int luaCreatureGetNearestEnemy(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
     lua_consumecycles(L, 500);
@@ -299,6 +309,22 @@ static int luaCreatureGetAttackDistance(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
     lua_pushnumber(L, creature_attack_distance(creature));
+    return 1;
+}
+
+#ifdef CHEATS
+static int luaCreatureCheatGiveAll(lua_State *L) {
+    get_player_and_creature();
+    creature->health = creature_max_health(creature);
+    creature->food   = creature_max_food(creature);
+    return 0;
+}
+#endif
+
+static int luaPlayerGetCPUUsage(lua_State *L) { 
+    get_player();
+    lua_consumecycles(L, 1000);
+    lua_pushnumber(L, player_get_cpu_usage(player));
     return 1;
 }
 
@@ -420,7 +446,8 @@ player_t *player_create(const char *pass) {
     lua_register_player(player, "set_state",            luaCreatureSetState);
     lua_register_player(player, "set_target",           luaCreatureSetTarget);
     lua_register_player(player, "set_convert",          luaCreatureSetConvert);
-    lua_register_player(player, "nearest_enemy",        luaCreatureNearestEnemy);
+    lua_register_player(player, "nearest_enemy",        luaCreatureGetNearestEnemy);
+    lua_register_player(player, "get_nearest_enemy",    luaCreatureGetNearestEnemy);
     lua_register_player(player, "get_type",             luaCreatureGetType);
     lua_register_player(player, "get_food",             luaCreatureGetFood);
     lua_register_player(player, "get_health",           luaCreatureGetHealth);
@@ -431,6 +458,12 @@ player_t *player_create(const char *pass) {
     lua_register_player(player, "set_message",          luaCreatureSetMessage);
     lua_register_player(player, "get_hitpoints",        luaCreatureGetHitpoints);
     lua_register_player(player, "get_attack_distance",  luaCreatureGetAttackDistance);
+
+    lua_register_player(player, "get_cpu_usage",        luaPlayerGetCPUUsage);
+
+#ifdef CHEATS
+    lua_register_player(player, "cheat_give_all",       luaCreatureCheatGiveAll);
+#endif
 
     lua_register(player->L,     "world_size",           luaWorldSize);
     lua_register(player->L,     "game_time",            luaGameTime);
@@ -725,12 +758,7 @@ void player_think() {
                 break;
         }
 
-        int cycles_left = lua_getcycles(player->L);
-
-        if (cycles_left < 0)
-            cycles_left = 0;
-
-        int newcpu = 100 * (player->max_cycles - cycles_left) / player->max_cycles;
+        int newcpu = player_get_cpu_usage(player); 
 
         if (newcpu != player->cpu_usage) {
             player->dirtymask |= PLAYER_DIRTY_CPU;
