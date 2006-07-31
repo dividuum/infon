@@ -59,7 +59,7 @@ linux-client-dist: $(GUI_EXECUTABLE)
 
 linux-server-dist: infond
 	strip infond infond-static
-	tar cfvz infond-linux-r$(REVISION).tgz README infond infond-static *.lua
+	tar cfvz infond-linux-r$(REVISION).tgz README infond infond-static *.lua level/*.lua
 
 infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o 
 	$(CC) $^ $(LDFLAGS) -o $@

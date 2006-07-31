@@ -74,7 +74,14 @@ void video_shutdown() {
 }
 
 void video_fullscreen_toggle() {
+#ifdef WIN32
+    flags ^= SDL_FULLSCREEN;
+    screen = SDL_SetVideoMode(0, 0, 0, flags);
+    if (!screen)
+        die("couldn't toggle fullscreen. sorry");
+#else
     SDL_WM_ToggleFullScreen(screen);
+#endif
 }
 
 void video_resize(int w, int h) {

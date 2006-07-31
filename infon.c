@@ -107,6 +107,11 @@ int main(int argc, char *argv[]) {
                             if (event.key.keysym.mod & KMOD_ALT)
                                 video_fullscreen_toggle();
                             break;
+                        case SDLK_1: video_resize( 640,  480); break;
+                        case SDLK_2: video_resize( 800,  600); break;
+                        case SDLK_3: video_resize(1024,  768); break;
+                        case SDLK_4: video_resize(1280, 1024); break;
+                        case SDLK_5: video_resize(1600, 1200); break;
                         case SDLK_c:
                             gui_world_center();
                             break;
