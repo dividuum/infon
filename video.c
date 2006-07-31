@@ -28,6 +28,8 @@
 #include "sprite.h"
 
 static SDL_Surface *screen;
+static Uint32       flags = SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_HWACCEL | SDL_RESIZABLE;
+
 static sge_bmpFont *font;
 
 static char tiny_font[1792]; // XXX Hardcoded
@@ -47,7 +49,7 @@ void video_init(int w, int h) {
     if (!(vi->vfmt->BitsPerPixel == 16 || vi->vfmt->BitsPerPixel == 32))
         die("insufficient color depth");
 
-    screen = SDL_SetVideoMode(w, h, vi->vfmt->BitsPerPixel, SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_HWACCEL);
+    screen = SDL_SetVideoMode(w, h, vi->vfmt->BitsPerPixel, flags);
 
     if (!screen)
         die("Couldn't set display mode: %s", SDL_GetError());
@@ -73,6 +75,14 @@ void video_shutdown() {
 
 void video_fullscreen_toggle() {
     SDL_WM_ToggleFullScreen(screen);
+}
+
+void video_resize(int w, int h) {
+    if (w < 320 || h < 200)
+        return;
+    screen = SDL_SetVideoMode(w, h, 0, flags);
+    if (!screen)
+        die("couldn't change resolution. sorry");
 }
 
 void video_flip() {
@@ -112,7 +122,7 @@ void video_line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2) {
 }
 
 void video_write(Sint16 x, Sint16 y, const char *text) {
-    sge_BF_textoutf(screen, font, x, y, "%s", text);
+    sge_BF_textout(screen, font, (char*)text, x, y);
 }
 
 void video_tiny(Sint16 x, Sint16 y, const char *text) {

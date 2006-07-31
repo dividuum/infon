@@ -59,11 +59,7 @@ int main(int argc, char *argv[]) {
     if (argc != 2)
         die("<ip:port>");
 
-    // const int width = 320, height = 208;
-    // const int width = 640, height = 480;
     const int width = 800, height = 600;
-    // const int width = 1024, height = 768;
-    // const int width = 1280, height = 1024;
 
 #ifndef WIN32
     signal(SIGINT,  sighandler);
@@ -124,7 +120,10 @@ int main(int argc, char *argv[]) {
                     if (event.motion.state & 1)
                     gui_world_center_change(-event.motion.xrel, -event.motion.yrel);
                     break;
-                case SDL_QUIT:
+               case SDL_VIDEORESIZE:
+                    video_resize(event.resize.w, event.resize.h);
+                    break;
+               case SDL_QUIT:
                     running = 0;
                     break;
             }

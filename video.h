@@ -35,6 +35,8 @@ void         video_flip();
 int          video_width();
 int          video_height();
 
+void         video_resize(int w, int h);
+
 void         video_line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2);
 void         video_hline(Sint16 x1, Sint16 x2, Sint16 y, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 void         video_rect(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
