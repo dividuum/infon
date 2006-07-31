@@ -67,7 +67,7 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     if (peer)
         sprintf(address, "%s:%d", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
     else
-        sprintf(address, "locale console");
+        sprintf(address, "local console");
 
     lua_pushliteral(L, "on_new_client");  /* funcname */
     lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
@@ -330,6 +330,8 @@ static void initial_update(client_t *client) {
     packet_write08(&packet, PROTOCOL_VERSION);
     server_send_packet(&packet, client);
 
+    server_start_compression(client);
+
     world_send_initial_update(client);
     player_send_initial_update(client);
     creature_send_initial_update(client);
@@ -346,7 +348,6 @@ static void client_turn_into_gui_client(client_t *client) {
     } else {
         client->prev_gui = client->next_gui = guiclients = client;
     }
-    server_start_compression(client);
     initial_update(client);
 }
 
