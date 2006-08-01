@@ -29,7 +29,8 @@ ifdef WINDOWS
 	GUI_LDFLAGS += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
 				   $(MINGW)/lib/libpng.a $(MINGW)/lib/libz.a     $(MINGW)/lib/libSDL_gfx.a   \
 				   $(MINGW)/lib/libSDL.a \
-	               -lmingw32 -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
+				   -lmingw32 $(MINGW)/lib/libSDLmain.a \
+	               -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
 	RES=infon.res				   
 	GUI_EXECUTABLE=infon.exe
 else

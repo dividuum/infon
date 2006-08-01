@@ -57,7 +57,13 @@ void print_fps() {
 
 int main(int argc, char *argv[]) {
     if (argc != 2)
-        die("<ip:port>");
+#ifdef WIN32
+        die("you must supply the gameservers hostname\n"
+            "as first command line parameter.\n\n"
+            "example: 'infon.exe bl0rg.net'");
+#else
+        die("usage: %s <serverip[:port]>", argv[0]);
+#endif
 
     const int width = 800, height = 600;
 
@@ -162,20 +168,3 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS; 
 }
-
-#ifdef WIN32
-#include <windows.h>
-int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance,
-                           LPSTR lpszArgument,      int nFunsterStil)
-{
-    if (strlen(lpszArgument) == 0) {
-        die("you must supply the gameserver hostname\n"
-            "as command line parameter.\n\n"
-            "example: 'infon.exe bl0rg.net'");
-    }
-    char *argv[] = { "foobar", lpszArgument, NULL };
-    return main(2, argv);
-}
-#endif
-
-
