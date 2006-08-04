@@ -25,11 +25,15 @@
 #include "gui_world.h"
 #include "video.h"
 #include "misc.h"
+#include "sprite.h"
 
 static int           initialized = 0;
 
 static int           world_w;
 static int           world_h;
+
+static int           koth_x;
+static int           koth_y;
 
 static int           center_x;
 static int           center_y;
@@ -37,8 +41,14 @@ static int           center_y;
 static int           offset_x;
 static int           offset_y;
 
-static sprite_t    **map_sprites  = NULL;
-static sprite_t    **food_sprites = NULL;
+typedef struct maptile_s {
+    sprite_t    *food;
+    sprite_t    *map;
+} maptile_t;
+
+static maptile_t *map;
+
+#define MAPTILE(x, y) (map[(y) * world_w + (x)])
 
 void gui_world_draw() {
     if (!initialized)
@@ -75,9 +85,9 @@ void gui_world_draw() {
 
     for (int y = y1; y < y2; y++) {
         for (int x = x1; x < x2; x++) {
-            video_draw(screenx, screeny, map_sprites[y * world_w + x]);
+            video_draw(screenx, screeny, MAPTILE(x, y).map);
 
-            sprite_t *food_sprite = food_sprites[y * world_w + x];
+            sprite_t *food_sprite = MAPTILE(x, y).food;
             if (food_sprite) 
                 video_draw(screenx, screeny, food_sprite);
             
@@ -88,13 +98,37 @@ void gui_world_draw() {
     }
 
     if (mapx1 > 0) 
-        video_rect(0, max(0, mapy1), mapx1, min(screen_h, mapy2), 0, 0, 0, 0);
+        video_rect(0, max(0, mapy1), mapx1, min(screen_h, mapy2), 30, 30, 30, 0);
     if (mapy1 > 0) 
-        video_rect(0, 0, screen_w, mapy1, 0, 0, 0, 0);
+        video_rect(0, 0, screen_w, mapy1, 30, 30, 30, 0);
     if (mapx2 <= screen_w) 
-        video_rect(mapx2, max(0, mapy1), screen_w, min(screen_h, mapy2), 0, 0, 0, 0);
+        video_rect(mapx2, max(0, mapy1), screen_w, min(screen_h, mapy2), 30, 30, 30, 0);
     if (mapy2 <= screen_h) 
-        video_rect(0, mapy2, screen_w, screen_h, 0, 0, 0, 0);
+        video_rect(0, mapy2, screen_w, screen_h, 30, 30, 30, 0);
+}
+
+static int gui_world_settype(int x, int y, int type) {
+    switch (type) {
+        case SOLID:
+            if (x == 0 || x == world_w - 1 || y == 0 || y == world_h - 1) {
+                MAPTILE(x, y).map = sprite_get(SPRITE_BORDER + rand() % SPRITE_NUM_BORDER);
+            } else {
+                MAPTILE(x, y).map = sprite_get(SPRITE_SOLID  + rand() % SPRITE_NUM_SOLID);
+            };
+            break;
+        case PLAIN:
+            if (x == koth_x && y == koth_y) {
+                MAPTILE(x, y).map = sprite_get(SPRITE_KOTH);
+            } else {
+                MAPTILE(x, y).map = sprite_get(SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN);
+            }
+            break;
+        default:
+            // XXX: Unsupported...
+            MAPTILE(x, y).map = sprite_get(SPRITE_KOTH);
+            return 0;
+    }
+    return 1;
 }
 
 void gui_world_center_change(int dx, int dy) {
@@ -122,37 +156,43 @@ void gui_world_from_network(packet_t *packet) {
     if (!packet_read08(packet, &y))         PROTOCOL_ERROR(); 
     if (x >= world_w)                       PROTOCOL_ERROR();
     if (y >= world_h)                       PROTOCOL_ERROR();
-    uint8_t spriteno;
-    if (!packet_read08(packet, &spriteno))  PROTOCOL_ERROR(); 
-    if (!sprite_exists(spriteno))           PROTOCOL_ERROR(); 
-    map_sprites[x + world_w * y] = sprite_get(spriteno);
+    uint8_t type;
+    if (!packet_read08(packet, &type))      PROTOCOL_ERROR(); 
+    if (!gui_world_settype(x, y, type))     PROTOCOL_ERROR();
     uint8_t food; 
     if (!packet_read08(packet, &food))      PROTOCOL_ERROR();
     if (food == 0xFF) {
-        food_sprites[x + world_w * y] = NULL;
+        MAPTILE(x, y).food = NULL;
     } else {
         if (food >= SPRITE_NUM_FOOD)        PROTOCOL_ERROR();
-        food_sprites[x + world_w * y] = sprite_get(SPRITE_FOOD + food);
+        MAPTILE(x, y).food = sprite_get(SPRITE_FOOD + food);
     }
 }
 
 void gui_world_info_from_network(packet_t *packet) {
     if (initialized)                        PROTOCOL_ERROR();
-    uint8_t w; uint8_t h;
+    uint8_t w, h, kx, ky;
     if (!packet_read08(packet, &w))         PROTOCOL_ERROR(); 
     if (!packet_read08(packet, &h))         PROTOCOL_ERROR(); 
+    if (!packet_read08(packet, &kx))        PROTOCOL_ERROR(); 
+    if (!packet_read08(packet, &ky))        PROTOCOL_ERROR(); 
     
     world_w = w;
     world_h = h;
 
-    map_sprites  = malloc(w * h * sizeof(sprite_t*));
-    food_sprites = malloc(w * h * sizeof(sprite_t*));
+    if (koth_x >= world_w)                  PROTOCOL_ERROR();
+    if (koth_y >= world_h)                  PROTOCOL_ERROR();
+
+    koth_x  = kx;
+    koth_y  = ky;
+
+    map  =  malloc(world_w * world_h * sizeof(maptile_t));
+    memset(map, 0, world_w * world_h * sizeof(maptile_t));
 
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
-            map_sprites [x + w * y] = sprite_get(SPRITE_BORDER);
-            food_sprites[x + w * y] = NULL;
+            gui_world_settype(x, y, SOLID);
         }
     }
 
@@ -170,8 +210,7 @@ void gui_world_init() {
 
 void gui_world_shutdown() {
     if (initialized) {
-        free(map_sprites);
-        free(food_sprites);
+        free(map);
         initialized = 0;
     }
 }

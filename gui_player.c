@@ -90,7 +90,7 @@ void gui_player_draw() {
 
         // King in dieser Runde?
         if (player == king_player) {
-            video_draw(player_displayed * 128 + 10,
+            video_draw(player_displayed * 128 + 32,
                        video_height() - 86 - abs(20.0 * sin(M_PI * (SDL_GetTicks() % 550) / 550.0)),
                        sprite_get(SPRITE_CROWN));
         }

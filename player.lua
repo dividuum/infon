@@ -100,7 +100,7 @@ function Creature:convert(to_type)
     while self:is_converting() do
         self:wait_for_next_round()
     end
-    return self:get_type() == to_type
+    return self:type() == to_type
 end
 
 function Creature:suicide()
@@ -359,6 +359,13 @@ function player_think()
     _killed_creatures   = {}
     _attacked_creatures = {}
 
+    if onRoundStart then
+        local ok, msg = pcall(onRoundStart)
+        if not ok then
+            print(msg)
+        end
+    end
+    
     can_yield = true
 
     -- Vorhandene Kreaturen durchlaufen
@@ -379,6 +386,14 @@ function player_think()
     end
 
     can_yield = false
+
+    if onRoundEnd then
+        local ok, msg = pcall(onRoundEnd)
+        if not ok then
+            print(msg)
+        end
+    end
+    
 end
 
 ------------------------------------------------------------------------

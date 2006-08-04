@@ -24,4 +24,11 @@
 // Begrenzt durch die Anzahl vorhandener Food Sprites
 #define MAX_TILE_FOOD 9999
 
+typedef enum {
+    SOLID = 0,
+    PLAIN = 1,
+    WATER = 2,
+    LAVA  = 3,
+} maptype_e;
+
 #endif

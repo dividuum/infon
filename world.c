@@ -37,13 +37,26 @@ static int           world_h;
 static int           koth_x;
 static int           koth_y;
 
+// TODO: Jeder Kreaturtype sollte eigene Pfadsuche haben
 static map_t        *map_pathfind;
 static pathfinder_t  finder;
-static int          *map_sprites;
-static int          *map_food;
+
+typedef struct maptile_s {
+    int         food;
+    maptype_e   type;
+} maptile_t;
+
+static maptile_t *map;
+
+#define MAPTILE(x, y) (map[(y) * world_w + (x)])
+
+static int is_on_map(int x, int y) {
+    return x >= 0 && x < world_w &&
+           y >= 0 && y < world_h;
+}
 
 int world_walkable(int x, int y) {
-    return MAP_IS_ON_MAP(map_pathfind, x, y) &&
+    return is_on_map(x, y) &&
            map_walkable(map_pathfind, x, y);
 }
 
@@ -51,14 +64,14 @@ int world_dig(int x, int y, maptype_e type) {
     if (x < 1 || x >= world_w - 1 ||
         y < 1 || y >= world_h - 1)
         return 0;
+
+    if (MAPTILE(x, y).type != SOLID)
+        return 0;
     
-    if (map_walkable(map_pathfind, x, y))
-        return 1;
     fprintf(stderr, "world_dig(%d, %d)\n", x, y);
 
     map_dig(map_pathfind, x, y);
-    map_sprites[y * world_w + x] = SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN;
-    
+    MAPTILE(x, y).type = type;
     world_to_network(x, y, SEND_BROADCAST);
     return 1;
 }
@@ -68,9 +81,10 @@ pathnode_t *world_findpath(int x1, int y1, int x2, int y2) {
 }
 
 int world_get_food(int x, int y) {
-    if (!MAP_IS_ON_MAP(map_pathfind, x, y))
+    if (!is_on_map(x, y))
         return 0;
-    return map_food[y * world_w + x];
+
+    return MAPTILE(x, y).food;
 }
 
 static int food_to_network_food(int food) {
@@ -78,14 +92,17 @@ static int food_to_network_food(int food) {
 }
 
 int world_add_food(int x, int y, int amount) {
-    if (!world_walkable(x, y))
+    if (!is_on_map(x, y))
         return 0;
 
-    int old = map_food[y * world_w + x];
+    if (MAPTILE(x, y).type != PLAIN)
+        return 0;
+
+    int old = MAPTILE(x, y).food;
     int new = old + amount;
     if (new > MAX_TILE_FOOD) new = MAX_TILE_FOOD;
     if (new < 0)             new = 0;
-    map_food[y * world_w + x] = new;
+    MAPTILE(x, y).food = new;
 
     if (food_to_network_food(new) != food_to_network_food(old))
         world_to_network(x, y, SEND_BROADCAST);
@@ -94,15 +111,18 @@ int world_add_food(int x, int y, int amount) {
 }
 
 int world_food_eat(int x, int y, int amount) {
-    if (!MAP_IS_ON_MAP(map_pathfind, x, y))
+    if (!is_on_map(x, y))
         return 0;
 
-    int ontile = map_food[y * world_w + x];
+    if (MAPTILE(x, y).type != PLAIN)
+        return 0;
+
+    int ontile = MAPTILE(x, y).food;
     if (amount > ontile)
         amount = ontile;
 
-    int old = map_food[y * world_w + x];
-    int new = map_food[y * world_w + x] -= amount;
+    int old = MAPTILE(x, y).food;
+    int new = MAPTILE(x, y).food -= amount;
 
     if (food_to_network_food(new) != food_to_network_food(old))
         world_to_network(x, y, SEND_BROADCAST);
@@ -131,7 +151,7 @@ void world_find_digged(int *x, int *y) {
     while (1) {
         int xx = rand() % world_w;
         int yy = rand() % world_h;
-        if (world_walkable(xx, yy)) {
+        if (MAPTILE(xx, yy).type == PLAIN) {
             *x = xx;
             *y = yy;
             return;
@@ -144,6 +164,8 @@ void world_send_initial_update(client_t *client) {
     packet_init(&packet, PACKET_WORLD_INFO);
     packet_write08(&packet, world_w);
     packet_write08(&packet, world_h);
+    packet_write08(&packet, koth_x);
+    packet_write08(&packet, koth_y);
     server_send_packet(&packet, client);
 
     for (int x = 0; x < world_w; x++) {
@@ -159,12 +181,8 @@ void world_to_network(int x, int y, client_t *client) {
 
     packet_write08(&packet, x);
     packet_write08(&packet, y);
-    packet_write08(&packet, map_sprites[x + world_w * y]);
-    if (map_food[x + world_w * y] == 0) {
-        packet_write08(&packet, 0xFF);
-    } else {
-        packet_write08(&packet, map_food[x + world_w * y] / 1000);
-    }
+    packet_write08(&packet, MAPTILE(x, y).type);
+    packet_write08(&packet, food_to_network_food(MAPTILE(x, y).food));
     server_send_packet(&packet, client);
 }
 
@@ -178,7 +196,7 @@ void world_tick() {
 }
 
 static int luaWorldDig(lua_State *L) {
-    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2), SOLID));
+    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2), PLAIN));
     return 1;
 }
 
@@ -238,32 +256,16 @@ void world_init() {
     map_init(map_pathfind, world_w, world_h);
     finder_init(&finder);
 
-    map_sprites = malloc(world_w * world_h * sizeof(int));
-    map_food    = malloc(world_w * world_h * sizeof(int));
-    memset(map_food, 0,  world_w * world_h * sizeof(int));
+    map  =  malloc(world_w * world_h * sizeof(maptile_t));
+    memset(map, 0, world_w * world_h * sizeof(maptile_t));
 
     // Koth Tile freigraben
     world_dig(koth_x, koth_y, SOLID);
-
-    // Tile Texturen setzen
-    for (int x = 0; x < world_w; x++) {
-        for (int y = 0; y < world_h; y++) {
-            if (x == 0 || x == world_w - 1 || y == 0 || y == world_h - 1) {
-                map_sprites[x + world_w * y] = SPRITE_BORDER + rand() % SPRITE_NUM_BORDER;
-            } else if (x == koth_x && y == koth_y) {
-                map_sprites[x + world_w * y] = SPRITE_KOTH;
-            } else {
-                map_sprites[x + world_w * y] = SPRITE_SOLID + rand() % SPRITE_NUM_SOLID;
-            }
-        }
-    }
-
 }
 
 void world_shutdown() {
     finder_shutdown(&finder);
-    free(map_sprites);
-    free(map_food);
+    free(map);
     map_free(map_pathfind);
 }
 

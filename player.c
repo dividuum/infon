@@ -429,6 +429,7 @@ player_t *player_create(const char *pass) {
     player->color         = playerno  % CREATURE_COLORS;
     player->all_dead_time = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
     player->all_disconnected_time = game_time;
+    player->spawn_time    = game_time;
 
     player->max_cycles    = LUA_MAX_CPU;
     
@@ -863,6 +864,18 @@ static int luaPlayerNumClients(lua_State *L) {
     return 1;
 }
 
+static int luaPlayerNumCreatures(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    lua_pushnumber(L, player->num_creatures);
+    return 1;
+}
+
+static int luaPlayerSpawnTime(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    lua_pushnumber(L, player->spawn_time);
+    return 1;
+}
+
 static int luaPlayerCreate(lua_State *L) {
     player_t *player = player_create(luaL_checkstring(L, 1));
     
@@ -906,11 +919,15 @@ void player_init() {
 
     lua_register(L, "player_create",                luaPlayerCreate);
     lua_register(L, "player_num_clients",           luaPlayerNumClients);
+    lua_register(L, "player_num_creatures",         luaPlayerNumCreatures);
     lua_register(L, "player_kill",                  luaPlayerKill);
     lua_register(L, "player_set_name",              luaPlayerSetName);
     lua_register(L, "player_get_name",              luaPlayerGetName);
     lua_register(L, "player_set_score",             luaPlayerSetScore);
     lua_register(L, "player_kill_all_creatures",    luaPlayerKillAllCreatures);
+    lua_register(L, "player_score",                 luaPlayerScore);
+    lua_register(L, "player_exists",                luaPlayerExists);
+    lua_register(L, "player_spawntime",             luaPlayerSpawnTime);
 }
 
 void player_shutdown() {

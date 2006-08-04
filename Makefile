@@ -76,8 +76,8 @@ lua-5.0.2/lib/liblua.a:
 	$(MAKE) -C $(LUADIR)
 
 clean:
-	$(MAKE) -C $(LUADIR) clean
 	-rm -f *.o infond infond-static infon infon.exe infon.res tags 
 
 distclean: clean
+	$(MAKE) -C $(LUADIR) clean
 	-rm -f infon*.zip infon*.tgz

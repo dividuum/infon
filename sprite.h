@@ -28,16 +28,16 @@
 #define SPRITE_NUM 8192
 
 // Tiles Konstanten
-#define SPRITE_SOLID        0
+#define SPRITE_BORDER       0
+#define SPRITE_NUM_BORDER   16
+
+#define SPRITE_SOLID        (SPRITE_BORDER + SPRITE_NUM_BORDER)
 #define SPRITE_NUM_SOLID    16
 
-#define SPRITE_PLAIN        (SPRITE_SOLID  + SPRITE_NUM_SOLID)
-#define SPRITE_NUM_PLAIN    8
+#define SPRITE_PLAIN        (SPRITE_SOLID + SPRITE_NUM_SOLID)
+#define SPRITE_NUM_PLAIN    16
 
-#define SPRITE_BORDER       (SPRITE_PLAIN  + SPRITE_NUM_PLAIN)
-#define SPRITE_NUM_BORDER   6
-
-#define SPRITE_KOTH         (SPRITE_BORDER + SPRITE_NUM_BORDER)
+#define SPRITE_KOTH         (SPRITE_PLAIN + SPRITE_NUM_PLAIN)
 #define SPRITE_NUM_KOTH     1
 
 #define SPRITE_NUM_TILES (SPRITE_NUM_SOLID  + \
@@ -48,7 +48,7 @@
 // Sprite Nummern bis hier duerfen maximal 255 sein, da diese 
 // beim World Netzwerk syncen in Bytes verpackt werden.
 
-#define SPRITE_TILE_SIZE 16
+#define SPRITE_TILE_SIZE    16
 
 // Food Konstanten
 #define SPRITE_FOOD         256
@@ -69,11 +69,11 @@
 #define SPRITE_CREATURE     512
 
 // Creature Konstanten
-#define CREATURE_SPRITE(color, type, direction, anim) \
-        (SPRITE_CREATURE + (color) * CREATURE_TYPES * CREATURE_DIRECTIONS * CREATURE_ANIMS + \
-                                             (type) * CREATURE_DIRECTIONS * CREATURE_ANIMS + \
-                                                              (direction) * CREATURE_ANIMS + \
-                                                                                    (anim))
+#define CREATURE_SPRITE(player, type, direction, anim) \
+        (SPRITE_CREATURE + (player) * CREATURE_TYPES * CREATURE_DIRECTIONS * CREATURE_ANIMS + \
+                                              (type) * CREATURE_DIRECTIONS * CREATURE_ANIMS + \
+                                                               (direction) * CREATURE_ANIMS + \
+                                                                                     (anim))
 
 typedef struct sprite_s {
     SDL_Surface *surface;

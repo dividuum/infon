@@ -64,6 +64,10 @@ function Client:joinmenu()
             return
         end
     else
+        if tostring(tonumber(playerno)) ~= playerno then
+            self:writeln("playernum not numeric.")
+            return
+        end
         self:write("password for player " .. playerno .. ": ")
         password = self:readln()
     end
@@ -127,6 +131,16 @@ function Client:batchmenu()
     self:execute(code)
 end
 
+function Client:killmenu() 
+    if not self:get_player() then
+        self:writeln("must join first")
+        return
+    end
+    self:write("kill all your creatures? [y/N] ")
+    if self:readln() == "y" then
+        self:kill()
+    end
+end
  
 function Client:shell()
     if debugpass == "" then
@@ -159,6 +173,33 @@ function Client:shell()
     end
 end
 
+function Client:showscores()
+    local players = {}
+    for n = 0, MAXPLAYERS - 1 do 
+        if player_exists(n) then
+            table.insert(players, {
+                name        = player_get_name(n),
+                score       = player_score(n),
+                creatures   = player_num_creatures(n),
+                age         = (game_time() - player_spawntime(n)) / 1000 / 60
+            })
+        end
+    end
+    table.sort(players, function (a,b) 
+        return a.score > b.score
+    end)
+    self:writeln("Scores | Creatures | Time | Name")
+    self:writeln("-------+-----------+------+----------")
+    for i,player in ipairs(players) do 
+        self:writeln(string.format("%6d | %9d | %4d | %s",
+                                   player.score,
+                                   player.creatures,
+                                   player.age,
+                                   player.name))
+    end
+    self:writeln("-------+-----------+------+----------")
+end
+
 function Client:mainmenu()
     local prompt = "> "
     while true do 
@@ -177,15 +218,14 @@ function Client:mainmenu()
             self:batchmenu() 
         elseif input == "n" then
             self:namemenu() 
+        elseif input == "s" then
+            self:showscores() 
         elseif input == "r" then
             self:execute("restart()")
         elseif input == "i" then
             self:execute("info()")
         elseif input == "k" then
-            self:write("kill all your creatures? [y/N] ")
-            if self:readln() == "y" then
-                self:kill()
-            end
+            self:killmenu()
         elseif input == "?" then
             self:writeln("-------------------------------------------------")
             self:writeln(GAME_NAME)
@@ -202,6 +242,7 @@ function Client:mainmenu()
                 self:writeln("i - nformation on your creatures")
                 self:writeln("k - ill me")
             end
+            self:writeln("s - how scores")
             self:writeln("q - uit")
             self:writeln("-------------------------------------------------")
         elseif input == "prompt" then

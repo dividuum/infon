@@ -26,14 +26,6 @@
 #include "server.h"
 #include "common_world.h"
 
-// XXX
-typedef enum {
-    SOLID = 0,
-    PLAIN = 1,
-    WATER = 2,
-    LAVA  = 3,
-} maptype_e;
-
 int         world_walkable(int x, int y);
 int         world_get_food(int x, int y);
 int         world_add_food(int x, int y, int amount);

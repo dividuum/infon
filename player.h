@@ -42,6 +42,7 @@ typedef struct player_s {
     int           score;
     int           koth_time;
     int           last_koth_time;
+    int           spawn_time;
 
     int           all_dead_time;
     int           all_disconnected_time;
