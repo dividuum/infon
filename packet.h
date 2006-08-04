@@ -25,6 +25,7 @@
 
 #pragma pack (push, 1)
 typedef struct {
+#define PACKET_HEADER_SIZE       2
 // Wire Data    
     uint8_t  len;
     uint8_t  type;

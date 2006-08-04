@@ -144,10 +144,13 @@ restart:
         do {
             strm.next_out  = buf;
             strm.avail_out = sizeof(buf);
-            if (inflate(&strm, Z_SYNC_FLUSH) != Z_OK) {
+
+            int ret = inflate(&strm, Z_SYNC_FLUSH);
+            if (ret != Z_OK && ret != Z_BUF_ERROR) {
                 client_destroy("decompression error");
                 return;
             }
+
             evbuffer_add(packet_buf, buf, sizeof(buf) - strm.avail_out);
             if (EVBUFFER_LENGTH(packet_buf) > 1024 * 1024) {
                 client_destroy("too much to decompress. funny server?");
@@ -160,16 +163,22 @@ restart:
         evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf));
     }
 
-    int old_compression = compression;
+    while (EVBUFFER_LENGTH(packet_buf) >= PACKET_HEADER_SIZE) {
+        int packet_len = PACKET_HEADER_SIZE + EVBUFFER_DATA(packet_buf)[0];
 
-    while (EVBUFFER_LENGTH(packet_buf) >= (int)EVBUFFER_DATA(packet_buf)[0] + 2) {
+        // Genuegend Daten da?
+        if (EVBUFFER_LENGTH(packet_buf) < packet_len)
+            break;
+
+        // Alten Kompressionszustand merken
+        int old_compression = compression;
+
         // Packet rauspopeln...
-        packet_t packet;
-        memcpy(&packet,EVBUFFER_DATA(packet_buf), (int)EVBUFFER_DATA(packet_buf)[0] + 2);
-        int len = packet.len + 2;
+        static packet_t packet;
+        memcpy(&packet, EVBUFFER_DATA(packet_buf), packet_len);
         packet_rewind(&packet);
         client_handle_packet(&packet);
-        evbuffer_drain(packet_buf, len);
+        evbuffer_drain(packet_buf, packet_len);
 
         // Disconnect Packet?
         if (!client_is_connected()) 

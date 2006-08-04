@@ -262,9 +262,9 @@ void server_writeto_all_gui_clients(const void *data, size_t size) {
 void server_send_packet(packet_t *packet, client_t *client) {
     packet->len  = packet->offset;
     if (!client) 
-        server_writeto_all_gui_clients(packet, 1 + 1 + packet->len);
+        server_writeto_all_gui_clients(packet, PACKET_HEADER_SIZE + packet->len);
     else
-        server_writeto(client, packet, 1 + 1 + packet->len);
+        server_writeto(client, packet, PACKET_HEADER_SIZE + packet->len);
 }
 
 void server_destroy(client_t *client, char *reason) {

@@ -31,6 +31,7 @@
 
 #include <event.h>
 
+#include "global.h"
 #include "video.h"
 #include "scroller.h"
 #include "packet.h"
@@ -93,8 +94,13 @@ void gui_scroller_from_network(packet_t *packet) {
 }
 
 void gui_scroller_init() {
-    scrollbuffer = evbuffer_new();
     last_time = SDL_GetTicks();
+
+    scrollbuffer = evbuffer_new();
+    for (int i = 0; i < 20; i++)
+        evbuffer_add(scrollbuffer, "          ", 10);
+
+    append(GAME_NAME);
 }
 
 void gui_scroller_shutdown() {
