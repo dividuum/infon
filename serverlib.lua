@@ -117,7 +117,7 @@ function Client:get_player()
     return client_player_number(self.fd)
 end
 
-function Client:set_player_name(name)
+function Client:set_name(name)
     local playerno = self:get_player()
     if playerno and player_get_name(playerno) ~= name and name ~= '' then
         local oldname = player_get_name(playerno)
@@ -128,6 +128,11 @@ function Client:set_player_name(name)
     else
         return false
     end
+end
+
+function Client:set_color(color)
+    local playerno = self:get_player()
+    player_set_color(playerno, color)
 end
 
 function Client:kill()
@@ -148,6 +153,15 @@ function Client:writeln(line)
         self:write(line .. "\n")
     else
         self:write("\n")
+    end
+end
+
+function Client:check_repeat(name, time)
+    if self[name] and self[name] + time > game_time() then
+        return false
+    else
+       self[name] = game_time()
+       return true
     end
 end
 
@@ -226,6 +240,10 @@ function p(x)
     else
         print(type(x) .. " - " .. tostring(x))
     end
+end
+
+function isnumber(var)
+    return tostring(tonumber(var)) == var
 end
 
 function clientlist(adminfd)

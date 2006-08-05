@@ -39,13 +39,13 @@ typedef struct gui_creature_s {
     int             x;
     int             y;
     int             speed;
+    int             player;
 
     int             dir;
     int             type;
     int             food;
     int             health;
     int             target;
-    int             color;
     creature_state  state;
 
     gui_pathnode_t *path;

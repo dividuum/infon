@@ -27,6 +27,7 @@
 #include "global.h"
 #include "gui_creature.h"
 #include "gui_world.h"
+#include "common_player.h"
 #include "video.h"
 #include "misc.h"
 #include "map.h"
@@ -63,7 +64,7 @@ void gui_creature_draw() {
         if (hw != 15) video_rect(x + hw, y - 2, x + 15, y,     0xFF, 0x00, 0x00, 0xB0);
         if (hw !=  0) video_rect(x,      y - 2, x + hw, y,     0x00, 0xFF, 0x00, 0xB0);
 
-        video_draw(x, y, sprite_get(CREATURE_SPRITE(creature->color,
+        video_draw(x, y, sprite_get(CREATURE_SPRITE(creature->player,
                                                     creature->type,
                                                     creature->dir,
                                                     (time >> 7) % 2)));
@@ -212,18 +213,18 @@ void gui_creature_from_network(packet_t *packet) {
     if (!packet_read08(packet, &updatemask))    PROTOCOL_ERROR();
 
     if (updatemask & CREATURE_DIRTY_ALIVE) {
-        uint8_t alive;
-        if (!packet_read08(packet, &alive))     PROTOCOL_ERROR();
-        if (alive == 0xFF) {
+        uint8_t playerno;
+        if (!packet_read08(packet, &playerno))  PROTOCOL_ERROR();
+        if (playerno == 0xFF) {
             if (!CREATURE_USED(creature))       PROTOCOL_ERROR();
             gui_creature_kill(creature);
             return;
         } else {
             if (CREATURE_USED(creature))        PROTOCOL_ERROR();
-            if (alive >= CREATURE_COLORS)       PROTOCOL_ERROR();
             memset(creature, 0, sizeof(gui_creature_t));
-            creature->used = 1;
-            creature->color = alive;
+            creature->used   = 1;
+            if (playerno >= MAXPLAYERS)         PROTOCOL_ERROR();
+            creature->player = playerno;
 
             uint16_t x, y;
             if (!packet_read16(packet, &x))     PROTOCOL_ERROR();

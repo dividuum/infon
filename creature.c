@@ -816,7 +816,7 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     packet_write08(&packet, dirtymask);
     if (dirtymask & CREATURE_DIRTY_ALIVE) {
         if (CREATURE_USED(creature)) {
-            packet_write08(&packet, creature->player->color);
+            packet_write08(&packet, player_num(creature->player));
             packet_write16(&packet, creature->network_last_x = creature->network_path_x);
             packet_write16(&packet, creature->network_last_y = creature->network_path_y);
         } else {

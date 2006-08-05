@@ -120,7 +120,7 @@ int sprite_num(sprite_t *sprite) {
     return sprite - sprites;
 }
 
-static void prerender_player_creatures(int playerno, int r1, int g1, int b1, int r2, int g2, int b2) {
+void sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2, int g2, int b2) {
     for (int t = 0; t < CREATURE_TYPES; t++) {
         for (int a = 0; a < CREATURE_ANIMS; a++) {
             SDL_Surface *base = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
@@ -165,31 +165,13 @@ static void prerender_player_creatures(int playerno, int r1, int g1, int b1, int
 }
 
 void sprite_init() {
-    gfx = sprite_load_surface("gfx/theme-orig.png");
+    gfx = sprite_load_surface("gfx/theme.png");
     SDL_SetAlpha(gfx, 0, 0);
 
     sprite_load_background();
     sprite_load_food();
     sprite_load_thought();
     sprite_load_images();
-
-    prerender_player_creatures( 0, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00);
-    prerender_player_creatures( 1, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF);
-    prerender_player_creatures( 2, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x80);
-    prerender_player_creatures( 3, 0xFF, 0xFF, 0x00, 0x80, 0x80, 0xFF);
-    prerender_player_creatures( 4, 0x00, 0xFF, 0xFF, 0xFF, 0x80, 0x80);
-    prerender_player_creatures( 5, 0xFF, 0x00, 0xFF, 0x80, 0xFF, 0x80);
-    prerender_player_creatures( 6, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00);
-    prerender_player_creatures( 7, 0x20, 0x20, 0x20, 0xFF, 0xFF, 0xFF);
-
-    prerender_player_creatures( 8, 0xFF, 0x00, 0x00, 0x80, 0x00, 0x00);
-    prerender_player_creatures( 9, 0x00, 0xFF, 0x00, 0x00, 0x80, 0x00);
-    prerender_player_creatures(10, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x80);
-    prerender_player_creatures(11, 0xFF, 0xFF, 0x00, 0x80, 0x80, 0x00);
-    prerender_player_creatures(12, 0x00, 0xFF, 0xFF, 0x00, 0x80, 0x80);
-    prerender_player_creatures(13, 0xFF, 0x00, 0xFF, 0x80, 0x00, 0x80);
-    prerender_player_creatures(14, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80);
-    prerender_player_creatures(15, 0x20, 0x20, 0x20, 0x10, 0x10, 0x10);
 }
 
 void sprite_shutdown() {

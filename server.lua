@@ -25,7 +25,7 @@ require "serverlib.lua"
 -----------------------------------------------------------
 
 function Client:joinmenu()
-    if self.last_join and self.last_join + 1000 > game_time() then
+    if not self:check_repeat("last_join", 3000) then
         self:writeln("joining too fast. please wait...")
         return
     end
@@ -64,7 +64,7 @@ function Client:joinmenu()
             return
         end
     else
-        if tostring(tonumber(playerno)) ~= playerno then
+        if not isnumber(playerno) then
             self:writeln("playernum not numeric.")
             return
         end
@@ -91,9 +91,39 @@ function Client:partmenu()
 end
 
 function Client:namemenu() 
+    if not self:get_player() then
+        self:writeln("must join first")
+        return
+    end
+
+    if not self:check_repeat("last_name", 1000) then
+        self:writeln("changing too fast. please wait")
+        return
+    end
+
     self:write("Player Name: ")
-    if not self:set_player_name(self:readln()) then
+    if not self:set_name(self:readln()) then
         self:writeln("cannot set name")
+    end
+end
+
+function Client:colormenu() 
+    if not self:get_player() then
+        self:writeln("must join first")
+        return
+    end
+
+    if not self:check_repeat("last_color", 1000) then
+        self:writeln("changing too fast. please wait")
+        return
+    end
+
+    self:write("color (0 - 255): ")
+    local color = self:readln()
+    if not isnumber(color) then
+        self:writeln("not numeric")
+    else
+        self:set_color(color)
     end
 end
  
@@ -214,6 +244,8 @@ function Client:mainmenu()
             self:partmenu() 
         elseif input == "l" then
             self:luamenu() 
+        elseif input == "c" then
+            self:colormenu() 
         elseif input == "b" then
             self:batchmenu() 
         elseif input == "n" then
@@ -235,6 +267,7 @@ function Client:mainmenu()
                 self:writeln("j - oin game")
             else
                 self:writeln("n - ame")
+                self:writeln("c - olor")
                 self:writeln("p - art game")
                 self:writeln("l - ua shell")
                 self:writeln("b - atch. enter bunch of lua code")

@@ -41,6 +41,10 @@ static int player_sort_by_score(const void *a, const void *b) {
     return -(pa->score > pb->score) + (pa->score < pb->score);
 }
 
+static int gui_player_num(gui_player_t *player) {
+    return player - players;
+}
+
 void gui_player_draw() {
     static int lastturn = 0;
     static int page = 0;
@@ -98,7 +102,7 @@ void gui_player_draw() {
         // Rotierendes Vieh
         video_draw(player_displayed * 128,
                    video_height() - 32, 
-                   sprite_get(CREATURE_SPRITE(player->color,
+                   sprite_get(CREATURE_SPRITE(gui_player_num(player),
                                               0, 
                                               (SDL_GetTicks() / 1000) % CREATURE_DIRECTIONS,
                                               (SDL_GetTicks() /  123) % 2)));
@@ -119,6 +123,39 @@ void gui_player_draw() {
                 
         player_displayed++;
     }
+}
+
+void gui_player_set_color(gui_player_t *player, int color) {
+    int colors[16][3] = {
+        { 0xFF, 0x00, 0x00 },
+        { 0x00, 0xFF, 0x00 },
+        { 0x00, 0x00, 0xFF },
+        { 0xFF, 0xFF, 0x00 },
+        { 0x00, 0xFF, 0xFF },
+        { 0xFF, 0x00, 0xFF },
+        { 0xFF, 0xFF, 0xFF },
+        { 0x00, 0x00, 0x00 },
+
+        { 0xFF, 0x80, 0x80 },
+        { 0x80, 0xFF, 0x80 },
+        { 0x80, 0x80, 0xFF },
+        { 0xFF, 0xFF, 0x80 },
+        { 0x80, 0xFF, 0xFF },
+        { 0xFF, 0x80, 0xFF },
+        { 0x80, 0x80, 0x80 },
+        { 0x60, 0xA0, 0xFF },
+    };
+
+    int hi = (color & 0xF0) >> 4;
+    int lo = (color & 0x0F);
+
+    sprite_render_player_creatures(gui_player_num(player),
+                                   colors[hi][0],
+                                   colors[hi][1],
+                                   colors[hi][2],
+                                   colors[lo][0],
+                                   colors[lo][1],
+                                   colors[lo][2]);
 }
 
 void gui_player_from_network(packet_t *packet) {
@@ -155,8 +192,7 @@ void gui_player_from_network(packet_t *packet) {
     if (updatemask & PLAYER_DIRTY_COLOR) { 
         uint8_t col;
         if (!packet_read08(packet, &col))       PROTOCOL_ERROR();
-        if (col >= CREATURE_COLORS)             PROTOCOL_ERROR();
-        player->color = col;
+        gui_player_set_color(player, col);
     }
     if (updatemask & PLAYER_DIRTY_CPU) {
         uint8_t cpu;

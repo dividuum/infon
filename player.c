@@ -402,6 +402,11 @@ static int luaKingPlayer(lua_State *L) {
     return 1;
 }
 
+static void player_set_color(player_t *player, int color) {
+    player->color = color & 0xFF;
+    player->dirtymask |= PLAYER_DIRTY_COLOR;
+}
+
 #define lua_register_player(p,n,f) \
     (lua_pushstring((p)->L, n), \
      lua_pushlightuserdata((p)->L, p), \
@@ -426,12 +431,13 @@ player_t *player_create(const char *pass) {
     snprintf(player->pass, sizeof(player->pass), "%s", pass);
     player->L = lua_open();
 
-    player->color         = playerno  % CREATURE_COLORS;
     player->all_dead_time = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
     player->all_disconnected_time = game_time;
     player->spawn_time    = game_time;
 
     player->max_cycles    = LUA_MAX_CPU;
+
+    player_set_color(player, playerno);
     
     lua_baselibopen(player->L);
     lua_dblibopen(player->L);
@@ -893,6 +899,12 @@ static int luaPlayerSetName(lua_State *L) {
     return 0;
 }
 
+static int luaPlayerSetColor(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_set_color(player, luaL_checklong(L, 2));
+    return 0;
+}
+
 static int luaPlayerGetName(lua_State *L) {
     player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
     lua_pushstring(L, player->name);
@@ -921,6 +933,7 @@ void player_init() {
     lua_register(L, "player_num_clients",           luaPlayerNumClients);
     lua_register(L, "player_num_creatures",         luaPlayerNumCreatures);
     lua_register(L, "player_kill",                  luaPlayerKill);
+    lua_register(L, "player_set_color",             luaPlayerSetColor);
     lua_register(L, "player_set_name",              luaPlayerSetName);
     lua_register(L, "player_get_name",              luaPlayerGetName);
     lua_register(L, "player_set_score",             luaPlayerSetScore);
