@@ -104,6 +104,8 @@ void gui_creature_draw() {
                 video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + xoff, Y_TO_SCREENY(target->y) + 3 + yoff);
             }
         }
+        //gui_world_center_set(creature->x * SPRITE_TILE_SIZE / TILE_WIDTH,
+        //                     creature->y * SPRITE_TILE_SIZE / TILE_HEIGHT);
     }
 }
 

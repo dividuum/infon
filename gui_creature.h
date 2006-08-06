@@ -62,7 +62,7 @@ void        gui_creature_draw();
 void        gui_creature_move(int delta);
 
 /* Network */
-void gui_creature_from_network(packet_t *packet);
+void        gui_creature_from_network(packet_t *packet);
 
 void        gui_creature_init();
 void        gui_creature_shutdown();

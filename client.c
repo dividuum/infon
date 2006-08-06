@@ -66,7 +66,10 @@ int  client_is_connected();
 
 static void client_read_handshake(packet_t *packet) {
     uint8_t serverprotocol;
-    if (!packet_read08(packet, &serverprotocol)) PROTOCOL_ERROR();
+
+    if (!packet_read08(packet, &serverprotocol)) 
+        PROTOCOL_ERROR();
+
     if (serverprotocol != PROTOCOL_VERSION) {
         die("server has %s protocol version %d. I have %d.\n"
             "visit the infon homepage for more information.",
@@ -76,6 +79,9 @@ static void client_read_handshake(packet_t *packet) {
 }
 
 static void client_start_compression() {
+    if (compression)
+        PROTOCOL_ERROR();
+
     strm.zalloc = Z_NULL;
     strm.zfree  = Z_NULL;
     strm.opaque = NULL;
@@ -226,9 +232,8 @@ void client_destroy(char *reason) {
     evbuffer_free(in_buf);
     evbuffer_free(out_buf);
     evbuffer_free(packet_buf);
-    if (compression) {
+    if (compression) 
         inflateEnd(&strm);
-    }
     event_del(&rd_event);
     event_del(&wr_event);
     close(clientfd);
@@ -255,14 +260,7 @@ void client_init(char *addr) {
     int    port = 1234;                                             
     struct hostent *host;
 
-#ifdef WIN32
-    char *colon = addr;
-    while (*colon && *colon != ':') 
-        colon++;
-    if (!*colon) colon = NULL;
-#else
-    char *colon = index(addr, ':');
-#endif
+    char *colon = strchr(addr, ':');
     if (colon) {                                       
         *colon = '\0';                                            
         port = atoi(colon + 1);                                  

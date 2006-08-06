@@ -115,7 +115,8 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     clients[fd].out_buf   = evbuffer_new();
 
     clients[fd].compress = 0;
-    
+
+    clients[fd].kill_me  = NULL;
     clients[fd].player   = NULL;
 
     clients[fd].next = NULL;
@@ -141,6 +142,12 @@ static void server_readable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
+    // Der Client wurde 'extern' gekickt, allerdings noch
+    // nicht entfernt. Dann wird dieser Readcallback aufgerufen,
+    // sollte allerdings nichts mehr machen.
+    if (client->kill_me)
+        return;
+
     int ret = evbuffer_read(client->in_buf, fd, 128);
     if (ret < 0) {
         server_destroy(client, strerror(errno));
@@ -157,18 +164,17 @@ static void server_readable(int fd, short event, void *arg) {
             lua_pushstring(L, line);
             free(line);
                 
-            if (lua_pcall(L, 2, 1, 0) != 0) {
+            if (lua_pcall(L, 2, 0, 0) != 0) {
                 fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
                 server_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
             }
 
-            if (!lua_toboolean(L, -1)) {
-                lua_pop(L, 1);
-                server_destroy(client, "user closed");
+            // Kill Me Flag waehrend Aufruf von on_client_input 
+            // gesetzt? Direkt rausschmeissen!
+            if (client->kill_me) {
+                server_destroy(client, client->kill_me);
                 return;
             }
-
-            lua_pop(L, 1);
         }
         event_add(cb_event, NULL);
     }
@@ -295,9 +301,11 @@ void server_destroy(client_t *client, char *reason) {
     evbuffer_free(client->in_buf);
     evbuffer_free(client->out_buf);
 
-    if (client->compress) { 
+    if (client->kill_me)
+        free(client->kill_me);
+
+    if (client->compress)
         deflateEnd(&client->strm);
-    }
     
     event_del(&client->rd_event);
     event_del(&client->wr_event);
@@ -434,6 +442,15 @@ static int luaScrollerAdd(lua_State *L) {
     return 0;
 }
 
+static int luaClientDisconnect(lua_State *L) {
+    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    const char *reason = luaL_checkstring(L, 2);
+    if (client->kill_me) 
+        free(client->kill_me);
+    client->kill_me = strdup(reason);
+    return 0;
+}
+
 void server_tick() {
     lua_pushliteral(L, "server_tick");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -443,6 +460,18 @@ void server_tick() {
     }
 
     event_loop(EVLOOP_NONBLOCK);
+
+    // Ungefaehr jede Sekunde alle zu kickenden Clients entfernen.
+    static int kicktick = 0;
+    if (++kicktick % 10 == 0) {
+        int clientno;
+        for (clientno = 0; clientno < MAXCLIENTS; clientno++) {
+            if (!CLIENT_USED(&clients[clientno])) 
+                continue;
+            if (clients[clientno].kill_me)
+                server_destroy(&clients[clientno], clients[clientno].kill_me);
+        }
+    }
 }
 
 void server_init() {
@@ -465,6 +494,7 @@ void server_init() {
     lua_register(L, "client_make_guiclient",    luaClientMakeGuiClient);
     lua_register(L, "client_is_gui_client",     luaClientIsGuiClient);
     lua_register(L, "client_player_number",     luaClientPlayerNumber);
+    lua_register(L, "client_disconnect",        luaClientDisconnect);
 
     lua_register(L, "scroller_add",             luaScrollerAdd);
 

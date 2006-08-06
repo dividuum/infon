@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
                         case SDLK_4: video_resize(1280, 1024); break;
                         case SDLK_5: video_resize(1600, 1200); break;
                         case SDLK_c:
-                            gui_world_center();
+                            gui_world_recenter();
                             break;
                         case SDLK_ESCAPE:
                             running = 0;

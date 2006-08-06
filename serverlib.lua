@@ -52,13 +52,12 @@ end
 
 function Client:on_new_client(addr) 
     self.addr = addr
-    self.finished = false
     print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
     self.thread = coroutine.create(self.handler)
     local ok, msg = coroutine.resume(self.thread, self)
     if not ok then
-        self:writeln(msg)
+        self:disconnect(msg)
     end
 end
 
@@ -76,15 +75,15 @@ function Client:on_input(line)
         self.thread = coroutine.create(self.handler)
         local ok, msg = coroutine.resume(self.thread, self)
         if not ok then
-            self:writeln(msg)
-            return false
+            self:disconnect(msg)
         end
     end
-    return not self.finished
 end
 
-function Client:disconnect()
-    self.finished = true
+function Client:disconnect(reason)
+    if self.fd ~= 0 then
+        client_disconnect(self.fd, reason)
+    end
 end
 
 function Client:write(data) 
@@ -209,18 +208,13 @@ function on_client_accepted(fd, addr)
 end
 
 function on_client_input(fd, line)
-    if clients[fd].kill_me then 
-        return false
-    else
-        return clients[fd]:on_input(line)
-    end
+    clients[fd]:on_input(line)
 end
 
 function on_client_close(fd, reason)
     clients[fd]:on_destroy(reason)
     clients[fd] = nil
 end
-
 
 function server_tick()
     server_tick = coroutine.wrap(ServerMain)
@@ -253,13 +247,7 @@ function clientlist(adminfd)
 end
 
 function kick(fd, msg)
-    -- XXX: momentan bis zur naechsten eingabe delayed...
-    if client_is_gui_client(fd) then
-        -- XXX: TODO 
-    else
-        client_write(fd, msg .. "\n")
-    end
-    clients[fd].kill_me = true
+    clients[fd]:disconnect(msg)
 end
 
 function killall()
@@ -278,6 +266,6 @@ end
 
 function kickall()
     table.foreach(clients, function (fd, obj)
-                               clients[fd].kill_me = true
+                               clients[fd]:disconnect("kicked")
                            end)
 end

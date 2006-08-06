@@ -173,14 +173,14 @@ function Client:killmenu()
 end
  
 function Client:shell()
-    if debugpass == "" then
-        self:writeln("password must be set in config.lua")
-        return
-    end
     local ok = false
     if self.authorized then 
         ok = true
     else
+        if debugpass == "" then
+            self:writeln("password must be set in config.lua")
+            return
+        end
         self:write("password: ")
         ok = self:readln() == debugpass 
     end
@@ -236,7 +236,7 @@ function Client:mainmenu()
         self:write(prompt)
         local input = self:readln()
         if input == "q" then
-            self:disconnect() 
+            self:disconnect("quitting") 
             break
         elseif input == "j" then
             self:joinmenu() 
@@ -299,6 +299,7 @@ end
 
 function Client:handler()
     if self.fd == 0 then -- XXX: HACK, stdin client
+        self.authorized = true
         self:writeln("")
     else
         self:welcome("Press <enter>")
@@ -347,4 +348,3 @@ function ServerMain()
         coroutine.yield()
     end
 end
-

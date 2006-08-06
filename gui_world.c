@@ -139,7 +139,12 @@ void gui_world_center_change(int dx, int dy) {
     center_y += dy;
 }
 
-void gui_world_center() {
+void gui_world_center_set(int x, int y) {
+    center_x = x;
+    center_y = y;
+}
+
+void gui_world_recenter() {
     center_x = world_w * SPRITE_TILE_SIZE / 2;
     center_y = world_h * SPRITE_TILE_SIZE / 2;
 }
@@ -199,7 +204,7 @@ void gui_world_info_from_network(packet_t *packet) {
         }
     }
 
-    gui_world_center();
+    gui_world_recenter();
     initialized = 1;
 }
 

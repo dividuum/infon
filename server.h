@@ -48,6 +48,8 @@ typedef struct client_s {
     int              compress;
     z_stream         strm;
 
+    char            *kill_me;
+
     // Verbindung von: 1-player <-> N-client
     struct player_s *player;
     struct client_s *next;

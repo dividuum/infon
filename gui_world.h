@@ -25,8 +25,9 @@
 #include "common_world.h"
 
 void        gui_world_draw();
-void        gui_world_center();
+void        gui_world_recenter();
 void        gui_world_center_change(int dx, int dy);
+void        gui_world_center_set(int x, int y);
 
 int         gui_world_x_offset();
 int         gui_world_y_offset();
