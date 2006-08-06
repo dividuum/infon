@@ -45,7 +45,7 @@ void         video_tiny(Sint16 x, Sint16 y, const char *text);
 
 SDL_Surface *video_new_surface(int w, int h);
 
-void         video_init(int w, int h);
+void         video_init(int w, int h, int fs);
 void         video_shutdown();
 
 #endif

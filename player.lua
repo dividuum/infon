@@ -155,6 +155,10 @@ function Creature:screen_message(msg)
     return set_message(self.id, msg)
 end
 
+function Creature:begin_idling()
+    return set_state(self.id, CREATURE_IDLE)
+end
+
 function Creature:begin_walk_path()
     return set_state(self.id, CREATURE_WALK)
 end
@@ -215,6 +219,13 @@ function Creature:is_feeding()
     return get_state(self.id) == CREATURE_FEED
 end
 
+function Creature:sleep(msec)
+    local time = game_time()
+    while time + msec >= game_time() do
+        self:wait_for_next_round()
+    end
+end
+
 function Creature:main_restarter() 
     while true do
         self:main()
@@ -240,7 +251,7 @@ function Creature:wait_for_next_round()
         coroutine.yield()
     else
         print("-----------------------------------------------------------")
-        print("Die Funktion kann keine langlaufenden Aktionen ausfuehren\n" .. _TRACEBACK())
+        print("Error: A called function wanted to wait_for_next_round().")
         print("-----------------------------------------------------------")
         error("cannot continue")
     end

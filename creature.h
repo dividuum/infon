@@ -40,8 +40,8 @@ typedef struct creature_s {
     int         spawn_food;
     creature_state state;
 
-    int  age_action_deltas;
-    int  spawn_time;
+    int         age_action_deltas;
+    int         spawn_time;
 
     char message[9];
     unsigned char dirtymask;

@@ -26,6 +26,8 @@
 #include "server.h"
 #include "common_world.h"
 
+int         world_is_within_border(int x, int y);
+
 int         world_walkable(int x, int y);
 int         world_get_food(int x, int y);
 int         world_add_food(int x, int y, int amount);
@@ -37,7 +39,7 @@ int         world_koth_x();
 int         world_koth_y();
 
 pathnode_t *world_findpath(int x1, int y1, int x2, int y2);
-void        world_find_digged(int *x, int *y);
+void        world_find_plain(int *x, int *y);
 
 void        world_tick();
 

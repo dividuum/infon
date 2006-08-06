@@ -34,7 +34,7 @@ static sge_bmpFont *font;
 
 static char tiny_font[1792]; // XXX Hardcoded
 
-void video_init(int w, int h) {
+void video_init(int w, int h, int fs) {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) == -1)
     if (SDL_Init(0) == -1) 
         die("Couldn't initialize SDL: %s", SDL_GetError());
@@ -48,6 +48,9 @@ void video_init(int w, int h) {
 
     if (!(vi->vfmt->BitsPerPixel == 16 || vi->vfmt->BitsPerPixel == 32))
         die("insufficient color depth");
+
+    if (fs) 
+        flags |= SDL_FULLSCREEN;
 
     screen = SDL_SetVideoMode(w, h, vi->vfmt->BitsPerPixel, flags);
 

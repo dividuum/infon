@@ -55,7 +55,9 @@ static void sprite_load_background() {
         {  8,  2 }, {  9,  2 }, { 10,  2 }, { 11,  2 }, 
         { 12,  2 }, { 13,  2 }, { 14,  2 }, { 15,  2 }, 
         // KOTH
-        {  0,  3 }
+        {  0,  3 },
+        // Water
+        {  0,  6 }, {  1,  6 }, {  2,  6 }, {  3,  6 }, 
     };
 
     for (int i = 0; i < SPRITE_NUM_TILES; i++) {

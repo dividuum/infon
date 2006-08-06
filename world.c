@@ -38,7 +38,7 @@ static int           koth_x;
 static int           koth_y;
 
 // TODO: Jeder Kreaturtype sollte eigene Pfadsuche haben
-static map_t        *map_pathfind;
+static map_t        *walkmap;
 static pathfinder_t  finder;
 
 typedef struct maptile_s {
@@ -50,38 +50,48 @@ static maptile_t *map;
 
 #define MAPTILE(x, y) (map[(y) * world_w + (x)])
 
-static int is_on_map(int x, int y) {
+int world_is_on_map(int x, int y) {
     return x >= 0 && x < world_w &&
            y >= 0 && y < world_h;
 }
 
+int world_is_within_border(int x, int y) {
+    return x >= 1 && x < world_w - 1 &&
+           y >= 1 && y < world_h - 1;
+}
+
 int world_walkable(int x, int y) {
-    return is_on_map(x, y) &&
-           map_walkable(map_pathfind, x, y);
+    return world_is_on_map(x, y) &&
+           map_walkable(walkmap, x, y);
 }
 
 int world_dig(int x, int y, maptype_e type) {
-    if (x < 1 || x >= world_w - 1 ||
-        y < 1 || y >= world_h - 1)
+    if (type == SOLID)
+        return 0;
+
+    if (!world_is_within_border(x, y))
         return 0;
 
     if (MAPTILE(x, y).type != SOLID)
         return 0;
     
-    fprintf(stderr, "world_dig(%d, %d)\n", x, y);
+    fprintf(stderr, "world_dig(%d, %d, %d)\n", x, y, type);
 
-    map_dig(map_pathfind, x, y);
+    // Pfadsuche fuer Bodenbasierte Viecher aktualisieren
+    if (type == PLAIN)
+        map_dig(walkmap, x, y);
+    
     MAPTILE(x, y).type = type;
     world_to_network(x, y, SEND_BROADCAST);
     return 1;
 }
 
 pathnode_t *world_findpath(int x1, int y1, int x2, int y2) {
-    return finder_find(&finder, map_pathfind, x1, y1, x2, y2);
+    return finder_find(&finder, walkmap, x1, y1, x2, y2);
 }
 
 int world_get_food(int x, int y) {
-    if (!is_on_map(x, y))
+    if (!world_is_on_map(x, y))
         return 0;
 
     return MAPTILE(x, y).food;
@@ -92,7 +102,7 @@ static int food_to_network_food(int food) {
 }
 
 int world_add_food(int x, int y, int amount) {
-    if (!is_on_map(x, y))
+    if (!world_is_on_map(x, y))
         return 0;
 
     if (MAPTILE(x, y).type != PLAIN)
@@ -111,7 +121,7 @@ int world_add_food(int x, int y, int amount) {
 }
 
 int world_food_eat(int x, int y, int amount) {
-    if (!is_on_map(x, y))
+    if (!world_is_on_map(x, y))
         return 0;
 
     if (MAPTILE(x, y).type != PLAIN)
@@ -146,7 +156,7 @@ int world_koth_y() {
     return koth_y;
 }
 
-void world_find_digged(int *x, int *y) {
+void world_find_plain(int *x, int *y) {
     // Terminiert, da kothtile immer freigegraben
     while (1) {
         int xx = rand() % world_w;
@@ -196,7 +206,9 @@ void world_tick() {
 }
 
 static int luaWorldDig(lua_State *L) {
-    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), luaL_checklong(L, 2), PLAIN));
+    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), 
+                                 luaL_checklong(L, 2),
+                                 luaL_checklong(L, 3)));
     return 1;
 }
 
@@ -214,7 +226,7 @@ static int luaWorldWalkable(lua_State *L) {
 
 static int luaWorldFindDigged(lua_State *L) {
     int x, y;
-    world_find_digged(&x, &y);
+    world_find_plain(&x, &y);
     lua_pushnumber(L, x);
     lua_pushnumber(L, y);
     return 2;
@@ -228,6 +240,15 @@ void world_init() {
     lua_register(L, "world_add_food",       luaWorldAddFood);
     lua_register(L, "world_is_walkable",    luaWorldWalkable);
     lua_register(L, "world_find_digged",    luaWorldFindDigged);
+
+    lua_pushnumber(L, SOLID);
+    lua_setglobal(L, "SOLID"); 
+
+    lua_pushnumber(L, PLAIN);
+    lua_setglobal(L, "PLAIN"); 
+
+    lua_pushnumber(L, WATER);
+    lua_setglobal(L, "WATER"); 
     
     lua_pushliteral(L, "world_init");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -252,20 +273,20 @@ void world_init() {
         koth_y <= 0 || koth_y >= world_h - 1)
         die("koth pos invalid: %d, %d", koth_x, koth_y);
     
-    map_pathfind = map_alloc();
-    map_init(map_pathfind, world_w, world_h);
+    walkmap = map_alloc();
+    map_init(walkmap, world_w, world_h);
     finder_init(&finder);
 
     map  =  malloc(world_w * world_h * sizeof(maptile_t));
     memset(map, 0, world_w * world_h * sizeof(maptile_t));
 
     // Koth Tile freigraben
-    world_dig(koth_x, koth_y, SOLID);
+    world_dig(koth_x, koth_y, PLAIN);
 }
 
 void world_shutdown() {
     finder_shutdown(&finder);
     free(map);
-    map_free(map_pathfind);
+    map_free(walkmap);
 }
 

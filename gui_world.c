@@ -123,6 +123,9 @@ static int gui_world_settype(int x, int y, int type) {
                 MAPTILE(x, y).map = sprite_get(SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN);
             }
             break;
+        case WATER:
+            MAPTILE(x, y).map = sprite_get(SPRITE_WATER + rand() % SPRITE_NUM_WATER);
+            break;
         default:
             // XXX: Unsupported...
             MAPTILE(x, y).map = sprite_get(SPRITE_KOTH);

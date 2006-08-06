@@ -56,16 +56,26 @@ void print_fps() {
 }   
 
 int main(int argc, char *argv[]) {
-    if (argc != 2)
+    int width = 800, height = 600, fullscreen = 0;
 #ifdef WIN32
+    if (argc == 2 && stricmp(argv[1], "/s") == 0) {
+        argv[1] = "bl0rg.net";
+        char *bs = strrchr(argv[0], '\\');
+        if (bs) { *bs = '\0'; chdir(argv[0]); }
+        width = 1024, height = 768, fullscreen = 1;
+    } else if (argc == 3 && stricmp(argv[1], "/p") == 0) {
+        exit(0);
+    } else if (argc == 2 && strstr(argv[1], "/c:") == argv[1]) {
+        die("There are no settings");
+    } else {
         die("you must supply the gameservers hostname\n"
             "as first command line parameter.\n\n"
             "example: 'infon.exe bl0rg.net'");
+    }
 #else
+    if (argc != 2)
         die("usage: %s <serverip[:port]>", argv[0]);
 #endif
-
-    const int width = 800, height = 600;
 
 #ifndef WIN32
     signal(SIGINT,  sighandler);
@@ -76,7 +86,7 @@ int main(int argc, char *argv[]) {
 
     client_init(argv[1]);
 
-    video_init(width, height);
+    video_init(width, height, fullscreen);
     sprite_init();
     gui_scroller_init();
     gui_world_init();
@@ -129,7 +139,7 @@ int main(int argc, char *argv[]) {
                     break;
                case SDL_MOUSEMOTION: 
                     if (event.motion.state & 1)
-                    gui_world_center_change(-event.motion.xrel, -event.motion.yrel);
+                        gui_world_center_change(-event.motion.xrel, -event.motion.yrel);
                     break;
                case SDL_VIDEORESIZE:
                     video_resize(event.resize.w, event.resize.h);

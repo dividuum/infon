@@ -40,10 +40,14 @@
 #define SPRITE_KOTH         (SPRITE_PLAIN + SPRITE_NUM_PLAIN)
 #define SPRITE_NUM_KOTH     1
 
+#define SPRITE_WATER        (SPRITE_KOTH  + SPRITE_NUM_KOTH)
+#define SPRITE_NUM_WATER    4
+
 #define SPRITE_NUM_TILES (SPRITE_NUM_SOLID  + \
                           SPRITE_NUM_PLAIN  + \
                           SPRITE_NUM_BORDER + \
-                          SPRITE_NUM_KOTH)
+                          SPRITE_NUM_KOTH   + \
+                          SPRITE_NUM_WATER)
 
 // Sprite Nummern bis hier duerfen maximal 255 sein, da diese 
 // beim World Netzwerk syncen in Bytes verpackt werden.

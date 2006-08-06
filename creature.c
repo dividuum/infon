@@ -76,8 +76,12 @@ int creature_max_health(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
             return 10000;
-        default:
+        case 1:
             return 20000;
+        case 2:
+            return  5000;
+        default:
+            assert(0);
     }
 }
 
@@ -85,8 +89,12 @@ int creature_max_food(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
             return 10000;
-        default:
+        case 1:
             return 20000;
+        case 2:
+            return  5000;
+        default:
+            assert(0);
     }
 }
 
@@ -96,8 +104,10 @@ int creature_aging(const creature_t *creature) {
             return 5;
         case 1:
             return 7;
+        case 2:
+            return 5;
         default:
-            return 0;
+            assert(0);
     }
 }
 
@@ -133,20 +143,13 @@ int  creature_can_move_to_target(creature_t *creature) {
 int creature_speed(const creature_t *creature) {
     switch (creature->type) {
         case 0:
-            //return 200 + creature->health / 50;
             return 200 + creature->health / 16;
-        default:
-            //return 300;
+        case 1:
             return 400;
-    }
-}
-
-int creature_turnspeed(const creature_t *creature) {
-    switch (creature->type) {
-        case 0:
-            return 2;
+        case 2:
+            return 800;
         default:
-            return 1;
+            assert(0);
     }
 }
 
@@ -192,8 +195,12 @@ int creature_heal_rate(const creature_t *creature) {
     switch (creature->type) {
         case 0:
             return 500;
-        default:
+        case 1:
             return 300;
+        case 2:
+            return 600;
+        default:
+            assert(0);
     }
 }
 
@@ -228,8 +235,12 @@ int creature_eat_rate(const creature_t *creature) {
     switch (creature->type) {
         case 0:
             return 800;
-        default:
+        case 1:
             return 400;
+        case 2:
+            return 600;
+        default:
+            assert(0);
     }
 }
 
@@ -251,8 +262,8 @@ void creature_do_eat(creature_t *creature, int delta) {
 
 static const int attack_possible[CREATURE_TYPES][CREATURE_TYPES] = 
                                // TARGET
-    { {    0,      0,      0,      0 },// ATTACKER
-      {    1,      1,      0,      0 },
+    { {    0,      0,      1,      0 },// ATTACKER
+      {    1,      1,      1,      0 },
       {    0,      0,      0,      0 },
       {    0,      0,      0,      0 } };
 
@@ -263,18 +274,26 @@ int creature_can_attack(const creature_t *creature, const creature_t *target) {
 int creature_hitpoints(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
-            return 0;
-        default:
+            return 1000;
+        case 1:
             return 1500;
+        case 2:
+            return    0;
+        default:
+            assert(0);
     }
 }
 
 int creature_attack_distance(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
+            return 3 * TILE_SCALE;
+        case 1:
+            return 2 * TILE_SCALE;
+        case 2:
             return 0;
         default:
-            return 2 * TILE_SCALE;
+            assert(0);
     }
 }
 
@@ -327,9 +346,9 @@ int creature_conversion_speed(creature_t *creature) {
 
 static const int conversion_food_needed[CREATURE_TYPES][CREATURE_TYPES] = 
                                // TO
-    { {    0,   8000,      0,      0 },// FROM
+    { {    0,   8000,   5000,      0 },// FROM
       {    0,      0,      0,      0 },
-      {    0,      0,      0,      0 },
+      {    0,   5000,      0,      0 },
       {    0,      0,      0,      0 } };
 
 int creature_conversion_food(const creature_t *creature, int type) {
@@ -437,8 +456,12 @@ int creature_can_feed(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
             return creature->food > 0;
-        default:
+        case 1:
             return 0;
+        case 2:
+            return creature->food > 0;
+        default:
+            assert(0);
     }
 }
 
@@ -446,8 +469,12 @@ int creature_feed_distance(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
             return TILE_SCALE;
-        default:
+        case 1: 
             return 0;
+        case 2:
+            return TILE_SCALE;
+        default:
+            assert(0);
     }
 }
 
@@ -455,8 +482,12 @@ int creature_feed_speed(const creature_t *creature) {
     switch (creature->type) {
         case 0: 
             return 400;
+        case 1:
+            return   0;
+        case 2:
+            return 400;
         default:
-            return 0;
+            assert(0);
     }
 }
 
@@ -706,10 +737,26 @@ void creature_moveall(int delta) {
 }
 
 int creature_set_path(creature_t *creature, int x, int y) {
-    if (!world_walkable(X_TO_TILEX(x), Y_TO_TILEY(y)))
-        return 0;
+    pathnode_t *newpath;
 
-    pathnode_t *newpath = world_findpath(creature->x, creature->y, x, y);
+    if (creature->type == 0 || creature->type == 1) {
+        // Bodenbasierte Viecher
+        if (!world_walkable(X_TO_TILEX(x), Y_TO_TILEY(y)))
+            return 0;
+
+        newpath = world_findpath(creature->x, creature->y, x, y);
+    } else {
+        // Fliegendes Vieh
+        if (!world_is_within_border(X_TO_TILEX(x), Y_TO_TILEY(y)))
+            return 0;
+
+        newpath = malloc(sizeof(pathnode_t));
+        if (newpath) {
+            newpath->x = x;
+            newpath->y = y;
+            newpath->next = NULL;
+        }
+    }
 
     if (!newpath)
         return 0;

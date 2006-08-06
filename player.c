@@ -482,45 +482,35 @@ player_t *player_create(const char *pass) {
     lua_register(player->L,     "king_player",          luaKingPlayer);
     lua_register(player->L,     "player_score",         luaPlayerScore);
 
-    lua_pushliteral(player->L, "CREATURE_IDLE");
-    lua_pushnumber(player->L,   CREATURE_IDLE);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_IDLE);
+    lua_setglobal(player->L, "CREATURE_IDLE");
 
-    lua_pushliteral(player->L, "CREATURE_WALK");
-    lua_pushnumber(player->L,   CREATURE_WALK);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_WALK);
+    lua_setglobal(player->L, "CREATURE_WALK");
 
-    lua_pushliteral(player->L, "CREATURE_HEAL");
-    lua_pushnumber(player->L,   CREATURE_HEAL);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_HEAL);
+    lua_setglobal(player->L, "CREATURE_HEAL");
 
-    lua_pushliteral(player->L, "CREATURE_EAT");
-    lua_pushnumber(player->L,   CREATURE_EAT);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_EAT);
+    lua_setglobal(player->L, "CREATURE_EAT");
 
-    lua_pushliteral(player->L, "CREATURE_ATTACK");
-    lua_pushnumber(player->L,   CREATURE_ATTACK);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_ATTACK);
+    lua_setglobal(player->L, "CREATURE_ATTACK");
 
-    lua_pushliteral(player->L, "CREATURE_CONVERT");
-    lua_pushnumber(player->L,   CREATURE_CONVERT);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_CONVERT);
+    lua_setglobal(player->L, "CREATURE_CONVERT");
 
-    lua_pushliteral(player->L, "CREATURE_SPAWN");
-    lua_pushnumber(player->L,   CREATURE_SPAWN);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_SPAWN);
+    lua_setglobal(player->L, "CREATURE_SPAWN");
 
-    lua_pushliteral(player->L, "CREATURE_FEED");
-    lua_pushnumber(player->L,   CREATURE_FEED);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, CREATURE_FEED);
+    lua_setglobal(player->L, "CREATURE_FEED");
 
-    lua_pushliteral(player->L, "player_number");
-    lua_pushnumber(player->L,   playerno);
-    lua_settable(player->L, LUA_GLOBALSINDEX);
+    lua_pushnumber(player->L, playerno);
+    lua_setglobal(player->L, "player_number");
 
-    lua_pushliteral(L, "MAXPLAYERS");
-    lua_pushnumber(L,   MAXPLAYERS);
-    lua_settable(L, LUA_GLOBALSINDEX);
+    lua_pushnumber(L, MAXPLAYERS);
+    lua_setglobal(L, "MAXPLAYERS");
 
     lua_setmaxmem(player->L, LUA_MAX_MEM);
     lua_dofile(player->L, "player.lua");
@@ -728,9 +718,9 @@ void player_think() {
             game_time > player->all_dead_time + PLAYER_CREATURE_RESPAWN_DELAY) 
         {
             int x, y;
-            world_find_digged(&x, &y);
+            world_find_plain(&x, &y);
             creature_spawn(player, TILE_XCENTER(x), TILE_YCENTER(y), 0, 0);
-            world_find_digged(&x, &y);
+            world_find_plain(&x, &y);
             creature_spawn(player, TILE_XCENTER(x), TILE_YCENTER(y), 0, 0);
             //creature_t * first = creature_spawn(player, TILE_XCENTER(world_koth_x()), TILE_YCENTER(world_koth_y()), 1, 0);
             // first->food = creature_max_food(first);
