@@ -115,6 +115,9 @@ static void client_handle_packet(packet_t *packet) {
         case PACKET_WORLD_INFO:
             gui_world_info_from_network(packet);
             break;
+        case PACKET_CREATURE_SMILE:
+            gui_creature_smile_from_network(packet);
+            break;
         case PACKET_WELCOME_MSG:    
             client_writeto("guiclient\n", 10);
             break;

@@ -60,7 +60,7 @@
 
 // Thought Konstanten
 #define SPRITE_THOUGHT      (SPRITE_FOOD + SPRITE_NUM_FOOD)
-#define SPRITE_NUM_THOUGHT  CREATURE_STATES
+#define SPRITE_NUM_THOUGHT  CREATURE_STATES + 1 /* + Smile */
 
 // Koth Krone
 #define SPRITE_CROWN        (SPRITE_THOUGHT + SPRITE_NUM_THOUGHT)

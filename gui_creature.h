@@ -56,6 +56,7 @@ typedef struct gui_creature_s {
     int             last_y;
 
     char            message[9];
+    int             smile_time;
 } gui_creature_t;
 
 void        gui_creature_draw();
@@ -63,6 +64,7 @@ void        gui_creature_move(int delta);
 
 /* Network */
 void        gui_creature_from_network(packet_t *packet);
+void        gui_creature_smile_from_network(packet_t *packet);
 
 void        gui_creature_init();
 void        gui_creature_shutdown();

@@ -71,7 +71,11 @@ void gui_creature_draw() {
         
         //if (game_time > creature->last_state_change +  300 && 
         //    game_time < creature->last_state_change + 1000)
+        if (creature->smile_time + 1000 > game_time) {
+            video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + 8));
+        } else {
             video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + creature->state));
+        }
 
         //if (time < creature->last_msg_set + 2000) 
             video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, creature->message);
@@ -202,6 +206,15 @@ again:
         if (creature->dir < 0)
             creature->dir += 32;
     }
+}
+
+void gui_creature_smile_from_network(packet_t *packet) {
+    uint16_t creatureno;
+
+    if (!packet_read16(packet, &creatureno))    PROTOCOL_ERROR();
+    if (creatureno >= MAXCREATURES)             PROTOCOL_ERROR();
+    gui_creature_t *creature = &creatures[creatureno];
+    creature->smile_time = game_time;
 }
 
 void gui_creature_from_network(packet_t *packet) {

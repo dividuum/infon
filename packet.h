@@ -36,6 +36,7 @@ typedef struct {
 #define PACKET_QUIT_MSG          4
 #define PACKET_KOTH_UPDATE       5
 #define PACKET_WORLD_INFO        6
+#define PACKET_CREATURE_SMILE    7
 #define PACKET_WELCOME_MSG      32
 #define PACKET_START_COMPRESS  254
 #define PACKET_HANDSHAKE       255

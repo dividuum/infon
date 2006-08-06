@@ -44,6 +44,13 @@ static creature_t *creature_find_unused() {
     return NULL;
 }
 
+static void creature_make_smile(const creature_t *creature, client_t *client) {
+    packet_t packet;
+    packet_init(&packet, PACKET_CREATURE_SMILE);
+    packet_write16(&packet, creature_num(creature));
+    server_send_packet(&packet, client);
+}
+
 creature_t *creature_by_num(int creature_num) {
     if (creature_num < 0 || creature_num >= MAXCREATURES)
         return NULL;
@@ -334,6 +341,7 @@ void creature_do_attack(creature_t *creature, int delta) {
         return;
 
     creature_kill(target, creature);
+    creature_make_smile(creature, SEND_BROADCAST);
 finished_attacking:
     creature_set_state(creature, CREATURE_IDLE);
 }
@@ -809,6 +817,7 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
     creature_to_network(creature, CREATURE_DIRTY_ALL, SEND_BROADCAST);
     creature->dirtymask = CREATURE_DIRTY_NONE;
 
+    creature_make_smile(creature, SEND_BROADCAST);
     return creature;
 }
 

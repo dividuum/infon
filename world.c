@@ -75,7 +75,7 @@ int world_dig(int x, int y, maptype_e type) {
     if (MAPTILE(x, y).type != SOLID)
         return 0;
     
-    fprintf(stderr, "world_dig(%d, %d, %d)\n", x, y, type);
+    // fprintf(stderr, "world_dig(%d, %d, %d)\n", x, y, type);
 
     // Pfadsuche fuer Bodenbasierte Viecher aktualisieren
     if (type == PLAIN)

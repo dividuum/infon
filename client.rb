@@ -111,6 +111,8 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
             puts  "king: %d  "      % socket.read8
         when 6:
             puts  "world info %dx%d koth: %d,%d" % [socket.read8, socket.read8, socket.read8, socket.read8]
+        when 7: 
+            puts "smile %d" % socket.read16
         when 32:
             socket.write("guiclient\n")
             puts  "welcome: %s"     % socket.read(len).delete("\n").strip
