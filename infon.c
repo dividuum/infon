@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
         exit(0);
     } else if (argc == 2 && strstr(argv[1], "/c:") == argv[1]) {
         die("There are no settings");
-    } else {
+    } else if (argc != 2) {
         die("you must supply the gameservers hostname\n"
             "as first command line parameter.\n\n"
             "example: 'infon.exe bl0rg.net'");
