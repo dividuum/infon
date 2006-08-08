@@ -512,6 +512,9 @@ player_t *player_create(const char *pass) {
     lua_pushnumber(L, MAXPLAYERS);
     lua_setglobal(L, "MAXPLAYERS");
 
+    // Initiale Cyclen setzen
+    lua_setcycles(player->L, player->max_cycles);
+
     lua_setmaxmem(player->L, LUA_MAX_MEM);
     lua_dofile(player->L, "player.lua");
     
@@ -658,7 +661,6 @@ void player_execute_client_lua(player_t *player, const char *source, const char 
         lua_pushliteral(player->L, "_TRACEBACK");
         lua_rawget(player->L, LUA_GLOBALSINDEX);
         lua_insert(player->L, base);
-        lua_setcycles(player->L, player->max_cycles);
         status = lua_pcall(player->L, 0, 1, base); // Yield() faehig machen?
         lua_remove(player->L, base);
     }
@@ -726,6 +728,11 @@ void player_think() {
             // first->food = creature_max_food(first);
         }
         
+        // Spieler CPU cyclen zuruecksetzen. Der Spieler
+        // kann damit sowohl seine Kreaturen steuern, als
+        // auch Befehle ueber Netzwerk ausfuehren.
+        lua_setcycles(player->L, player->max_cycles);
+        
         // Spiele Luacode aufrufen
         lua_pushliteral(player->L, "_TRACEBACK");
         lua_rawget(player->L, LUA_GLOBALSINDEX); 
@@ -733,8 +740,6 @@ void player_think() {
         lua_pushliteral(player->L, "player_think");
         lua_rawget(player->L, LUA_GLOBALSINDEX);         
         
-        lua_setcycles(player->L, player->max_cycles);
-
         switch (lua_pcall(player->L, 0, 0, -2)) {
             case LUA_ERRRUN:
                 snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s", lua_tostring(player->L, -1));
@@ -755,14 +760,18 @@ void player_think() {
                 break;
         }
 
+        lua_pop(player->L, 1);
+
+        // Verbrauchte CPU Zeit speichern:
+        // Dies ist die rein fuer player_think verbrauchte
+        // Zeit. Darauf folgende Konsolenbefehle werden fuer
+        // die Anzeige im Client nicht mehr beachtet.
         int newcpu = player_get_cpu_usage(player); 
 
         if (newcpu != player->cpu_usage) {
             player->dirtymask |= PLAYER_DIRTY_CPU;
             player->cpu_usage = newcpu;
         }
-
-        lua_pop(player->L, 1);
 
         player_to_network(player, player->dirtymask, SEND_BROADCAST);
         player->dirtymask = PLAYER_DIRTY_NONE;

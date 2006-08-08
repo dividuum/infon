@@ -214,6 +214,7 @@ void gui_creature_smile_from_network(packet_t *packet) {
     if (!packet_read16(packet, &creatureno))    PROTOCOL_ERROR();
     if (creatureno >= MAXCREATURES)             PROTOCOL_ERROR();
     gui_creature_t *creature = &creatures[creatureno];
+    if (!CREATURE_USED(creature))               PROTOCOL_ERROR();
     creature->smile_time = game_time;
 }
 

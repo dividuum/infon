@@ -21,8 +21,7 @@ else
 endif
 
 CFLAGS     += -I$(SDLDIR)/include/SDL 
-
-LDFLAGS 	= -L$(LUADIR)/lib -levent -lSDL -llua -llualib -lm -lpthread -lz
+LDFLAGS 	= -L$(LUADIR)/lib -levent -llua -llualib -lm -lz
 
 ifdef WINDOWS
 	MINGW=/home/dividuum/progs/mingw32/
@@ -34,7 +33,7 @@ ifdef WINDOWS
 	RES=infon.res				   
 	GUI_EXECUTABLE=infon.exe
 else
-	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lSDL -lSDL_image -lSGE -lSDL_gfx
+	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lSDL -lSDL_image -lSGE -lSDL_gfx -lz -lm
 	GUI_EXECUTABLE=infon
 endif
 

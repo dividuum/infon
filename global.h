@@ -22,12 +22,12 @@
 #define GLOBAL_H
 
 #include <lua.h>
-#include <SDL.h>
 
-lua_State *L;
+extern lua_State *L;
 
-Uint32     game_time;
-int        game_round;
+extern int game_time;
+extern int game_round;
+extern int game_paused;
 
 #define GAME_NAME "Infon Battle Arena 'Network Edition'"
 

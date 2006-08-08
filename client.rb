@@ -13,13 +13,14 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
             if @compress
                 while @buf.size < x
                     @buf << @zstream.inflate(orig_read(1))
+                    @traffic += 1
                 end
                 ret = @buf[0...x]
                 @buf = @buf[x..-1]
             else
                 ret = orig_read(x)
+                @traffic += x
             end
-            @traffic += x
             ret
         end
        

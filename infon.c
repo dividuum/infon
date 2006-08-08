@@ -35,6 +35,9 @@
 #include "gui_scroller.h"
 #include "gui_player.h"
 
+int game_time   = 0;
+int game_round  = 0;
+
 static int running = 1;
 
 void sighandler(int sig) {
@@ -92,9 +95,6 @@ int main(int argc, char *argv[]) {
     gui_world_init();
     gui_player_init();
     gui_creature_init();
-
-    game_round = 0;
-    game_time  = 0;
 
     Uint32 lastticks = SDL_GetTicks();
     while (running && client_is_connected()) {

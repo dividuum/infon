@@ -22,25 +22,42 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/time.h>
 #include <time.h>
 
 #include <lualib.h>
 #include <lauxlib.h>
 
 #include "global.h"
+#include "misc.h"
 #include "server.h"
 #include "world.h"
 #include "creature.h"
 #include "scroller.h"
 
-static int running = 1;
-static int paused  = 0;
+lua_State *L;
+
+int game_time   = 0;
+int game_round  = 0;
+int game_paused = 0;
+
+static int    running = 1;
 
 void sighandler(int sig) {
     running = 0;
 }
 
+static struct timeval start;
+
+int get_tick() {
+    static struct timeval now;
+    gettimeofday(&now , NULL);
+    return (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
+}
+
 int main(int argc, char *argv[]) {
+    int lasttick;
+
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
 
@@ -58,9 +75,6 @@ int main(int argc, char *argv[]) {
     lua_dofile(L, "config.lua");
     lua_dofile(L, "server.lua");
 
-    game_round = 0;
-    game_time  = 0;
-
     world_init();
     server_init();
     player_init();
@@ -69,32 +83,29 @@ int main(int argc, char *argv[]) {
     // Initialer Worldtick
     world_tick();
 
-    Uint32 lastticks = SDL_GetTicks();
+    // Beginn der Zeitrechnung...
+    lasttick = 0;
+    gettimeofday(&start, NULL);
+    
     while (running) {
-        game_round++;
-        Uint32 nowticks = SDL_GetTicks();
-        Uint32 delta = nowticks - lastticks;
+        int tick  = get_tick();
+        int delta = tick - lasttick;
 
-        if (nowticks < lastticks || nowticks > lastticks + 1000) {
+        if (delta < 0 || delta > 1000) {
             // Timewarp?
-            lastticks = nowticks;
-            SDL_Delay(5);
+            lasttick = tick;
             continue;
         } else if (delta < 100) {
-            SDL_Delay(5);
+            usleep(max(95000 - delta * 1000, 1000));
             continue;
         }
 
-        lastticks = nowticks;
-
-        // Zeit weiterlaufen lassen
-        if (!paused) 
-            game_time += delta;
+        lasttick = tick;
 
         // IO Lesen/Schreiben
         server_tick();
 
-        if (!paused) {
+        if (!game_paused) {
             // World Zeugs
             world_tick();
 
@@ -103,6 +114,10 @@ int main(int argc, char *argv[]) {
 
             // Viecher bewegen
             creature_moveall(delta);
+
+            // Zeit weiterlaufen lassen
+            game_time += delta;
+            game_round++;
         }
     }
     
