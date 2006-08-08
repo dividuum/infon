@@ -131,8 +131,10 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     lua_pushnumber(L, fd);
     lua_pushstring(L, address);
 
-    if (lua_pcall(L, 2, 0, 0) != 0) 
+    if (lua_pcall(L, 2, 0, 0) != 0) {
         fprintf(stderr, "error calling on_client_accepted: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
 
     event_add(&clients[fd].rd_event, NULL);
     return 1;
@@ -167,6 +169,7 @@ static void server_readable(int fd, short event, void *arg) {
             if (lua_pcall(L, 2, 0, 0) != 0) {
                 fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
                 server_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
+                lua_pop(L, 1);
             }
 
             // Kill Me Flag waehrend Aufruf von on_client_input 
@@ -280,8 +283,10 @@ void server_destroy(client_t *client, char *reason) {
     lua_rawget(L, LUA_GLOBALSINDEX);
     lua_pushnumber(L, fd);
     lua_pushstring(L, reason);
-    if (lua_pcall(L, 2, 0, 0) != 0) 
+    if (lua_pcall(L, 2, 0, 0) != 0) {
         fprintf(stderr, "error calling on_client_close: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
 
     // Versuchen, den Rest rauszuschreiben.
     if (client->is_gui_client) {
@@ -359,44 +364,43 @@ static void client_turn_into_gui_client(client_t *client) {
     initial_update(client);
 }
 
-static client_t *client_get_checked_lua(lua_State *L, int clientno) {
+static client_t *client_get_checked_lua(lua_State *L, int idx) {
+    int clientno = luaL_checklong(L, idx);
     if (clientno < 0 || clientno >= MAXCLIENTS) 
         luaL_error(L, "client number %d out of range", clientno);
-
-    if (!CLIENT_USED(&clients[clientno])) 
+    client_t *client = &clients[clientno];
+    if (!CLIENT_USED(client)) 
         luaL_error(L, "client %d not in use", clientno);
-
-    return &clients[clientno];
+    return client;
 }
 
 static int luaClientWrite(lua_State *L) {
-    int clientno = luaL_checklong(L, 1);
     size_t msglen; const char *msg = luaL_checklstring(L, 2, &msglen);
-    server_writeto(client_get_checked_lua(L, clientno), msg, msglen);
+    server_writeto(client_get_checked_lua(L, 1), msg, msglen);
     return 0;
 }
 
 static int luaClientAttachToPlayer(lua_State *L) {
-    lua_pushboolean(L, player_attach_client(client_get_checked_lua(L, luaL_checklong(L, 1)), 
-                                            player_get_checked_lua(L, luaL_checklong(L, 2)), 
+    lua_pushboolean(L, player_attach_client(client_get_checked_lua(L, 1), 
+                                            player_get_checked_lua(L, 2), 
                                             luaL_checkstring(L, 3)));
     return 1;
 }
 
 static int luaClientDetachFromPlayer(lua_State *L) {
-    lua_pushboolean(L, player_detach_client(client_get_checked_lua(L, luaL_checklong(L, 1)), 
-                                            player_get_checked_lua(L, luaL_checklong(L, 2)))); 
+    lua_pushboolean(L, player_detach_client(client_get_checked_lua(L, 1), 
+                                            player_get_checked_lua(L, 2))); 
     return 1;
 }
 
 static int luaClientMakeGuiClient(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    client_t *client = client_get_checked_lua(L, 1);
     client_turn_into_gui_client(client);
     return 0;
 }
 
 static int luaClientIsGuiClient(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    client_t *client = client_get_checked_lua(L, 1);
     lua_pushboolean(L, client->is_gui_client);
     return 1;
 }
@@ -414,20 +418,18 @@ static int luaGameTime(lua_State *L) {
 }
 
 static int luaClientExecute(lua_State *L) {
-    int clientno = luaL_checklong(L, 1);
-    const char *code = luaL_checkstring(L, 2);
-
-    client_t *client = client_get_checked_lua(L, clientno);
+    const char *code = luaL_checkstring(L, 2); // XXX: Binary Safe machen
+    client_t *client = client_get_checked_lua(L, 1);
+    if (!client->player) 
+        luaL_error(L, "client %d has no player", client_num(client));
     char buf[128];
     snprintf(buf, sizeof(buf), "input from client %d", client_num(client));
-    if (!client->player) 
-        luaL_error(L, "client %d has no player", clientno);
     player_execute_client_lua(client->player, code, buf);
     return 0;
 }
 
 static int luaClientPlayerNumber(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    client_t *client = client_get_checked_lua(L, 1);
     
     if (!client->player) {
         lua_pushnil(L);
@@ -443,7 +445,7 @@ static int luaScrollerAdd(lua_State *L) {
 }
 
 static int luaClientDisconnect(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, luaL_checklong(L, 1));
+    client_t *client = client_get_checked_lua(L, 1);
     const char *reason = luaL_checkstring(L, 2);
     if (client->kill_me) 
         free(client->kill_me);

@@ -22,11 +22,6 @@
 #define RULES_H
 
 #define PLAYER_CREATURE_RESPAWN_DELAY 2000
-#define CREATURE_SUICIDE_POINTS        -40
-#define CREATURE_DIED_POINTS            -3
-#define CREATURE_VICTIM_POINTS_0        -3
-#define CREATURE_VICTIM_POINTS_1       -20
-#define CREATURE_KILLED_POINTS          10
 #define CREATURE_KOTH_POINTS             5
 
 #define RESTRICTIVE                      0

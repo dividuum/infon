@@ -23,6 +23,9 @@
 #include <math.h>
 #include <assert.h>
 
+#include <lauxlib.h>
+#include <lualib.h>
+
 #include "global.h"
 #include "creature.h"
 #include "player.h"
@@ -57,6 +60,16 @@ creature_t *creature_by_num(int creature_num) {
     creature_t *creature = &creatures[creature_num];
     if (!CREATURE_USED(creature))
         return NULL;
+    return creature;
+}
+
+creature_t *creature_get_checked_lua(lua_State *L, int idx) {
+    int creatureno = luaL_checklong(L, idx);
+    if (creatureno < 0 || creatureno >= MAXCREATURES) 
+        luaL_error(L, "creature number %d out of range", creatureno);
+    creature_t *creature = &creatures[creatureno];
+    if (!CREATURE_USED(creature)) 
+        luaL_error(L, "creature %d not in use", creatureno);
     return creature;
 }
 
@@ -340,8 +353,8 @@ void creature_do_attack(creature_t *creature, int delta) {
     if (target->health > 0)
         return;
 
-    creature_kill(target, creature);
     creature_make_smile(creature, SEND_BROADCAST);
+    creature_kill(target, creature);
 finished_attacking:
     creature_set_state(creature, CREATURE_IDLE);
 }
@@ -822,17 +835,7 @@ creature_t *creature_spawn(player_t *player, int x, int y, int type, int points)
 }
 
 void creature_kill(creature_t *creature, creature_t *killer) {
-    int food_from_creature = creature->food;
-
-    // Bei Selbstmord kommt nicht das ganze Futter raus.
-    if (killer == creature)
-        food_from_creature /= 3;
-
-    world_add_food(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y), food_from_creature);
-
-    player_on_creature_killed(creature->player, 
-                              creature_num(creature), 
-                              killer ? creature_num(killer) : -1);
+    player_on_creature_killed(creature->player, creature, killer);
 
     path_delete(creature->path);
     creature->player = NULL;

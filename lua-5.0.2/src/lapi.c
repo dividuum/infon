@@ -762,6 +762,8 @@ LUA_API int lua_getcycles(lua_State *L) {
 
 LUA_API void lua_consumecycles(lua_State *L, int cycles) {
     lua_lock(L);
+    if (!G(L)->cyclesleft)
+        return;
     G(L)->cyclesleft -= cycles;
     if (G(L)->cyclesleft < 1)
         G(L)->cyclesleft = 1;

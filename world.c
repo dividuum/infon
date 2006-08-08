@@ -232,14 +232,20 @@ static int luaWorldFindDigged(lua_State *L) {
     return 2;
 }
 
+static int luaWorldPosToTile(lua_State *L) {
+    int x = luaL_checklong(L, 1);
+    int y = luaL_checklong(L, 2);
+    lua_pushnumber(L, X_TO_TILEX(x));
+    lua_pushnumber(L, Y_TO_TILEY(y));
+    return 2;
+}
 
 void world_init() {
-    lua_dofile(L, "world.lua");
-
     lua_register(L, "world_dig",            luaWorldDig);
     lua_register(L, "world_add_food",       luaWorldAddFood);
     lua_register(L, "world_is_walkable",    luaWorldWalkable);
     lua_register(L, "world_find_digged",    luaWorldFindDigged);
+    lua_register(L, "world_pos_to_tile",    luaWorldPosToTile);
 
     lua_pushnumber(L, SOLID);
     lua_setglobal(L, "SOLID"); 

@@ -21,6 +21,8 @@
 #ifndef CREATURE_H
 #define CREATURE_H
 
+#include <lua.h>
+
 #include "path.h"
 #include "player.h"
 #include "server.h"
@@ -59,6 +61,8 @@ typedef struct creature_s {
 
 int         creature_num(const creature_t *creature);
 creature_t *creature_by_num(int creature_num);
+creature_t *creature_get_checked_lua(lua_State *L, int idx);
+
 creature_t *creature_spawn(player_t *player, int x, int y, int type, int points);
 void        creature_kill(creature_t *creature, creature_t *killer);
 

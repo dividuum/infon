@@ -55,18 +55,21 @@ typedef struct player_s {
     unsigned char dirtymask;
 } player_t;
 
+struct creature_s;
+
+int         player_num(player_t *player);
+player_t   *player_by_num(int playerno);
+player_t   *player_get_checked_lua(lua_State *L, int idx);
+
 int         player_attach_client(client_t *client, player_t *player, const char *pass);
 int         player_detach_client(client_t *client, player_t *player);
 
 void        player_on_creature_spawned(player_t *player,  int idx, int points);
-void        player_on_creature_killed(player_t *player,   int victim, int killer);
+void        player_on_creature_killed(player_t *player, struct creature_s *victim, struct creature_s *killer);
 void        player_on_creature_attacked(player_t *player, int victim, int attacker);
 
 void        player_execute_client_lua(player_t *player, const char *source, const char *where);
 
-player_t   *player_get_checked_lua(lua_State *L, int playerno);
-player_t   *player_by_num(int playerno);
-int         player_num(player_t *player);
 void        player_writeto(player_t *player, const void *data, size_t size);
 
 void        player_set_name(player_t *player, const char *name);

@@ -19,7 +19,13 @@
 ]]--
 
 -----------------------------------------------------------
--- Klassen fuer Clientverbindung bauen
+-- Konfiguration laden
+-----------------------------------------------------------
+
+require 'config.lua'
+
+-----------------------------------------------------------
+-- Klasse fuer Clientverbindung
 -----------------------------------------------------------
 
 clients= {}
@@ -196,7 +202,7 @@ end
 wall = Client.writelnAll
 
 -----------------------------------------------------------
--- C Callbacks
+-- Server C Callbacks
 -----------------------------------------------------------
 
 function on_new_client(addr) 
@@ -218,6 +224,39 @@ end
 
 function server_tick()
     server_tick = coroutine.wrap(ServerMain)
+end
+
+-----------------------------------------------------------
+-- World Funktionen
+-----------------------------------------------------------
+
+function world_main()
+    level_init()
+    while true do
+        level_tick()
+        coroutine.yield()
+    end
+end
+
+function world_init()
+    dofile("level/" .. map .. ".lua")
+    local w,  h  = level_size()
+    local kx, ky = level_koth_pos()
+    world_tick = coroutine.wrap(world_main)
+    return w, h, kx, ky
+end
+
+function world_add_food_by_worldcoord(x, y, amount)
+    tx, ty = world_pos_to_tile(x, y)
+    return world_add_food(tx, ty, amount)
+end
+
+-----------------------------------------------------------
+-- Rules Funktionen
+-----------------------------------------------------------
+
+function rules_init()
+    dofile("rules/" .. rules .. ".lua")
 end
 
 -----------------------------------------------------------
@@ -269,3 +308,9 @@ function kickall()
                                clients[fd]:disconnect("kicked")
                            end)
 end
+
+-----------------------------------------------------------
+-- Clienthandler laden
+-----------------------------------------------------------
+
+require "server.lua"

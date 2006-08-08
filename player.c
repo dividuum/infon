@@ -40,7 +40,7 @@
 static player_t players[MAXPLAYERS];
 static player_t *king_player = NULL;
 
-void player_score(player_t *player, int scoredelta, char *reason) {
+void player_score(player_t *player, int scoredelta, const char *reason) {
     static char buf[1024];
     snprintf(buf, sizeof(buf), "%s %s %d point%s: %s",
                                player->name, 
@@ -81,48 +81,48 @@ void player_on_creature_spawned(player_t *player, int idx, int points) {
         player_score(player, points, "Creature Spawned");
 }
 
-void player_on_creature_killed(player_t *player, int victim, int killer) {
+void player_on_creature_killed(player_t *player, creature_t *victim, creature_t *killer) {
     lua_pushliteral(player->L, "_killed_creatures");
     lua_rawget(player->L, LUA_GLOBALSINDEX);         
-    if (!lua_isnil(player->L, -1)) {
-        lua_pushnumber(player->L,  killer);
-        lua_rawseti(player->L, -2, victim);
-    } else {
+    if (lua_isnil(player->L, -1)) {
         static char msg[] = "cannot locate _killed_creatures table. did you delete it?\n";
         player_writeto(player, msg, sizeof(msg) - 1);
+    } else {
+        lua_pushnumber(player->L,  killer ? creature_num(killer) : -1);
+        lua_rawseti(player->L, -2, creature_num(victim));
     }
     lua_pop(player->L, 1);
 
     player->num_creatures--;
+    assert(player->num_creatures >= 0);
 
     if (player->num_creatures == 0)
         player->all_dead_time = game_time;
 
-    if (killer == victim) {
-        player_score(player, CREATURE_SUICIDE_POINTS, "Creature suicides");
-    } else if (killer == -1) {
-        player_score(player, CREATURE_DIED_POINTS,    "Creature died");
-    } else {
-        creature_t *victim_creature = creature_by_num(victim);
-        if (victim_creature->type == 0) {
-            player_score(player, CREATURE_VICTIM_POINTS_0,  "Creature was killed");
-        } else {
-            player_score(player, CREATURE_VICTIM_POINTS_1,  "Creature was killed");
-        }
-        creature_t *killer_creature = creature_by_num(killer);
-        player_score(killer_creature->player, CREATURE_KILLED_POINTS, "Killed a creature");
+    // Rule Handler aufrufen
+    lua_pushliteral(L, "onCreatureKilled");
+    lua_rawget(L, LUA_GLOBALSINDEX);         
+    lua_pushnumber(L, creature_num(victim));
+    if (killer)
+        lua_pushnumber(L, creature_num(killer));
+    else
+        lua_pushnil(L);
+    
+    if (lua_pcall(L, 2, 0, 0) != 0) {
+        fprintf(stderr, "error calling onCreatureKilled: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
     }
 }
 
 void player_on_creature_attacked(player_t *player, int victim, int attacker) {
     lua_pushliteral(player->L, "_attacked_creatures");
     lua_rawget(player->L, LUA_GLOBALSINDEX);         
-    if (!lua_isnil(player->L, -1)) {
-        lua_pushnumber(player->L,  victim);
-        lua_rawseti(player->L, -2, attacker);
-    } else {
+    if (lua_isnil(player->L, -1)) {
         static char msg[] = "cannot locate _attacked_creatures table. did you delete it?\n";
         player_writeto(player, msg, sizeof(msg) - 1);
+    } else {
+        lua_pushnumber(player->L,  victim);
+        lua_rawseti(player->L, -2, attacker);
     }
     lua_pop(player->L, 1);
 }
@@ -158,19 +158,26 @@ static int player_get_cpu_usage(player_t *player) {
     return 100 * (player->max_cycles - cycles_left) / player->max_cycles;
 }
 
-#define get_player()                                               \
-    player_t   *player   = lua_touserdata(L, lua_upvalueindex(1)); \
+// Makros fuer die Verwendung innerhalb der C-Lua Creature-Funktionen. 
+// Innerhalb einer Spieler VM wird ein Pointer auf die player-Struktur
+// als Upvalue abgelegt (siehe lua_register_player), welcher dann inner-
+// halb der Funktion wieder als 'player' zur Verfuegung steht. 
+//
+// Werden die Funktionen von der HauptVM aus aufgerufen, so ist der
+// Upvalue nil und der Wert von Player NULL.
+
+#define get_player()                                            \
+    player_t *player = lua_touserdata(L, lua_upvalueindex(1));  \
     (void)player; /* Unused Warning weg */                         
 
-#define get_player_and_creature()                                  \
-    get_player();                                                  \
-    const int creature_idx     = (int)luaL_checklong(L, 1);        \
-    creature_t *creature = creature_by_num(creature_idx);          \
-    if (!creature) return luaL_error(L, "%d isn't a valid creature", creature_idx);
+#define get_player_and_creature()                               \
+    get_player();                                               \
+    creature_t *creature = creature_get_checked_lua(L, 1);         
 
-#define assure_is_players_creature()                                            \
-    do { if (creature->player != player)                                        \
-        return luaL_error(L, "%d isn't your creature", creature_idx);           \
+#define assure_is_players_creature()                            \
+    do { if (player && creature->player != player)              \
+        return luaL_error(L, "%d isn't your creature",          \
+                             creature_num(creature));           \
     } while(0)                                                                  
 
 static int luaCreatureSuicide(lua_State *L) {
@@ -283,9 +290,7 @@ static int luaCreatureGetPos(lua_State *L) {
 static int luaCreatureGetDistance(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
-    const creature_t *target = creature_by_num(luaL_checklong(L, 2));
-    if (!target)
-        return 0;
+    const creature_t *target = creature_get_checked_lua(L, 2);
     lua_consumecycles(L, 100);
     lua_pushnumber(L, creature_dist(creature, target));
     return 1;
@@ -379,18 +384,24 @@ static int luaPlayerExists(lua_State *L) {
     return 1;
 }
 
-static int luaCreaturePlayer(lua_State *L) {
-    const creature_t *creature = creature_by_num(luaL_checklong(L, 1));
-    if (!creature)
-        return 0;
+static int luaCreatureGetPlayer(lua_State *L) {
+    const creature_t *creature = creature_get_checked_lua(L, 1);
     lua_pushnumber(L, player_num(creature->player));
     return 1;
 }
 
 static int luaPlayerScore(lua_State *L) {
-    lua_pushnumber(L, player_get_checked_lua(L, luaL_checklong(L, 1))->score);
+    lua_pushnumber(L, player_get_checked_lua(L, 1)->score);
     return 1;
 }
+
+static int luaPlayerChangeScore(lua_State *L) {
+    player_score(player_get_checked_lua(L, 1), 
+                 luaL_checklong(L, 2),
+                 luaL_checkstring(L, 3));
+    return 0;
+}
+
 
 static int luaKingPlayer(lua_State *L) {
     player_t *king = player_king();
@@ -477,7 +488,7 @@ player_t *player_create(const char *pass) {
     lua_register(player->L,     "get_koth_pos",         luaGetKothPos);
     lua_register(player->L,     "exists",               luaCreatureExists);
     lua_register(player->L,     "creature_exists",      luaCreatureExists);
-    lua_register(player->L,     "creature_player",      luaCreaturePlayer);
+    lua_register(player->L,     "creature_player",      luaCreatureGetPlayer);
     lua_register(player->L,     "player_exists",        luaPlayerExists);
     lua_register(player->L,     "king_player",          luaKingPlayer);
     lua_register(player->L,     "player_score",         luaPlayerScore);
@@ -565,19 +576,20 @@ void player_writeto(player_t *player, const void *data, size_t size) {
 player_t *player_by_num(int playerno) {
     if (playerno < 0 || playerno >= MAXPLAYERS) 
         return NULL;
-    if (!PLAYER_USED(&players[playerno])) 
+    player_t *player = &players[playerno];
+    if (!PLAYER_USED(player)) 
         return NULL;
-    return &players[playerno];
+    return player;
 }
 
-player_t *player_get_checked_lua(lua_State *L, int playerno) {
+player_t *player_get_checked_lua(lua_State *L, int idx) {
+    int playerno = luaL_checklong(L, idx);
     if (playerno < 0 || playerno >= MAXPLAYERS) 
         luaL_error(L, "player number %d out of range", playerno);
-
-    if (!PLAYER_USED(&players[playerno])) 
+    player_t *player = &players[playerno];
+    if (!PLAYER_USED(player)) 
         luaL_error(L, "player %d not in use", playerno);
-
-    return &players[playerno];
+    return player;
 }
 
 int player_attach_client(client_t *client, player_t *player, const char *pass) {
@@ -742,17 +754,17 @@ void player_think() {
         
         switch (lua_pcall(player->L, 0, 0, -2)) {
             case LUA_ERRRUN:
-                snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s", lua_tostring(player->L, -1));
+                snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s\n", lua_tostring(player->L, -1));
                 lua_pop(player->L, 1);
                 player_writeto(player, errorbuf, strlen(errorbuf));
                 break;
             case LUA_ERRMEM:
-                snprintf(errorbuf, sizeof(errorbuf), "mem error: %s", lua_tostring(player->L, -1));
+                snprintf(errorbuf, sizeof(errorbuf), "mem error: %s\n", lua_tostring(player->L, -1));
                 lua_pop(player->L, 1);
                 player_writeto(player, errorbuf, strlen(errorbuf));
                 break;
             case LUA_ERRERR:
-                snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)");
+                snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)\n");
                 lua_pop(player->L, 1);
                 player_writeto(player, errorbuf, strlen(errorbuf));
                 break;
@@ -858,25 +870,25 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
 }
 
 static int luaPlayerKill(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     player_mark_for_kill(player);
     return 0;
 }
 
 static int luaPlayerNumClients(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     lua_pushnumber(L, player->num_clients);
     return 1;
 }
 
 static int luaPlayerNumCreatures(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     lua_pushnumber(L, player->num_creatures);
     return 1;
 }
 
 static int luaPlayerSpawnTime(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     lua_pushnumber(L, player->spawn_time);
     return 1;
 }
@@ -893,25 +905,25 @@ static int luaPlayerCreate(lua_State *L) {
 }
 
 static int luaPlayerSetName(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     player_set_name(player, luaL_checkstring(L, 2));
     return 0;
 }
 
 static int luaPlayerSetColor(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     player_set_color(player, luaL_checklong(L, 2));
     return 0;
 }
 
 static int luaPlayerGetName(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     lua_pushstring(L, player->name);
     return 1;
 }
 
 static int luaPlayerSetScore(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     int newscore = luaL_checklong(L, 2);
     player->score = 0;
     player_score(player, newscore, "changed by admin");
@@ -919,11 +931,10 @@ static int luaPlayerSetScore(lua_State *L) {
 }
 
 static int luaPlayerKillAllCreatures(lua_State *L) {
-    player_t *player = player_get_checked_lua(L, luaL_checklong(L, 1)); 
+    player_t *player = player_get_checked_lua(L, 1); 
     creature_kill_all_players_creatures(player);
     return 0;
 }
-
 
 void player_init() {
     memset(players, 0, sizeof(players));
@@ -940,6 +951,28 @@ void player_init() {
     lua_register(L, "player_score",                 luaPlayerScore);
     lua_register(L, "player_exists",                luaPlayerExists);
     lua_register(L, "player_spawntime",             luaPlayerSpawnTime);
+    lua_register(L, "player_change_score",          luaPlayerChangeScore);
+
+    lua_register(L, "creature_get_pos",             luaCreatureGetPos);
+    lua_register(L, "creature_get_state",           luaCreatureGetState);
+    lua_register(L, "creature_get_nearest_enemy",   luaCreatureGetNearestEnemy);
+    lua_register(L, "creature_get_type",            luaCreatureGetType);
+    lua_register(L, "creature_get_food",            luaCreatureGetFood);
+    lua_register(L, "creature_get_health",          luaCreatureGetHealth);
+    lua_register(L, "creature_get_speed",           luaCreatureGetSpeed);
+    lua_register(L, "creature_get_tile_food",       luaCreatureGetTileFood);
+    lua_register(L, "creature_get_max_food",        luaCreatureGetMaxFood);
+    lua_register(L, "creature_get_distance",        luaCreatureGetDistance);
+    lua_register(L, "creature_get_hitpoints",       luaCreatureGetHitpoints);
+    lua_register(L, "creature_get_attack_distance", luaCreatureGetAttackDistance);
+    lua_register(L, "creature_get_player",          luaCreatureGetPlayer);
+
+    lua_pushliteral(L, "rules_init");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        fprintf(stderr, "error calling rules_init: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
 }
 
 void player_shutdown() {

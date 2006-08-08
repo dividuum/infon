@@ -72,8 +72,7 @@ int main(int argc, char *argv[]) {
     lua_dblibopen(L);
     lua_mathlibopen(L);
 
-    lua_dofile(L, "config.lua");
-    lua_dofile(L, "server.lua");
+    lua_dofile(L, "infond.lua");
 
     world_init();
     server_init();
