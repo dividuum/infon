@@ -92,7 +92,6 @@ static void sprite_load_thought() {
                 pixels[y * 16 + x] = (pixel & 0xFFFFFF00) | (int)((pixel & 0xFF) / 3);
             }
         }
-
     }
 }
 

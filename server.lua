@@ -221,7 +221,7 @@ function Client:showscores()
     self:writeln("Scores | Creatures | Time |     Mem | CPU | Name")
     self:writeln("-------+-----------+------+---------+-----+-------------")
     for i,player in ipairs(players) do 
-        self:writeln(string.format("%6d | %9dm| %4d | %7d | %3d%%| %s",
+        self:writeln(string.format("%6d | %9d | %4dm| %7d | %3d%%| %s",
                                    player.score,
                                    player.creatures,
                                    player.age,

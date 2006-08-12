@@ -251,8 +251,13 @@ function world_init()
 end
 
 function world_add_food_by_worldcoord(x, y, amount)
-    tx, ty = world_pos_to_tile(x, y)
-    return world_add_food(tx, ty, amount)
+    return world_add_food(x / TILE_WIDTH, y / TILE_HEIGHT, amount)
+end
+
+function world_find_digged_worldcoord()
+    local x, y = world_find_digged()
+    return x * TILE_WIDTH  + TILE_WIDTH  / 2, 
+           y * TILE_HEIGHT + TILE_HEIGHT / 2
 end
 
 -----------------------------------------------------------
@@ -304,7 +309,9 @@ function reset()
     for n = 0, MAXPLAYERS - 1 do
         pcall(player_set_score, n, 0)
     end
-    wall("Game restarted")
+    scroller_add("About to restart on map " .. map)
+    wall("About to restart on map " .. map)
+    end_round()
 end
 
 function kickall()

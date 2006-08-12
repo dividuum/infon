@@ -168,7 +168,7 @@ void world_find_plain(int *x, int *y) {
     }
 }
 
-void world_send_initial_update(client_t *client) {
+void world_send_info(client_t *client) {
     packet_t packet;
     packet_init(&packet, PACKET_WORLD_INFO);
     packet_write08(&packet, world_w);
@@ -176,6 +176,10 @@ void world_send_initial_update(client_t *client) {
     packet_write08(&packet, koth_x);
     packet_write08(&packet, koth_y);
     server_send_packet(&packet, client);
+}
+
+void world_send_initial_update(client_t *client) {
+    world_send_info(client);
 
     for (int x = 0; x < world_w; x++) {
         for (int y = 0; y < world_h; y++) {
@@ -231,20 +235,11 @@ static int luaWorldFindDigged(lua_State *L) {
     return 2;
 }
 
-static int luaWorldPosToTile(lua_State *L) {
-    int x = luaL_checklong(L, 1);
-    int y = luaL_checklong(L, 2);
-    lua_pushnumber(L, X_TO_TILEX(x));
-    lua_pushnumber(L, Y_TO_TILEY(y));
-    return 2;
-}
-
 void world_init() {
     lua_register(L, "world_dig",            luaWorldDig);
     lua_register(L, "world_add_food",       luaWorldAddFood);
     lua_register(L, "world_is_walkable",    luaWorldWalkable);
     lua_register(L, "world_find_digged",    luaWorldFindDigged);
-    lua_register(L, "world_pos_to_tile",    luaWorldPosToTile);
 
     lua_pushnumber(L, SOLID);
     lua_setglobal(L, "SOLID"); 
@@ -254,6 +249,12 @@ void world_init() {
 
     lua_pushnumber(L, WATER);
     lua_setglobal(L, "WATER"); 
+
+    lua_pushnumber(L, TILE_WIDTH);
+    lua_setglobal(L, "TILE_WIDTH"); 
+    
+    lua_pushnumber(L, TILE_HEIGHT);
+    lua_setglobal(L, "TILE_HEIGHT"); 
     
     lua_pushliteral(L, "world_init");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -284,6 +285,9 @@ void world_init() {
 
     map  =  malloc(world_w * world_h * sizeof(maptile_t));
     memset(map, 0, world_w * world_h * sizeof(maptile_t));
+
+    // World Informationen an GUI Clients schicken
+    world_send_info(SEND_BROADCAST);
 
     // Koth Tile freigraben
     world_dig(koth_x, koth_y, PLAIN);

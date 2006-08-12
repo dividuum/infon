@@ -518,6 +518,13 @@ void server_init() {
 
     // XXX: HACK: stdin client starten
     server_accept(STDIN_FILENO, NULL); 
+
+    lua_pushliteral(L, "rules_init");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        fprintf(stderr, "error calling rules_init: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
 }
 
 void server_shutdown() {

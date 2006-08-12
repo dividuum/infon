@@ -157,6 +157,13 @@ int gui_world_y_offset() {
     return offset_y;
 }
 
+void gui_world_destroy() {
+    if (initialized) {
+        free(map);
+        initialized = 0;
+    }
+}
+
 void gui_world_from_network(packet_t *packet) {
     if (!initialized)                       PROTOCOL_ERROR();
     uint8_t x; uint8_t y;
@@ -178,7 +185,9 @@ void gui_world_from_network(packet_t *packet) {
 }
 
 void gui_world_info_from_network(packet_t *packet) {
-    if (initialized)                        PROTOCOL_ERROR();
+    if (initialized)    
+        gui_world_destroy();
+
     uint8_t w, h, kx, ky;
     if (!packet_read08(packet, &w))         PROTOCOL_ERROR(); 
     if (!packet_read08(packet, &h))         PROTOCOL_ERROR(); 
@@ -187,12 +196,11 @@ void gui_world_info_from_network(packet_t *packet) {
     
     world_w = w;
     world_h = h;
+    koth_x  = kx;
+    koth_y  = ky;
 
     if (koth_x >= world_w)                  PROTOCOL_ERROR();
     if (koth_y >= world_h)                  PROTOCOL_ERROR();
-
-    koth_x  = kx;
-    koth_y  = ky;
 
     map  =  malloc(world_w * world_h * sizeof(maptile_t));
     memset(map, 0, world_w * world_h * sizeof(maptile_t));
@@ -217,9 +225,6 @@ void gui_world_init() {
 }
 
 void gui_world_shutdown() {
-    if (initialized) {
-        free(map);
-        initialized = 0;
-    }
+    gui_world_destroy();
 }
 

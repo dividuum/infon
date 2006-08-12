@@ -45,3 +45,19 @@ function onCreatureKilled(victim, killer)
         end
     end
 end
+
+function onPlayerCreated(player)
+    local x, y
+    x, y = world_find_digged_worldcoord()
+    creature_spawn(player, nil, x, y, CREATURE_BIG)
+    x, y = world_find_digged_worldcoord()
+    creature_spawn(player, nil, x, y, CREATURE_SMALL)
+end
+
+function onPlayerAllCreaturesDied(player)
+    local x, y
+    x, y = world_find_digged_worldcoord()
+    creature_spawn(player, nil, x, y, CREATURE_SMALL)
+    x, y = world_find_digged_worldcoord()
+    creature_spawn(player, nil, x, y, CREATURE_SMALL)
+end

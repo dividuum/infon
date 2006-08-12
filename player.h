@@ -74,7 +74,6 @@ void        player_writeto(player_t *player, const void *data, size_t size);
 
 void        player_set_name(player_t *player, const char *name);
 player_t   *player_create(const char *pass);
-void        player_mark_for_kill(player_t *player);
 
 void        player_think();
 
@@ -87,6 +86,7 @@ void        player_send_initial_update(client_t *client);
 void        player_to_network(player_t *player, int dirtymask, client_t *client);
 
 void        player_init();
+void        player_round_start();
 void        player_shutdown();
 
 #endif
