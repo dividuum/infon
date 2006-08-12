@@ -42,7 +42,7 @@ typedef struct gui_creature_s {
     int             player;
 
     int             dir;
-    int             type;
+    creature_type   type;
     int             food;
     int             health;
     int             target;

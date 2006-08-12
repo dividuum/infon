@@ -209,23 +209,27 @@ function Client:showscores()
                 name        = player_get_name(n),
                 score       = player_score(n),
                 creatures   = player_num_creatures(n),
-                age         = (game_time() - player_spawntime(n)) / 1000 / 60
+                age         = (game_time() - player_spawntime(n)) / 1000 / 60,
+                mem         = player_get_used_mem(n),
+                cpu         = player_get_used_cpu(n)
             })
         end
     end
     table.sort(players, function (a,b) 
         return a.score > b.score
     end)
-    self:writeln("Scores | Creatures | Time | Name")
-    self:writeln("-------+-----------+------+----------")
+    self:writeln("Scores | Creatures | Time |     Mem | CPU | Name")
+    self:writeln("-------+-----------+------+---------+-----+-------------")
     for i,player in ipairs(players) do 
-        self:writeln(string.format("%6d | %9d | %4d | %s",
+        self:writeln(string.format("%6d | %9dm| %4d | %7d | %3d%%| %s",
                                    player.score,
                                    player.creatures,
                                    player.age,
+                                   player.mem,
+                                   player.cpu,
                                    player.name))
     end
-    self:writeln("-------+-----------+------+----------")
+    self:writeln("-------+-----------+------+---------+-----+-------------")
 end
 
 function Client:mainmenu()

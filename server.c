@@ -222,15 +222,17 @@ void server_start_compression(client_t *client) {
     if (client->compress)
         return;
 
-    packet_t packet;
-    packet_init(&packet, PACKET_START_COMPRESS);
-    server_send_packet(&packet, client);
-
     client->strm.zalloc = Z_NULL;
     client->strm.zfree  = Z_NULL;
     client->strm.opaque = NULL;
-    if (deflateInit(&client->strm, 9) != Z_OK)
-        die("cannot alloc new zstream");
+    if (deflateInit(&client->strm, 9) != Z_OK) {
+        fprintf(stderr, "cannot alloc new zstream\n");
+        return;
+    }
+
+    packet_t packet;
+    packet_init(&packet, PACKET_START_COMPRESS);
+    server_send_packet(&packet, client);
     client->compress  = 1;
 }
 
@@ -376,7 +378,10 @@ static client_t *client_get_checked_lua(lua_State *L, int idx) {
 
 static int luaClientWrite(lua_State *L) {
     size_t msglen; const char *msg = luaL_checklstring(L, 2, &msglen);
-    server_writeto(client_get_checked_lua(L, 1), msg, msglen);
+    client_t *client = client_get_checked_lua(L, 1);
+    // Nur schreiben, falls der Client kein GUI Client
+    if (!client->is_gui_client)
+        server_writeto(client, msg, msglen);
     return 0;
 }
 
@@ -418,13 +423,13 @@ static int luaGameTime(lua_State *L) {
 }
 
 static int luaClientExecute(lua_State *L) {
-    const char *code = luaL_checkstring(L, 2); // XXX: Binary Safe machen
+    size_t codelen; const char *code = luaL_checklstring(L, 2, &codelen);
     client_t *client = client_get_checked_lua(L, 1);
     if (!client->player) 
         luaL_error(L, "client %d has no player", client_num(client));
     char buf[128];
     snprintf(buf, sizeof(buf), "input from client %d", client_num(client));
-    player_execute_client_lua(client->player, code, buf);
+    player_execute_client_lua(client->player, code, codelen, buf);
     return 0;
 }
 

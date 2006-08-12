@@ -189,6 +189,8 @@ LUA_API void  lua_setcycles(lua_State *L, int cycles);
 LUA_API int   lua_getcycles(lua_State *L);
 LUA_API void  lua_consumecycles(lua_State *L, int cycles);
 LUA_API void  lua_setmaxmem(lua_State *L, int blocks);
+LUA_API int   lua_getusedmem(lua_State *L);
+
 LUA_API void  lua_call (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_call_yp (lua_State *L, int nargs, int nresults, int tailcall);
 LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);

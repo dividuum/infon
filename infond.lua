@@ -100,6 +100,10 @@ function Client:turn_into_guiclient()
     client_make_guiclient(self.fd)
 end
 
+function Client:is_guiclient()
+    return client_is_gui_client(self.fd)
+end
+
 function Client:attach_to_player(playerno, pass)
     local ok, ret = pcall(client_attach_to_player, self.fd, playerno, pass)
     if not ok then

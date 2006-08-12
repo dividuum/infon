@@ -27,7 +27,6 @@
 
 #include "global.h"
 #include "world.h"
-#include "sprite.h"
 #include "path.h"
 #include "misc.h"
 

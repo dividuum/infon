@@ -24,14 +24,18 @@
 #define MAXCREATURES       256
 
 #define CREATURE_COLORS     16
+
+typedef enum {
+    CREATURE_SMALL,
+    CREATURE_BIG,
+    CREATURE_FLYER,
+    CREATURE_UNUSED
+} creature_type;
 #define CREATURE_TYPES       4
+
 #define CREATURE_DIRECTIONS 32
+
 #define CREATURE_ANIMS       2
-
-#define CREATURE_STATES      8
-
-#define CREATURE_POS_RESOLUTION   16
-#define CREATURE_SPEED_RESOLUTION  4
 
 typedef enum {
     CREATURE_IDLE,
@@ -43,6 +47,10 @@ typedef enum {
     CREATURE_SPAWN,
     CREATURE_FEED,
 } creature_state;
+#define CREATURE_STATES      8
+
+#define CREATURE_POS_RESOLUTION   16
+#define CREATURE_SPEED_RESOLUTION  4
 
 #define CREATURE_DIRTY_ALIVE        (1 << 0) 
 #define CREATURE_DIRTY_TYPE         (1 << 1)

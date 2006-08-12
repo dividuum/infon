@@ -75,9 +75,10 @@ void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
     luaG_runerror(L, "memory allocation error: block too big");
   else {
     if (size > oldsize && L && G(L)->maxblocks) {
-        if (G(L)->nblocks - oldsize + size > G(L)->maxblocks)
+        if (G(L)->nblocks - oldsize + size > G(L)->maxblocks) {
+            // printf("out of mem: %d used, %d freed, %d alloc'd\n", G(L)->nblocks, oldsize, size);
             luaD_throw(L, LUA_ERRMEM);
-
+        }
     }
     block = l_realloc(block, oldsize, size);
     if (block == NULL) {

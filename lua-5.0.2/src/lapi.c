@@ -754,16 +754,19 @@ LUA_API void lua_setcycles(lua_State *L, int cycles) {
 }
 
 LUA_API int lua_getcycles(lua_State *L) {
+    int ret;
     lua_lock(L);
-    int ret = G(L)->cyclesleft;
+    ret = G(L)->cyclesleft;
     lua_unlock(L);
     return ret;
 }
 
 LUA_API void lua_consumecycles(lua_State *L, int cycles) {
     lua_lock(L);
-    if (!G(L)->cyclesleft)
+    if (!G(L)->cyclesleft) {
+        lua_unlock(L);
         return;
+    }
     G(L)->cyclesleft -= cycles;
     if (G(L)->cyclesleft < 1)
         G(L)->cyclesleft = 1;
@@ -774,6 +777,14 @@ LUA_API void lua_setmaxmem(lua_State *L, int blocks) {
     lua_lock(L);
     G(L)->maxblocks = blocks;
     lua_unlock(L);
+}
+
+LUA_API int lua_getusedmem(lua_State *L) {
+    lu_mem blocks;
+    lua_lock(L);
+    blocks = G(L)->nblocks;
+    lua_unlock(L);
+    return blocks;
 }
 
 LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {

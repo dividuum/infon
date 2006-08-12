@@ -4,8 +4,12 @@
 
 -- Called after the Creature was created. You cannot 
 -- call long-running methods (like moveto) here.
-function Creature:onSpawned()
-    print("Creature " .. self.id .. " spawned")
+function Creature:onSpawned(parent)
+    if parent then
+        print("Creature " .. self.id .. " spawned by " .. parent)
+    else
+        print("Creature " .. self.id .. " spawned")
+    end
 end
 
 

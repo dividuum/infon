@@ -50,6 +50,9 @@ void player_score(player_t *player, int scoredelta, const char *reason) {
                                reason);
                                
     add_to_scroller(buf);
+
+    int oldscore = player->score;
+
     player->score += scoredelta;
 
     if (player->score < PLAYER_KICK_SCORE)
@@ -58,27 +61,39 @@ void player_score(player_t *player, int scoredelta, const char *reason) {
     if (player->score > 9999)
         player->score = 9999;
 
-    player->dirtymask |= PLAYER_DIRTY_SCORE;
+    if (player->score != oldscore)
+        player->dirtymask |= PLAYER_DIRTY_SCORE;
 
     printf("stat: %10d %3d '%10s' %5d: %s\n", game_time, player_num(player), player->name, player->score, reason);
 }
 
-void player_on_creature_spawned(player_t *player, int idx, int points) {
-    player->num_creatures++;
-        
+void player_on_creature_spawned(player_t *player, creature_t *creature, creature_t *parent) {
     lua_pushliteral(player->L, "_spawned_creatures");
     lua_rawget(player->L, LUA_GLOBALSINDEX);         
-    if (!lua_isnil(player->L, -1)) {
-        lua_pushnumber(player->L,  game_round);
-        lua_rawseti(player->L, -2, idx);
-    } else {
+    if (lua_isnil(player->L, -1)) {
         static char msg[] = "cannot locate _spawned_creatures table. did you delete it?\n";
         player_writeto(player, msg, sizeof(msg) - 1);
+    } else {
+        lua_pushnumber(player->L,  parent ? creature_num(parent) : -1);
+        lua_rawseti(player->L, -2, creature_num(creature));
     }
     lua_pop(player->L, 1);
 
-    if (points > 0)
-        player_score(player, points, "Creature Spawned");
+    player->num_creatures++;
+        
+    // Rule Handler aufrufen
+    lua_pushliteral(L, "onCreatureSpawned");
+    lua_rawget(L, LUA_GLOBALSINDEX);         
+    lua_pushnumber(L, creature_num(creature));
+    if (parent)
+        lua_pushnumber(L, creature_num(parent));
+    else
+        lua_pushnil(L);
+    
+    if (lua_pcall(L, 2, 0, 0) != 0) {
+        fprintf(stderr, "error calling onCreaturSpawned: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
 }
 
 void player_on_creature_killed(player_t *player, creature_t *victim, creature_t *killer) {
@@ -326,13 +341,6 @@ static int luaCreatureCheatGiveAll(lua_State *L) {
 }
 #endif
 
-static int luaPlayerGetCPUUsage(lua_State *L) { 
-    get_player();
-    lua_consumecycles(L, 1000);
-    lua_pushnumber(L, player_get_cpu_usage(player));
-    return 1;
-}
-
 static int luaCreatureSetState(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
@@ -352,6 +360,13 @@ static int luaCreatureSetState(lua_State *L) {
             luaL_error(L, "invalid state %d", luaL_checklong(L, 2));
             break;
     }
+    return 1;
+}
+
+static int luaGetCPUUsage(lua_State *L) { 
+    get_player();
+    lua_consumecycles(L, 1000);
+    lua_pushnumber(L, player_get_cpu_usage(player));
     return 1;
 }
 
@@ -400,6 +415,18 @@ static int luaPlayerChangeScore(lua_State *L) {
                  luaL_checklong(L, 2),
                  luaL_checkstring(L, 3));
     return 0;
+}
+
+static int luaCreatureSetFood(lua_State *L) {
+    get_player_and_creature();
+    lua_pushnumber(L, creature_set_food(creature, luaL_checklong(L, 2)));
+    return 1;
+}
+
+static int luaCreatureSetType(lua_State *L) {
+    get_player_and_creature();
+    lua_pushnumber(L, creature_set_type(creature, luaL_checklong(L, 2)));
+    return 1;
 }
 
 
@@ -477,12 +504,12 @@ player_t *player_create(const char *pass) {
     lua_register_player(player, "get_hitpoints",        luaCreatureGetHitpoints);
     lua_register_player(player, "get_attack_distance",  luaCreatureGetAttackDistance);
 
-    lua_register_player(player, "get_cpu_usage",        luaPlayerGetCPUUsage);
-
 #ifdef CHEATS
     lua_register_player(player, "cheat_give_all",       luaCreatureCheatGiveAll);
 #endif
 
+    lua_register_player(player, "get_cpu_usage",        luaGetCPUUsage);
+    
     lua_register(player->L,     "world_size",           luaWorldSize);
     lua_register(player->L,     "game_time",            luaGameTime);
     lua_register(player->L,     "get_koth_pos",         luaGetKothPos);
@@ -665,15 +692,15 @@ int player_detach_client(client_t *client, player_t *player) {
     return 1;
 }
 
-void player_execute_client_lua(player_t *player, const char *source, const char *where) {
-    int status = luaL_loadbuffer(player->L, source, strlen(source), where);
+void player_execute_client_lua(player_t *player, const char *code, size_t codelen, const char *where) {
+    int status = luaL_loadbuffer(player->L, code, codelen, where);
     
     if (status == 0) {
         int base = lua_gettop(player->L);
         lua_pushliteral(player->L, "_TRACEBACK");
         lua_rawget(player->L, LUA_GLOBALSINDEX);
         lua_insert(player->L, base);
-        status = lua_pcall(player->L, 0, 1, base); // Yield() faehig machen?
+        status = lua_pcall(player->L, 0, 1, base);
         lua_remove(player->L, base);
     }
 
@@ -733,9 +760,9 @@ void player_think() {
         {
             int x, y;
             world_find_plain(&x, &y);
-            creature_spawn(player, TILE_XCENTER(x), TILE_YCENTER(y), 0, 0);
+            creature_spawn(player, NULL, TILE_XCENTER(x), TILE_YCENTER(y), 0);
             world_find_plain(&x, &y);
-            creature_spawn(player, TILE_XCENTER(x), TILE_YCENTER(y), 0, 0);
+            creature_spawn(player, NULL, TILE_XCENTER(x), TILE_YCENTER(y), 0);
             //creature_t * first = creature_spawn(player, TILE_XCENTER(world_koth_x()), TILE_YCENTER(world_koth_y()), 1, 0);
             // first->food = creature_max_food(first);
         }
@@ -922,6 +949,16 @@ static int luaPlayerGetName(lua_State *L) {
     return 1;
 }
 
+static int luaPlayerGetUsedMem(lua_State *L) {
+    lua_pushnumber(L, lua_getusedmem(player_get_checked_lua(L, 1)->L));
+    return 1;
+}
+
+static int luaPlayerGetCPUUsage(lua_State *L) {
+    lua_pushnumber(L, player_get_cpu_usage(player_get_checked_lua(L, 1)));
+    return 1;
+}
+
 static int luaPlayerSetScore(lua_State *L) {
     player_t *player = player_get_checked_lua(L, 1); 
     int newscore = luaL_checklong(L, 2);
@@ -952,6 +989,8 @@ void player_init() {
     lua_register(L, "player_exists",                luaPlayerExists);
     lua_register(L, "player_spawntime",             luaPlayerSpawnTime);
     lua_register(L, "player_change_score",          luaPlayerChangeScore);
+    lua_register(L, "player_get_used_mem",          luaPlayerGetUsedMem);
+    lua_register(L, "player_get_used_cpu",          luaPlayerGetCPUUsage);
 
     lua_register(L, "creature_get_pos",             luaCreatureGetPos);
     lua_register(L, "creature_get_state",           luaCreatureGetState);
@@ -966,6 +1005,9 @@ void player_init() {
     lua_register(L, "creature_get_hitpoints",       luaCreatureGetHitpoints);
     lua_register(L, "creature_get_attack_distance", luaCreatureGetAttackDistance);
     lua_register(L, "creature_get_player",          luaCreatureGetPlayer);
+
+    lua_register(L, "creature_set_food",            luaCreatureSetFood);
+    lua_register(L, "creature_set_type",            luaCreatureSetType);
 
     lua_pushliteral(L, "rules_init");
     lua_rawget(L, LUA_GLOBALSINDEX);

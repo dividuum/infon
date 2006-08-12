@@ -1,3 +1,11 @@
+function onCreatureSpawned(creature, parent)
+    if parent then
+        local parent_player = creature_get_player(parent)
+        player_change_score(parent_player, 10, "Spawned a creature")
+        creature_set_food(creature, 1000)
+    end
+end
+
 function onCreatureKilled(victim, killer) 
     local victim_food        = creature_get_food(victim)
     local victim_x, victim_y = creature_get_pos(victim)

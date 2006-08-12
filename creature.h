@@ -29,48 +29,51 @@
 #include "common_creature.h"
 
 typedef struct creature_s {
-    int         x;
-    int         y;
-    int         type;
-    int         food;
-    int         health;
-    player_t   *player;
-    int         target;
-    pathnode_t *path;
-    int         convert_food;
-    int         convert_type;
-    int         spawn_food;
-    creature_state state;
+    int             x;
+    int             y;
+    creature_type   type;
+    int             food;
+    int             health;
+    player_t       *player;
+    int             target;
+    pathnode_t     *path;
+    int             convert_food;
+    creature_type   convert_type;
+    int             spawn_food;
+    creature_state  state;
 
-    int         age_action_deltas;
-    int         spawn_time;
+    int             age_action_deltas;
+    int             spawn_time;
 
-    char message[9];
-    unsigned char dirtymask;
+    char            message[9];
+    unsigned char   dirtymask;
 
-    int         network_food_health;
-    int         network_state;
-    int         network_path_x;
-    int         network_path_y;
-    int         network_speed;
-    int         network_target;
+    int             network_food_health;
+    int             network_state;
+    int             network_path_x;
+    int             network_path_y;
+    int             network_speed;
+    int             network_target;
 
-    int         network_last_x;
-    int         network_last_y;
+    // Letzte uebermittelte Koordinate (fuer Delta Kompression)
+    int             network_last_x;
+    int             network_last_y;
 } creature_t;
 
 int         creature_num(const creature_t *creature);
 creature_t *creature_by_num(int creature_num);
 creature_t *creature_get_checked_lua(lua_State *L, int idx);
 
-creature_t *creature_spawn(player_t *player, int x, int y, int type, int points);
+creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, creature_type type);
 void        creature_kill(creature_t *creature, creature_t *killer);
 
 int         creature_set_path(creature_t *creature, int x, int y);
 int         creature_set_target(creature_t *creature, int target);
 int         creature_set_state(creature_t *creature, int state);
-int         creature_set_conversion_type(creature_t *creature, int type);
+int         creature_set_conversion_type(creature_t *creature, creature_type type);
 void        creature_set_message(creature_t *creature, const char *message);
+int         creature_set_food(creature_t *creature, int food);
+int         creature_set_type(creature_t *creature, creature_type type);
 
 creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr);
 int         creature_max_health(const creature_t *creature);

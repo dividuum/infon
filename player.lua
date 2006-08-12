@@ -343,7 +343,10 @@ function player_think()
     end
 
     -- Erzeugte Kreaturen
-    for id, round in _spawned_creatures do
+    for id, parent in _spawned_creatures do
+        if parent == -1 then
+           parent = nil
+        end
         local creature = {}
         setmetatable(creature, {
             __index = function(self, what)
@@ -355,7 +358,7 @@ function player_think()
         creatures[id] = creature
         creature.id = id
         if creature.onSpawned then 
-            local ok, msg = pcall(creature.onSpawned, creature)
+            local ok, msg = pcall(creature.onSpawned, creature, parent)
             if not ok then
                 print(msg)
             end
