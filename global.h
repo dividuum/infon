@@ -26,8 +26,8 @@
 extern lua_State *L;
 
 extern int game_time;
-extern int game_round;
 extern int game_paused;
+extern int game_exit;
 
 #define GAME_NAME "Infon Battle Arena 'Network Edition'"
 
@@ -41,6 +41,6 @@ extern int game_paused;
 #define PATHFIND_AREA_MERGE 
 
 // Netzwerk Protokoll
-#define PROTOCOL_VERSION 5
+#define PROTOCOL_VERSION 6
 
 #endif

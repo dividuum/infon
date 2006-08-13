@@ -80,10 +80,6 @@ void gui_scroller_draw() {
     char saved = *end; *end = '\0';
     video_write(x, video_height() - 15, EVBUFFER_DATA(scrollbuffer));
     *end = saved;
-    
-    // Bitte drinlassen. Danke
-    if (now / 1000 % 60 < 5) 
-        video_draw(video_width() - 190, 20, sprite_get(SPRITE_LOGO));
 }
 
 void gui_scroller_from_network(packet_t *packet) {

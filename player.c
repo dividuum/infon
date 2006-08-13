@@ -64,6 +64,16 @@ void player_score(player_t *player, int scoredelta, const char *reason) {
     if (player->score != oldscore)
         player->dirtymask |= PLAYER_DIRTY_SCORE;
 
+    // Rule Handler aufrufen
+    lua_pushliteral(L, "onPlayerScoreChange");
+    lua_rawget(L, LUA_GLOBALSINDEX);         
+    lua_pushnumber(L, player_num(player));
+    lua_pushnumber(L, player->score);
+    if (lua_pcall(L, 2, 0, 0) != 0) {
+        fprintf(stderr, "error calling onPlayerScoreChange: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
     printf("stat: %10d %3d '%10s' %5d: %s\n", game_time, player_num(player), player->name, player->score, reason);
 }
 
@@ -775,7 +785,7 @@ void player_think() {
 
         // Kein Client mehr da?
         if (player->num_clients == 0 && 
-            player->all_disconnected_time + NO_PLAYER_DISCONNECT < game_time) 
+            player->all_disconnected_time + NO_CLIENT_KICK_TIME < game_time) 
         {
             player_destroy(player);
             continue;
@@ -976,8 +986,10 @@ static int luaPlayerGetCPUUsage(lua_State *L) {
 static int luaPlayerSetScore(lua_State *L) {
     player_t *player = player_get_checked_lua(L, 1); 
     int newscore = luaL_checklong(L, 2);
-    player->score = 0;
-    player_score(player, newscore, "changed by admin");
+    int diff = newscore - player->score;
+    static char buf[128];
+    snprintf(buf, sizeof(buf), "manually set to %d", newscore);
+    player_score(player, diff, buf);
     return 0;
 }
 

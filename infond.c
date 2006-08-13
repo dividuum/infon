@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/time.h>
 #include <time.h>
 
 #include <lualib.h>
@@ -32,86 +31,17 @@
 #include "misc.h"
 #include "server.h"
 #include "world.h"
-#include "creature.h"
-#include "scroller.h"
+#include "game.h"
+#include "player.h"
 
 lua_State *L;
 
 int game_time   = 0;
-int game_round  = 0;
 int game_paused = 0;
-
-int should_end_round = 0;
-int should_exit      = 0;
+int game_exit   = 0;
 
 void sighandler(int sig) {
-    should_exit = 1;
-}
-
-static struct timeval start;
-
-int get_tick() {
-    static struct timeval now;
-    gettimeofday(&now , NULL);
-    return (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
-}
-
-void round() {
-    should_end_round = 0;
-    
-    world_init();
-    creature_init();
-
-    // Initialer Worldtick
-    world_tick();
-
-    // Beginn der Zeitrechnung...
-    int lasttick = 0;
-    gettimeofday(&start, NULL);
-
-    player_round_start();
-    
-    while (!should_exit && !should_end_round) {
-        int tick  = get_tick();
-        int delta = tick - lasttick;
-
-        if (delta < 0 || delta > 1000) {
-            // Timewarp?
-            lasttick = tick;
-            continue;
-        } else if (delta < 100) {
-            usleep(max(95000 - delta * 1000, 1000));
-            continue;
-        }
-
-        lasttick = tick;
-
-        if (!game_paused) {
-            // World Zeugs
-            world_tick();
-
-            // Spieler Programme ausfuehren
-            player_think();
-
-            // Viecher bewegen
-            creature_moveall(delta);
-
-            // Zeit weiterlaufen lassen
-            game_time += delta;
-            game_round++;
-        }
-        
-        // IO Lesen/Schreiben
-        server_tick();
-    }
-    
-    creature_shutdown();
-    world_shutdown();
-}
-
-static int luaEndRound(lua_State *L) {
-    should_end_round = 1;
-    return 0;
+    game_exit = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -130,13 +60,13 @@ int main(int argc, char *argv[]) {
     lua_mathlibopen(L);
 
     lua_dofile(L, "infond.lua");
-    lua_register(L, "end_round", luaEndRound);
 
+    game_init();
     server_init();
     player_init();
 
-    while (!should_exit) {
-        round();
+    while (!game_exit) {
+        game_one_round();
     }
 
     player_shutdown();

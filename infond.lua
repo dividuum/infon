@@ -311,7 +311,7 @@ function reset()
     end
     scroller_add("About to restart on map " .. map)
     wall("About to restart on map " .. map)
-    end_round()
+    game_end()
 end
 
 function kickall()

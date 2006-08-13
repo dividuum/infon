@@ -113,11 +113,18 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         when 6:
             puts  "world info %dx%d koth: %d,%d" % [socket.read8, socket.read8, socket.read8, socket.read8]
         when 7: 
-            puts "smile %d" % socket.read16
+            puts  "smile %d" % socket.read16
+        when 8: 
+            puts  "game info time:%d" % socket.read32
+        when 9: 
+            puts  "round tick, delta=%d" % socket.read8
+        when 10:
+            puts  "intermission: %s" % socket.readXX(len)
         when 32:
             socket.write("guiclient\n")
             puts  "welcome: %s"     % socket.read(len).delete("\n").strip
         when 254:
+            puts "compression start"
             socket.compress = true
         when 255:
             puts  "server protocol version %d" % socket.read8

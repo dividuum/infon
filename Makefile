@@ -61,11 +61,11 @@ linux-server-dist: infond
 	strip infond infond-static
 	tar cfvz infond-linux-r$(REVISION).tgz README infond infond-static *.lua level/*.lua rules/*.lua
 
-infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o 
+infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 
-$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o video.o sprite.o $(RES)
+$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o gui_game.o video.o sprite.o $(RES)
 	$(CC) $^ $(GUI_LDFLAGS) -o $@ 
 
 infon.res: infon.rc

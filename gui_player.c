@@ -45,6 +45,36 @@ static int gui_player_num(gui_player_t *player) {
     return player - players;
 }
 
+void gui_player_draw_scores(int xcenter, int y) {
+    int n;
+    int num_players = 0;
+    gui_player_t *sorted[MAXPLAYERS];
+
+    for (n = 0; n < MAXPLAYERS; n++) {
+        gui_player_t *player = &players[n];
+        if (!PLAYER_USED(player))
+            continue;
+        sorted[num_players++] = player;
+    }
+    qsort(sorted, num_players, sizeof(gui_player_t*), player_sort_by_score);
+
+    for (n = 0; n < num_players; n++) {
+        gui_player_t *player = sorted[n];
+        video_draw(xcenter - 48,
+                   y + 14 * n,
+                   sprite_get(CREATURE_SPRITE(gui_player_num(player),
+                                              0, 
+                                              (SDL_GetTicks() / 60) % CREATURE_DIRECTIONS,
+                                              (SDL_GetTicks() / 123) % 2)));
+        
+        static char buf[40];
+        snprintf(buf, sizeof(buf), "%2d.     %4d %s", n + 1, player->score, player->name);
+        video_write(xcenter - 70,
+                    y + 14 * n + 1,
+                    buf);
+    }
+}
+
 void gui_player_draw() {
     static int lastturn = 0;
     static int page = 0;
@@ -104,8 +134,8 @@ void gui_player_draw() {
                    video_height() - 32, 
                    sprite_get(CREATURE_SPRITE(gui_player_num(player),
                                               0, 
-                                              (SDL_GetTicks() / 1000) % CREATURE_DIRECTIONS,
-                                              (SDL_GetTicks() /  123) % 2)));
+                                              (SDL_GetTicks() /  64) % CREATURE_DIRECTIONS,
+                                              (SDL_GetTicks() / 128) % 2)));
         // CPU Auslastung Anzeigen
         const int cpu = 80 * player->cpu_usage / 100;
         video_rect(player_displayed * 128 + 16, 

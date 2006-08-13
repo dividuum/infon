@@ -29,14 +29,11 @@
 #include "video.h"
 #include "sprite.h"
 #include "misc.h"
-
-#include "gui_creature.h"
+#include "gui_game.h"
 #include "gui_world.h"
-#include "gui_scroller.h"
-#include "gui_player.h"
+#include "gui_creature.h"
 
 int game_time   = 0;
-int game_round  = 0;
 
 static int running = 1;
 
@@ -91,14 +88,11 @@ int main(int argc, char *argv[]) {
 
     video_init(width, height, fullscreen);
     sprite_init();
-    gui_scroller_init();
-    gui_world_init();
-    gui_player_init();
-    gui_creature_init();
+
+    gui_game_init();
 
     Uint32 lastticks = SDL_GetTicks();
     while (running && client_is_connected()) {
-        game_round++;
         Uint32 nowticks = SDL_GetTicks();
         Uint32 delta = nowticks - lastticks;
 
@@ -156,21 +150,13 @@ int main(int argc, char *argv[]) {
 
         // IO Lesen/Schreiben
         client_tick();
+
         gui_creature_move(delta);
 
-        // Anzeigen
-        gui_world_draw();
-        gui_creature_draw();
-        gui_scroller_draw();
-        gui_player_draw();
-
-        video_flip();
+        gui_game_draw();
     }
     
-    gui_creature_shutdown();
-    gui_player_shutdown();
-    gui_world_shutdown();
-    gui_scroller_shutdown();
+    gui_game_shutdown();
 
     sprite_shutdown();
     video_shutdown();

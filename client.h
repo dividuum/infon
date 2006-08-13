@@ -21,10 +21,11 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-void client_tick();
-int  client_is_connected();
+void  client_tick();
+int   client_is_connected();
+char *client_intermission();
 
-void client_init(char *addr);
-void client_shutdown();
+void  client_init(char *addr);
+void  client_shutdown();
 
 #endif

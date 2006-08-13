@@ -1,3 +1,46 @@
+function onNewRound()
+    round_end_text = nil
+    round_end_time = nil
+end
+
+function onRound()
+    if not round_end_text and time_limit and game_time() > time_limit then
+        local maxscore   = -1000000
+        local winner     = nil
+        local num_winner = 0
+        for n = 0, MAXPLAYERS - 1 do 
+            if player_exists(n) then
+                local score = player_score(n)
+                if score > maxscore then 
+                    winner     = n
+                    maxscore   = score
+                    num_winner = 1
+                elseif score == maxscore then
+                    num_winner = num_winner + 1
+                end
+            end
+        end
+        if not winner then
+            round_end_text = "Timelimit hit"
+        elseif num_winner == 1 then
+            round_end_text = "Timelimit hit. " .. player_get_name(winner) .. " wins the game!"
+        end
+    end
+    
+    if round_end_text then 
+        if not round_end_time then
+            round_end_time = game_time()
+            scroller_add(round_end_text)
+            set_intermission(round_end_text)
+        else
+            if round_end_time + 10000 < game_time() then
+                set_intermission("")
+                reset()
+            end
+        end
+    end
+end
+
 function onCreatureSpawned(creature, parent)
     if parent then
         local parent_player = creature_get_player(parent)
@@ -60,4 +103,10 @@ function onPlayerAllCreaturesDied(player)
     creature_spawn(player, nil, x, y, CREATURE_SMALL)
     x, y = world_find_digged_worldcoord()
     creature_spawn(player, nil, x, y, CREATURE_SMALL)
+end
+
+function onPlayerScoreChange(player, score)
+    if not round_end_text and score_limit and score >= score_limit then
+        round_end_text = "player " .. player_get_name(player) .. " wins the game!"
+    end 
 end

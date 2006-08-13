@@ -40,7 +40,7 @@
 #include "world.h"
 #include "listener.h"
 #include "misc.h"
-#include "scroller.h"
+#include "game.h"
 #include "creature.h"
 
 #define CLIENT_USED(client) ((client)->in_buf)
@@ -69,7 +69,7 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     else
         sprintf(address, "local console");
 
-    lua_pushliteral(L, "on_new_client");  /* funcname */
+    lua_pushliteral(L, "on_new_client");/* funcname */
     lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
     lua_pushstring(L, address);         /* addr     */
 
@@ -347,6 +347,7 @@ static void initial_update(client_t *client) {
 
     server_start_compression(client);
 
+    game_send_initial_update(client);
     world_send_initial_update(client);
     player_send_initial_update(client);
     creature_send_initial_update(client);
@@ -410,18 +411,6 @@ static int luaClientIsGuiClient(lua_State *L) {
     return 1;
 }
 
-static int luaGameInfo(lua_State *L) {
-    lua_pushnumber(L, game_time);
-    lua_pushnumber(L, world_width());
-    lua_pushnumber(L, world_height());
-    return 3;
-}
-
-static int luaGameTime(lua_State *L) {
-    lua_pushnumber(L, game_time);
-    return 1;
-}
-
 static int luaClientExecute(lua_State *L) {
     size_t codelen; const char *code = luaL_checklstring(L, 2, &codelen);
     client_t *client = client_get_checked_lua(L, 1);
@@ -442,11 +431,6 @@ static int luaClientPlayerNumber(lua_State *L) {
         lua_pushnumber(L, player_num(client->player));
     }
     return 1;
-}
-
-static int luaScrollerAdd(lua_State *L) {
-    add_to_scroller(luaL_checkstring(L, 1));
-    return 0;
 }
 
 static int luaClientDisconnect(lua_State *L) {
@@ -503,28 +487,8 @@ void server_init() {
     lua_register(L, "client_player_number",     luaClientPlayerNumber);
     lua_register(L, "client_disconnect",        luaClientDisconnect);
 
-    lua_register(L, "scroller_add",             luaScrollerAdd);
-
-    lua_register(L, "game_info",                luaGameInfo);
-    lua_register(L, "game_time",                luaGameTime);
-
-    lua_pushliteral(L, "MAXPLAYERS");
-    lua_pushnumber(L,   MAXPLAYERS);
-    lua_settable(L, LUA_GLOBALSINDEX);
-
-    lua_pushliteral(L, "GAME_NAME");
-    lua_pushliteral(L, GAME_NAME);
-    lua_rawset(L, LUA_GLOBALSINDEX);
-
     // XXX: HACK: stdin client starten
     server_accept(STDIN_FILENO, NULL); 
-
-    lua_pushliteral(L, "rules_init");
-    lua_rawget(L, LUA_GLOBALSINDEX);
-    if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling rules_init: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
 }
 
 void server_shutdown() {

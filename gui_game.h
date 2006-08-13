@@ -18,32 +18,15 @@
 
 */
 
-#ifndef GUI_PLAYER_H
-#define GUI_PLAYER_H
-
-#include <string.h>
+#ifndef GUI_GAME_H
+#define GUI_GAME_H
 
 #include "packet.h"
 
-typedef struct gui_player_s {
-    int           used;
-    char          name[16];
-    int           color;
+void gui_game_intermission_from_network(packet_t *packet);
+void gui_game_draw();
 
-    int           score;
-    int           cpu_usage;
-
-    unsigned char dirtymask;
-} gui_player_t;
-
-void        gui_player_draw();
-void        gui_player_draw_scores(int xcenter, int y);
-
-/* Network */
-void        gui_player_from_network(packet_t *packet);
-void        gui_player_king_from_network(packet_t *packet);
-
-void        gui_player_init();
-void        gui_player_shutdown();
+void gui_game_init();
+void gui_game_shutdown();
 
 #endif

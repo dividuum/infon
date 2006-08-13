@@ -104,7 +104,7 @@ int packet_write32(packet_t *packet, uint32_t data) {
         printf("packet too full\n");
         return 0;
     }
-    *((uint16_t*)&packet->data[packet->offset]) = htonl(data);
+    *((uint32_t*)&packet->data[packet->offset]) = htonl(data);
     packet->offset += 4;
     return 1;
 }

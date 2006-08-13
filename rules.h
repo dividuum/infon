@@ -26,7 +26,7 @@
 
 #define RESTRICTIVE                      0
 
-#define NO_PLAYER_DISCONNECT   (120 * 1000)
+#define NO_CLIENT_KICK_TIME    (120 * 1000)
 #define PLAYER_KICK_SCORE            (-500)
 
 #define LUA_MAX_MEM       (8 * 1024 * 1024)

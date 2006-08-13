@@ -49,6 +49,7 @@
 #include "gui_world.h"
 #include "gui_scroller.h"
 #include "gui_creature.h"
+#include "gui_game.h"
 
 static int              clientfd;
 static struct event     rd_event;
@@ -117,6 +118,12 @@ static void client_handle_packet(packet_t *packet) {
             break;
         case PACKET_CREATURE_SMILE:
             gui_creature_smile_from_network(packet);
+            break;
+        case PACKET_GAME_INFO:
+        case PACKET_ROUND:
+            break;
+        case PACKET_INTERMISSION:
+            gui_game_intermission_from_network(packet);
             break;
         case PACKET_WELCOME_MSG:    
             client_writeto("guiclient\n", 10);
