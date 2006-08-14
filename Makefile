@@ -51,7 +51,7 @@ source-dist: distclean
 
 win32-client-dist: $(GUI_EXECUTABLE)
 	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
-	zip      infon-win32-r$(REVISION).zip README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
+	zip      infon-win32-r$(REVISION).zip README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png example.demo
 
 linux-client-dist: $(GUI_EXECUTABLE)
 	strip $(GUI_EXECUTABLE)

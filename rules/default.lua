@@ -32,11 +32,9 @@ function onRound()
             round_end_time = game_time()
             scroller_add(round_end_text)
             set_intermission(round_end_text)
-        else
-            if round_end_time + 10000 < game_time() then
-                set_intermission("")
-                reset()
-            end
+        elseif round_end_time + 10000 < game_time() then
+            set_intermission("")
+            reset()
         end
     end
 end
@@ -92,7 +90,7 @@ end
 function onPlayerCreated(player)
     local x, y
     x, y = world_find_digged_worldcoord()
-    creature_spawn(player, nil, x, y, CREATURE_BIG)
+    creature_spawn(player, nil, x, y, CREATURE_SMALL)
     x, y = world_find_digged_worldcoord()
     creature_spawn(player, nil, x, y, CREATURE_SMALL)
 end

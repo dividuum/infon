@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     srand(time(0));
 
-    client_init(argv[1]);
+    client_init(argv[1], NULL);
 
     video_init(width, height, fullscreen);
     sprite_init();

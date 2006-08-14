@@ -30,6 +30,7 @@
 #include <sys/ioctl.h>
 #include <netdb.h>
 #endif
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -38,6 +39,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <SDL.h>
 #include <event.h>
 #include <zlib.h>
 
@@ -58,6 +60,11 @@ static struct evbuffer *in_buf;
 static struct evbuffer *packet_buf;
 static struct evbuffer *out_buf;
 
+static int              is_file_source;
+static Uint32           next_demo_read = 0;
+
+// static int           demo_write_fd;
+
 static int              compression;
 static z_stream         strm;
 
@@ -72,16 +79,31 @@ static void client_read_handshake(packet_t *packet) {
         PROTOCOL_ERROR();
 
     if (serverprotocol != PROTOCOL_VERSION) {
-        die("server has %s protocol version %d. I have %d.\n"
+        die("%s has %s protocol version %d. I have %d.\n"
             "visit the infon homepage for more information.",
+               is_file_source ? "demo" : "server",
                serverprotocol < PROTOCOL_VERSION ? "older" : "newer",
                serverprotocol,  PROTOCOL_VERSION);
     }
 }
 
+static void client_read_round_info(packet_t *packet) {
+    uint8_t delta;
+
+    if (!packet_read08(packet, &delta)) 
+        PROTOCOL_ERROR();
+
+    next_demo_read = SDL_GetTicks() + delta;
+}
+
 static void client_start_compression() {
     if (compression)
         PROTOCOL_ERROR();
+
+    // Bei Demofiles Kompressionstart ignorieren,
+    // da diese unkomprimiert abgelegt werden.
+    if (is_file_source)
+        return;
 
     strm.zalloc = Z_NULL;
     strm.zfree  = Z_NULL;
@@ -120,13 +142,16 @@ static void client_handle_packet(packet_t *packet) {
             gui_creature_smile_from_network(packet);
             break;
         case PACKET_GAME_INFO:
+            break;
         case PACKET_ROUND:
+            client_read_round_info(packet);
             break;
         case PACKET_INTERMISSION:
             gui_game_intermission_from_network(packet);
             break;
         case PACKET_WELCOME_MSG:    
-            client_writeto("guiclient\n", 10);
+            if (!is_file_source)
+                client_writeto("guiclient\n", 10);
             break;
         case PACKET_START_COMPRESS:
             client_start_compression();
@@ -236,37 +261,42 @@ void client_writeto(const void *data, size_t size) {
     event_add(&wr_event, NULL);
 }
 
-void client_destroy(char *reason) {
-    assert(clientfd != -1);
-    printf("disconnected from server: %s\n", reason);
-    evbuffer_free(in_buf);
-    evbuffer_free(out_buf);
-    evbuffer_free(packet_buf);
-    if (compression) 
-        inflateEnd(&strm);
-    event_del(&rd_event);
-    event_del(&wr_event);
-    close(clientfd);
-    clientfd = -1;
-}
-
 int  client_is_connected() {
     return clientfd != -1;
 }
 
-void client_tick() {
-    event_loop(EVLOOP_NONBLOCK);
+void file_loop() {
+    static packet_t packet;
+    int ret;
+    while (SDL_GetTicks() >= next_demo_read) {
+        ret = read(clientfd, &packet, PACKET_HEADER_SIZE);
+        if (ret != PACKET_HEADER_SIZE) {
+            client_destroy("eof");
+            return;
+        }
+        ret = read(clientfd, &packet.data, packet.len);
+        if (ret != packet.len) {
+            client_destroy("eof");
+            return;
+        }
+        
+        packet_rewind(&packet);
+        client_handle_packet(&packet);
+
+        if (!client_is_connected()) 
+            return;
+    }
 }
 
-void client_init(char *addr) {
-#ifdef WIN32
-    WSADATA wsa;
-    if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) 
-        die("WSAStartup failed");
-#endif
+void client_tick() {
+    if (is_file_source) {
+        file_loop();
+    } else {
+        event_loop(EVLOOP_NONBLOCK);
+    }
+}
 
-    event_init();
-
+int client_open_socket(char *addr) {
     int    port = 1234;                                             
     struct hostent *host;
 
@@ -299,22 +329,22 @@ void client_init(char *addr) {
     fprintf(stderr, "connecting to %s:%d (%s:%d)\n", addr, port, inet_ntoa(serveraddr.sin_addr), port);
 
     /* Socket erzeugen */
-    clientfd = socket(AF_INET, SOCK_STREAM, 0);
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
 
     /* Fehler beim Socket erzeugen? */
 #ifdef WIN32
-    if (clientfd == INVALID_SOCKET)
+    if (fd == INVALID_SOCKET)
         die("cannot open socket: Error %d", WSAGetLastError());
 #else
-    if (clientfd == -1) 
+    if (fd == -1) 
         die("cannot open socket: %s", strerror(errno));
 #endif
 
 #ifdef WIN32
-    if (connect(clientfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+    if (connect(fd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
         die("cannot connect socket: Error %d", WSAGetLastError());
 #else
-    if (connect(clientfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
+    if (connect(fd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
         die("cannot connect socket: %s", strerror(errno));
 #endif
 
@@ -323,27 +353,75 @@ void client_init(char *addr) {
     /* Non Blocking setzen */
 #ifdef WIN32
     DWORD notblock = 1;
-    ioctlsocket(clientfd, FIONBIO, &notblock);
+    ioctlsocket(fd, FIONBIO, &notblock);
 #else
-    if (fcntl(clientfd, F_SETFL, O_NONBLOCK) < 0) 
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) 
         die("cannot set socket nonblocking: %s", strerror(errno));
 #endif
-    
-    event_set(&rd_event, clientfd, EV_READ,  client_readable, &rd_event);
-    event_set(&wr_event, clientfd, EV_WRITE, client_writable, &wr_event);
+
+    return fd;
+}
+
+int client_open_file(char *filename) {
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0)
+        die("cannot open file %s: %s", filename, strerror(errno));
+    return fd;
+}
+
+void client_init(char *source, char *demo_save_name) {
+    struct stat stat_buf;
+    if (stat(source, &stat_buf) < 0) {
+#ifdef WIN32
+        WSADATA wsa;
+        if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) 
+            die("WSAStartup failed");
+#endif
+        clientfd       = client_open_socket(source);
+        is_file_source = 0;
+
+        event_init();
+
+        event_set(&rd_event, clientfd, EV_READ,  client_readable, &rd_event);
+        event_set(&wr_event, clientfd, EV_WRITE, client_writable, &wr_event);
+
+        event_add(&rd_event, NULL);
+    } else {
+        clientfd       = client_open_file(source);
+        is_file_source = 1;
+    }
 
     in_buf      = evbuffer_new();
     out_buf     = evbuffer_new();
     packet_buf  = evbuffer_new();
-
-    event_add(&rd_event, NULL);
 }
+
+void client_destroy(char *reason) {
+    assert(clientfd != -1);
+    printf("datasource destroyed: %s\n", reason);
+
+    evbuffer_free(in_buf);
+    evbuffer_free(out_buf);
+    evbuffer_free(packet_buf);
+    
+    if (compression) 
+        inflateEnd(&strm);
+
+    close(clientfd);
+    clientfd = -1;
+    
+    if (!is_file_source) {
+        event_del(&rd_event);
+        event_del(&wr_event);
+#ifdef WIN32
+        WSACleanup();
+#endif
+    }
+}
+
 
 void client_shutdown() {
     if (client_is_connected())
         client_destroy("shutdown");
-#ifdef WIN32
-    WSACleanup();
-#endif
 }
 
