@@ -367,7 +367,11 @@ int client_open_socket(char *addr) {
 }
 
 int client_open_file(char *filename) {
+#ifdef WIN32
+    int fd = open(filename, O_RDONLY | O_BINARY);
+#else
     int fd = open(filename, O_RDONLY);
+#endif
     if (fd < 0)
         die("cannot open file %s: %s", filename, strerror(errno));
     return fd;
