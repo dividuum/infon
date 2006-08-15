@@ -272,7 +272,7 @@ void file_loop() {
     while (SDL_GetTicks() >= next_demo_read) {
         ret = read(clientfd, &packet, PACKET_HEADER_SIZE);
         if (ret != PACKET_HEADER_SIZE) {
-            snprintf(errbuf, sizeof(errbuf), "eof, reading header: want %d, got %d", PACKET_HANDSHAKE, ret);
+            snprintf(errbuf, sizeof(errbuf), "eof, reading header: want %d, got %d", PACKET_HEADER_SIZE, ret);
             client_destroy(errbuf);
             return;
         }
