@@ -142,6 +142,13 @@ void game_one_round() {
 
     player_round_start();
 
+    // Demo Aufnahme starten
+    static char demoname[128];
+    snprintf(demoname, sizeof(demoname), "infond-%08X.demo", (int)time(0));
+    client_t *demowriter = server_start_demo_writer(demoname);
+    if (!demowriter)
+        fprintf(stderr, "couldn't start demo file\n");
+
     while (!game_exit && !should_end_round) {
         int tick  = get_tick();
         int delta = tick - lasttick;
@@ -184,6 +191,9 @@ void game_one_round() {
         // IO Lesen/Schreiben
         server_tick();
     }
+    
+    if (demowriter) 
+        server_destroy(demowriter, "game ended");
 
     creature_shutdown();
     world_shutdown();

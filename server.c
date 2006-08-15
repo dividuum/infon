@@ -21,6 +21,8 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -28,6 +30,8 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <fcntl.h>
+
 
 #include <lauxlib.h>
 #include <event.h>
@@ -54,20 +58,27 @@ int client_num(client_t *client) {
     return client - clients;
 }
 
-int server_accept(int fd, struct sockaddr_in *peer) {
+client_t *server_accept(int fd, struct sockaddr_in *peer) {
     static struct linger l = { 1, 0 };
     static const int one = 1;
     static char address[128];
 
     if (fd >= MAXCLIENTS) {
         fprintf(stderr, "cannot accept() new incoming connection: file descriptor too large\n");
-        return 0;
+        return NULL;
     }
+    
+    memset(&clients[fd], 0, sizeof(client_t));
+    client_t *client = &clients[fd];
 
-    if (peer)
+    if (peer) {
         sprintf(address, "%s:%d", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
-    else
+    } else if (fd == STDIN_FILENO) {
         sprintf(address, "local console");
+    } else {
+        sprintf(address, "demo dumper");
+        client->is_demo_dumper = 1;
+    }
 
     lua_pushliteral(L, "on_new_client");/* funcname */
     lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
@@ -76,13 +87,13 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     if (lua_pcall(L, 1, 1, 0) != 0) {
         fprintf(stderr, "error calling on_new_client: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
-        return 0;
+        return NULL;
     }
 
     if (!lua_toboolean(L, -1)) {
         fprintf(stderr, "rejected client %s\n", address);
         lua_pop(L, 1);
-        return 0;
+        return NULL;
     }
 
     lua_pop(L, 1);
@@ -90,41 +101,42 @@ int server_accept(int fd, struct sockaddr_in *peer) {
     /* Non Blocking setzen */
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
         fprintf(stderr, "cannot set accept()ed socket nonblocking: %s\n", strerror(errno));
-        return 0;
+        return NULL;
     }
 
     if (peer) { 
         /* TCP_NODELAY setzen. Dadurch werden Daten frühestmöglich versendet */
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) < 0) {
             fprintf(stderr, "cannot enable TCP_NODELAY: %s\n", strerror(errno));
-            return 0;
+            return NULL;
         }
 
         /* SO_LINGER setzen. Falls sich noch Daten in der Sendqueue der Verbindung
            befinden, werden diese verworfen. */
         if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l)) == -1) {
             fprintf(stderr, "cannot set SO_LINGER: %s\n", strerror(errno));
-            return 0;
+            return NULL;
         }
     }
 
     // Aktivieren
-    event_set(&clients[fd].rd_event, fd, EV_READ,  server_readable, &clients[fd].rd_event);
-    event_set(&clients[fd].wr_event, fd, EV_WRITE, server_writable, &clients[fd].wr_event);
-    clients[fd].in_buf    = evbuffer_new();
-    clients[fd].out_buf   = evbuffer_new();
+    event_set(&client->rd_event, fd, EV_READ,  server_readable, &client->rd_event);
+    event_set(&client->wr_event, fd, EV_WRITE, server_writable, &client->wr_event);
+    
+    client->in_buf    = evbuffer_new();
+    client->out_buf   = evbuffer_new();
 
-    clients[fd].compress = 0;
+    client->compress = 0;
 
-    clients[fd].kill_me  = NULL;
-    clients[fd].player   = NULL;
+    client->kill_me  = NULL;
+    client->player   = NULL;
 
-    clients[fd].next = NULL;
-    clients[fd].prev = NULL;
+    client->next = NULL;
+    client->prev = NULL;
 
-    clients[fd].is_gui_client = 0;
-    clients[fd].next_gui = NULL;
-    clients[fd].prev_gui = NULL;
+    client->is_gui_client = 0;
+    client->next_gui = NULL;
+    client->prev_gui = NULL;
 
     lua_pushliteral(L, "on_client_accepted");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -136,8 +148,10 @@ int server_accept(int fd, struct sockaddr_in *peer) {
         lua_pop(L, 1);
     }
 
-    event_add(&clients[fd].rd_event, NULL);
-    return 1;
+    if (!client->is_demo_dumper)
+        event_add(&client->rd_event, NULL);
+
+    return client;
 }
 
 static void server_readable(int fd, short event, void *arg) {
@@ -239,6 +253,10 @@ void server_start_compression(client_t *client) {
 void server_writeto(client_t *client, const void *data, size_t size) {
     if (size == 0) 
         return;
+    if (client->is_demo_dumper) {
+        write(client_num(client), data, size);
+        return;
+    }
     if (EVBUFFER_LENGTH(client->out_buf) > 1024*1024)
         return;
     if (client->compress) {
@@ -303,7 +321,9 @@ void server_destroy(client_t *client, char *reason) {
         evbuffer_add(client->out_buf, reason, strlen(reason));
         evbuffer_add(client->out_buf, "\n", 1);
     }
-    evbuffer_write(client->out_buf, fd);
+
+    if (!client->is_demo_dumper) 
+        evbuffer_write(client->out_buf, fd);
 
     evbuffer_free(client->in_buf);
     evbuffer_free(client->out_buf);
@@ -489,6 +509,15 @@ void server_init() {
 
     // XXX: HACK: stdin client starten
     server_accept(STDIN_FILENO, NULL); 
+}
+
+client_t *server_start_demo_writer(const char *demoname) {
+    int server_demo_fd = open(demoname, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, S_IRUSR|S_IWUSR);
+    if (server_demo_fd < 0)
+        return NULL;
+    client_t *demowriter = server_accept(server_demo_fd, NULL);
+    client_turn_into_gui_client(demowriter);
+    return demowriter;
 }
 
 void server_shutdown() {

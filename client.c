@@ -68,11 +68,11 @@ static Uint32           next_demo_read = 0;
 static int              compression;
 static z_stream         strm;
 
-void client_destroy(char *reason);
+void client_destroy(const char *reason);
 void client_writeto(const void *data, size_t size);
 int  client_is_connected();
 
-static void client_read_handshake(packet_t *packet) {
+static void client_handshake_from_network(packet_t *packet) {
     uint8_t serverprotocol;
 
     if (!packet_read08(packet, &serverprotocol)) 
@@ -87,7 +87,7 @@ static void client_read_handshake(packet_t *packet) {
     }
 }
 
-static void client_read_round_info(packet_t *packet) {
+static void client_round_info_from_network(packet_t *packet) {
     uint8_t delta;
 
     if (!packet_read08(packet, &delta)) 
@@ -144,7 +144,7 @@ static void client_handle_packet(packet_t *packet) {
         case PACKET_GAME_INFO:
             break;
         case PACKET_ROUND:
-            client_read_round_info(packet);
+            client_round_info_from_network(packet);
             break;
         case PACKET_INTERMISSION:
             gui_game_intermission_from_network(packet);
@@ -157,7 +157,7 @@ static void client_handle_packet(packet_t *packet) {
             client_start_compression();
             break;
         case PACKET_HANDSHAKE:
-            client_read_handshake(packet);
+            client_handshake_from_network(packet);
             break;
         default:
             printf("packet->type %d unknown\n", packet->type);
@@ -267,16 +267,20 @@ int  client_is_connected() {
 
 void file_loop() {
     static packet_t packet;
+    static char errbuf[128];
     int ret;
     while (SDL_GetTicks() >= next_demo_read) {
         ret = read(clientfd, &packet, PACKET_HEADER_SIZE);
         if (ret != PACKET_HEADER_SIZE) {
-            client_destroy("eof");
+            snprintf(errbuf, sizeof(errbuf), "eof, reading header: want %d, got %d", PACKET_HANDSHAKE, ret);
+            client_destroy(errbuf);
             return;
         }
+        
         ret = read(clientfd, &packet.data, packet.len);
         if (ret != packet.len) {
-            client_destroy("eof");
+            snprintf(errbuf, sizeof(errbuf), "eof, reading packet: want %d, got %d", packet.len, ret);
+            client_destroy(errbuf);
             return;
         }
         
@@ -396,7 +400,7 @@ void client_init(char *source, char *demo_save_name) {
     packet_buf  = evbuffer_new();
 }
 
-void client_destroy(char *reason) {
+void client_destroy(const char *reason) {
     assert(clientfd != -1);
     printf("datasource destroyed: %s\n", reason);
 

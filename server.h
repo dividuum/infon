@@ -45,6 +45,7 @@ typedef struct client_s {
     struct evbuffer *in_buf;
     struct evbuffer *out_buf;
 
+    int              is_demo_dumper;
     int              compress;
     z_stream         strm;
 
@@ -63,13 +64,14 @@ typedef struct client_s {
 
 client_t clients[MAXCLIENTS];
 
-int  server_accept(int fd, struct sockaddr_in *peer);
+client_t *server_accept(int fd, struct sockaddr_in *peer);
 void server_writeto(client_t *client, const void *data, size_t size);
 void server_writeto_all_gui_clients(const void *data, size_t size);
 void server_destroy(client_t *client, char *reason);
 
 void server_send_packet(packet_t *packet, client_t *client);
 
+client_t *server_start_demo_writer(const char *demoname);
 
 void server_tick();
 
