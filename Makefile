@@ -79,4 +79,4 @@ clean:
 
 distclean: clean
 	$(MAKE) -C $(LUADIR) clean
-	-rm -f infon*.zip infon*.tgz
+	-rm -f infon*.zip infon*.tgz *.orig *.rej

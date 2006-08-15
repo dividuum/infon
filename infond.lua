@@ -182,7 +182,7 @@ end
 -- wie andere in packet.h definierte Packete gelesen
 -- gelesen werden kann (len = 32 (space), type = 32 (space).
 function Client:welcome(msg)
-    msglen = string.len(msg)
+    local msglen = string.len(msg)
     if msglen > 30 then
         print('welcome message too long')
         msg = "Press <enter>"

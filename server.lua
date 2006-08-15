@@ -339,7 +339,7 @@ function ServerMain()
     scroller_add("Welcome to " .. GAME_NAME .. "!")
     scroller_add(join_info)
                         
-    info_time = game_info()
+    local info_time = game_info()
     while true do
         if game_info() > info_time + 10000 then
            info_time = game_info() 
