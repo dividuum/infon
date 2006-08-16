@@ -1,7 +1,9 @@
 require 'socket'
 require 'zlib'
 
-TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
+raise "#$0 <server> <demofile>" unless ARGV.size == 2
+ 
+TCPSocket.open(ARGV[0], 1234) { |socket|
     
     class << socket
         alias_method  :orig_read, :read 

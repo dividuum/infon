@@ -58,10 +58,11 @@ void print_fps() {
 int main(int argc, char *argv[]) {
     int width = 800, height = 600, fullscreen = 0;
 #ifdef WIN32
+    char *sep = strrchr(argv[0], '\\');
+    if (sep) { *sep = '\0'; chdir(argv[0]); }
+
     if (argc == 2 && stricmp(argv[1], "/s") == 0) {
         argv[1] = "bl0rg.net";
-        char *bs = strrchr(argv[0], '\\');
-        if (bs) { *bs = '\0'; chdir(argv[0]); }
         width = 1024, height = 768, fullscreen = 1;
     } else if (argc == 3 && stricmp(argv[1], "/p") == 0) {
         exit(0);

@@ -51,15 +51,18 @@ source-dist: distclean
 
 win32-client-dist: $(GUI_EXECUTABLE)
 	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
-	zip      infon-win32-r$(REVISION).zip README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png example.demo
+	upx -9 --all-methods $(GUI_EXECUTABLE)
+	zip infon-win32-r$(REVISION).zip README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png example.demo
 
 linux-client-dist: $(GUI_EXECUTABLE)
 	strip $(GUI_EXECUTABLE)
-	tar cfvz infon-linux-r$(REVISION).tgz README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
+	# upx $(GUI_EXECUTABLE)
+	tar cfvz infon-linux-i386-r$(REVISION).tgz README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
 
 linux-server-dist: infond
 	strip infond infond-static
-	tar cfvz infond-linux-r$(REVISION).tgz README infond infond-static *.lua level/*.lua rules/*.lua
+	# upx infond infond-static
+	tar cfvz infond-linux-i386-r$(REVISION).tgz README infond infond-static *.lua level/*.lua rules/*.lua
 
 infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o
 	$(CC) $^ $(LDFLAGS) -o $@
@@ -79,4 +82,4 @@ clean:
 
 distclean: clean
 	$(MAKE) -C $(LUADIR) clean
-	-rm -f infon*.zip infon*.tgz *.orig *.rej
+	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo
