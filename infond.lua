@@ -226,8 +226,11 @@ function on_client_close(fd, reason)
     clients[fd] = nil
 end
 
-function server_tick()
+function server_new_round()
     server_tick = coroutine.wrap(ServerMain)
+end
+
+function server_tick()
 end
 
 -----------------------------------------------------------

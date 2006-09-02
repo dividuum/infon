@@ -520,6 +520,15 @@ client_t *server_start_demo_writer(const char *demoname) {
     return demowriter;
 }
 
+void server_round_start() {
+    lua_pushliteral(L, "server_new_round");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        fprintf(stderr, "error calling server_new_round: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+}
+
 void server_shutdown() {
     int clientno;
     for (clientno = 0; clientno < MAXCLIENTS; clientno++) {

@@ -123,10 +123,10 @@ void game_one_round() {
     
     game_send_info(SEND_BROADCAST);
     
-    lua_pushliteral(L, "onNewRound");
+    lua_pushliteral(L, "onNewGame");
     lua_rawget(L, LUA_GLOBALSINDEX);
     if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling onNewRound: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "error calling onNewGame: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 
@@ -140,6 +140,7 @@ void game_one_round() {
     int lasttick = 0;
     gettimeofday(&start, NULL);
 
+    server_round_start();
     player_round_start();
 
     // Demo Aufnahme starten

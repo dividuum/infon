@@ -76,6 +76,7 @@ client_t *server_start_demo_writer(const char *demoname);
 void server_tick();
 
 void server_init();
+void server_round_start();
 void server_shutdown();
 
 #endif

@@ -30,7 +30,7 @@ function Client:joinmenu()
     self:writeln("------------------------------")
     local numplayers = 0
     for n = 0, MAXPLAYERS - 1 do 
-        ok, name = pcall(player_get_name, n)
+        local ok, name = pcall(player_get_name, n)
         if ok then
             numplayers = numplayers + 1
             self:writeln(string.format("%3d - %s", n, name))

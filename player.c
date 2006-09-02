@@ -164,6 +164,11 @@ void player_on_all_dead(player_t *player) {
 }
 
 void player_on_created(player_t *player) {
+    // Zeiten zuruecksetzen
+    player->all_dead_time = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
+    player->all_disconnected_time = game_time;
+    player->spawn_time    = game_time;
+
     // Rule Handler aufrufen
     lua_pushliteral(L, "onPlayerCreated");
     lua_rawget(L, LUA_GLOBALSINDEX);         
@@ -500,10 +505,6 @@ player_t *player_create(const char *pass) {
     snprintf(player->name, sizeof(player->name), "player%d", playerno);
     snprintf(player->pass, sizeof(player->pass), "%s", pass);
     player->L = lua_open();
-
-    player->all_dead_time = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
-    player->all_disconnected_time = game_time;
-    player->spawn_time    = game_time;
 
     player->max_cycles    = LUA_MAX_CPU;
 
@@ -988,7 +989,7 @@ static int luaPlayerSetScore(lua_State *L) {
     int newscore = luaL_checklong(L, 2);
     int diff = newscore - player->score;
     static char buf[128];
-    snprintf(buf, sizeof(buf), "manually set to %d", newscore);
+    snprintf(buf, sizeof(buf), "set to %d", newscore);
     player_score(player, diff, buf);
     return 0;
 }

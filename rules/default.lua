@@ -1,4 +1,4 @@
-function onNewRound()
+function onNewGame()
     round_end_text = nil
     round_end_time = nil
 end
