@@ -22,6 +22,27 @@
 -- Unsicheres Zeugs weg
 ------------------------------------------------------------------------
 
+_TRACEBACK = debug.traceback
+
+function b()
+    for o = 1, 20000 do p = 123 end
+    error("haha")
+end
+
+function c()
+    error("sdf")
+end
+
+function a()
+    while true do 
+        pcall(b, 123)
+    end
+    c("123")
+end
+
+save_in_registry('traceback', debug.traceback)
+save_in_registry = nil
+
 dofile          = nil
 getfenv         = nil
 setfenv         = nil
@@ -30,6 +51,9 @@ _VERSION        = nil
 newproxy        = nil
 debug           = nil
 gcinfo          = nil
+os              = nil
+package         = nil
+io              = nil
 
 collectgarbage()
 collectgarbage  = nil
@@ -239,7 +263,7 @@ function Creature:restart()
     if self.onRestart then
         local ok, msg = pcall(self.onRestart, self)
         if not ok then 
-            print(msg)
+            print("restarting main failed: " .. msg)
         end
     else
         print("onRestart method deleted")
@@ -271,7 +295,7 @@ end
 function p(x) 
     if type(x) == "table" then
         print("+--- Table: " .. tostring(x))
-        for key, val in x do
+        for key, val in pairs(x) do
             print("| " .. tostring(key) .. " " .. tostring(val))
         end
         print("+-----------------------")
@@ -285,14 +309,14 @@ end
 ------------------------------------------------------------------------
 
 function restart()
-    for id, creature in creatures do
+    for id, creature in pairs(creatures) do
         creature.message = nil
         creature:restart()
     end
 end
 
 function info()
-    for id, creature in creatures do
+    for id, creature in pairs(creatures) do
         print("creature " .. id .. ": " .. (creature.message or "-"))
     end
 end
@@ -300,6 +324,7 @@ end
 ------------------------------------------------------------------------
 -- Callbacks von C
 ------------------------------------------------------------------------
+function this_function_call_fails_if_cpu_limit_exceeded() end
 
 _spawned_creatures  = {}
 _killed_creatures   = {}
@@ -312,7 +337,7 @@ function player_think()
     can_yield = false
     
     -- Getoetete Kreaturen handlen
-    for victim, killer in _killed_creatures do
+    for victim, killer in pairs(_killed_creatures) do
         if killer == -1 then 
            killer = nil
         end
@@ -320,7 +345,7 @@ function player_think()
         if creatures[victim].onKilled then 
             local ok, msg = pcall(creatures[victim].onKilled, creatures[victim], killer)
             if not ok then 
-                print(msg)
+                print("cannot call onKilled: " .. msg)
             end
         else
             print("onKilled method deleted")
@@ -329,12 +354,12 @@ function player_think()
     end
     
     -- Angegriffene Kreaturen
-    for attacker, victim in _attacked_creatures do
+    for attacker, victim in pairs(_attacked_creatures) do
         if creatures[victim] then -- Getoetete Viecher ueberspringen
             if creatures[victim].onAttacked then 
                 local ok, msg = pcall(creatures[victim].onAttacked, creatures[victim], attacker)
                 if not ok then 
-                    print(msg)
+                    print("onAttacked failed: " .. msg)
                 end
             else
                 print("onAttacked method deleted")
@@ -343,7 +368,7 @@ function player_think()
     end
 
     -- Erzeugte Kreaturen
-    for id, parent in _spawned_creatures do
+    for id, parent in pairs(_spawned_creatures) do
         if parent == -1 then
            parent = nil
         end
@@ -360,7 +385,7 @@ function player_think()
         if creature.onSpawned then 
             local ok, msg = pcall(creature.onSpawned, creature, parent)
             if not ok then
-                print(msg)
+                print("onSpawned failed: " .. msg)
             end
         else
             print("onSpawned method deleted")
@@ -376,14 +401,14 @@ function player_think()
     if onRoundStart then
         local ok, msg = pcall(onRoundStart)
         if not ok then
-            print(msg)
+            print("onRoundEnd failed: " .. msg)
         end
     end
     
     can_yield = true
 
     -- Vorhandene Kreaturen durchlaufen
-    for id, creature in creatures do
+    for id, creature in pairs(creatures) do
         if type(creature.thread) ~= 'thread' then
             creature.message = 'uuh. self.thread is not a coroutine.'
         elseif coroutine.status(creature.thread) == 'dead' then
@@ -393,8 +418,13 @@ function player_think()
         else
             local ok, msg = coroutine.resume(creature.thread, creature)
             if not ok then
-                print(msg)
                 creature.message = msg
+                -- Falls die Coroutine abgebrochen wurde, weil zuviel
+                -- CPU benutzt wurde, so triggert folgeder Funktions
+                -- Aufruf den Abbruch von player_think. Um zu ermitteln,
+                -- wo zuviel CPU gebraucht wurde, kann der Traceback
+                -- in creature.message mittels 'i' angezeigt werden.
+                this_function_call_fails_if_cpu_limit_exceeded()
             end
         end
     end
@@ -404,7 +434,7 @@ function player_think()
     if onRoundEnd then
         local ok, msg = pcall(onRoundEnd)
         if not ok then
-            print(msg)
+            print("onRoundEnd failed: " .. msg)
         end
     end
     
@@ -414,5 +444,5 @@ end
 -- Default Laden
 ------------------------------------------------------------------------
 
-require 'player-default.lua'
+require 'player-default'
 require = nil

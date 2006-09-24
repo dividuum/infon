@@ -43,6 +43,6 @@ end
 
 -- Your Creature Logic here :-)
 function Creature:main()
-    
+    for a = 1, 2000 do b = 1 end
 end
 

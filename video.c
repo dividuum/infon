@@ -20,8 +20,10 @@
 
 #include <SDL.h>
 #include <SDL_gfxPrimitives.h>
-#include <stdio.h>
 #include <sge.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 #include "misc.h"
 #include "global.h"
@@ -60,12 +62,14 @@ void video_init(int w, int h, int fs) {
     SDL_ShowCursor(1);
     //SDL_EnableUNICODE(1);
 
-    font = sge_BF_OpenFont("gfx/font.png", SGE_BFTRANSP|SGE_BFPALETTE);
+    font = sge_BF_OpenFont(PREFIX "gfx/font.png", SGE_BFTRANSP|SGE_BFPALETTE);
     if(!font)
         die("Cannot open font font.png: %s", SDL_GetError());
 
     /* Load a font and draw with it */
-    FILE *file = fopen("gfx/5x7.fnt","r");
+    FILE *file = fopen(PREFIX "gfx/5x7.fnt","r");
+    if (!file)
+        die("Cannot open tiny font file 5x7.fnt: %s", strerror(errno));
     fread(&tiny_font,sizeof(tiny_font), 1, file);
     fclose(file);
     gfxPrimitivesSetFont(tiny_font, 5, 7);

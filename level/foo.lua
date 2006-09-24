@@ -1202,7 +1202,7 @@ end
 
 function level_tick()
     if game_info() > last_food + 10000 then
-        for n, spawner in food_spawner do
+        for n, spawner in pairs(food_spawner) do
             if game_info() > spawner.n then 
                 world_add_food(spawner.x + math.random(spawner.r * 2 + 1) - spawner.r,
                                spawner.y + math.random(spawner.r * 2 + 1) - spawner.r,

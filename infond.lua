@@ -22,7 +22,7 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
-require 'config.lua'
+require 'config'
 
 -----------------------------------------------------------
 -- Klasse fuer Clientverbindung
@@ -278,7 +278,7 @@ end
 function p(x) 
     if type(x) == "table" then
         print("+--- Table: " .. tostring(x))
-        for key, val in x do
+        for key, val in pairs(x) do
             print("| " .. tostring(key) .. " " .. tostring(val))
         end
         print("+-----------------------")
@@ -327,4 +327,4 @@ end
 -- Clienthandler laden
 -----------------------------------------------------------
 
-require "server.lua"
+require "server"

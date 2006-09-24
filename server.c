@@ -463,6 +463,8 @@ static int luaClientDisconnect(lua_State *L) {
 }
 
 void server_tick() {
+    lua_set_cycles(L, 0xFFFFFF);
+    
     lua_pushliteral(L, "server_tick");
     lua_rawget(L, LUA_GLOBALSINDEX);
     if (lua_pcall(L, 0, 0, 0) != 0) {

@@ -191,7 +191,7 @@ function Client:shell()
             if code == "" then 
                 break
             end
-            local ok, msg = xpcall(loadstring(code), _TRACEBACK)
+            local ok, msg = xpcall(loadstring(code), debug.traceback)
             if not ok then 
                 self:writeln(msg)
             end

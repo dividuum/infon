@@ -50,6 +50,9 @@ typedef struct player_s {
     int           max_cycles;
     int           cpu_usage;
 
+    int           max_mem;
+    int           mem_enforce;
+
     int           kill_me;
 
     unsigned char dirtymask;
