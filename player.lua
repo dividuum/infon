@@ -24,22 +24,6 @@
 
 _TRACEBACK = debug.traceback
 
-function b()
-    for o = 1, 20000 do p = 123 end
-    error("haha")
-end
-
-function c()
-    error("sdf")
-end
-
-function a()
-    while true do 
-        pcall(b, 123)
-    end
-    c("123")
-end
-
 save_in_registry('traceback', debug.traceback)
 save_in_registry = nil
 
@@ -169,6 +153,10 @@ end
 
 function Creature:tile_food()
     return get_tile_food(self.id)
+end
+
+function Creature:tile_type()
+    return get_tile_type(self.id)
 end
 
 function Creature:type()
@@ -335,6 +323,15 @@ creatures = {}
 
 function player_think()
     can_yield = false
+
+    -- Gesetzt nach Rundenstart und/oder Joinen
+    if _player_created and onGameStart then
+        local ok, msg = pcall(onGameStart)
+        if not ok then
+            print("onGameStart failed: " .. msg)
+        end
+        _player_created = nil
+    end
     
     -- Getoetete Kreaturen handlen
     for victim, killer in pairs(_killed_creatures) do

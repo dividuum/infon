@@ -34,6 +34,7 @@ function onRound()
             set_intermission(round_end_text)
         elseif round_end_time + 10000 < game_time() then
             set_intermission("")
+            world_rotate_map()
             reset()
         end
     end

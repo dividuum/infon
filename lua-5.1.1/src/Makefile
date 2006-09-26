@@ -92,7 +92,7 @@ generic:
 	$(MAKE) all MYCFLAGS=
 
 debug:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -ggdb" MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -ggdb -DLUA_USE_APICHECK" MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
 
 linux:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"

@@ -83,6 +83,10 @@ int creature_num(const creature_t *creature) {
     return creature - creatures;
 }
 
+maptype_e creature_tile_type(const creature_t *creature) {
+    return world_get_type(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y));
+}
+
 int creature_food_on_tile(const creature_t *creature) {
     return world_get_food(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y));
 }
@@ -367,8 +371,8 @@ int creature_conversion_speed(creature_t *creature) {
 static const int conversion_food_needed[CREATURE_TYPES][CREATURE_TYPES] = 
                                // TO
     { {    0,   8000,   5000,      0 },// FROM
-      {    0,      0,      0,      0 },
-      {    0,   5000,      0,      0 },
+      { 8000,      0,      0,      0 },
+      { 5000,      0,      0,      0 },
       {    0,      0,      0,      0 } };
 
 int creature_conversion_food(const creature_t *creature, creature_type type) {

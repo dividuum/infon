@@ -245,6 +245,17 @@ function world_main()
     end
 end
 
+current_map = 1
+map         = maps[current_map]
+
+function world_rotate_map()
+    current_map = current_map + 1
+    if current_map > #maps then
+       current_map = 1
+    end
+    map = maps[current_map]
+end
+
 function world_init()
     dofile("level/" .. map .. ".lua")
     local w,  h  = level_size()

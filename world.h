@@ -30,6 +30,7 @@ int         world_is_within_border(int x, int y);
 
 int         world_walkable(int x, int y);
 int         world_get_food(int x, int y);
+maptype_e   world_get_type(int x, int y);
 int         world_add_food(int x, int y, int amount);
 int         world_food_eat(int x, int y, int amount);
 

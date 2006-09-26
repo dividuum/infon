@@ -165,9 +165,9 @@ void player_on_all_dead(player_t *player) {
 
 void player_on_created(player_t *player) {
     // Zeiten zuruecksetzen
-    player->all_dead_time = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
+    player->all_dead_time         = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
     player->all_disconnected_time = game_time;
-    player->spawn_time    = game_time;
+    player->spawn_time            = game_time;
 
     // Rule Handler aufrufen
     lua_pushliteral(L, "onPlayerCreated");
@@ -177,6 +177,10 @@ void player_on_created(player_t *player) {
         fprintf(stderr, "error calling onPlayerCreated: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
+    
+    lua_pushliteral(player->L, "_player_created");
+    lua_pushnumber(player->L, player_num(player));
+    lua_rawset(player->L, LUA_GLOBALSINDEX);         
 }
 
 static int luaSaveInRegistry(lua_State *L) {
@@ -396,6 +400,13 @@ static int luaCreatureGetTileFood(lua_State *L) {
     return 1;
 }
 
+static int luaCreatureGetTileType(lua_State *L) {
+    get_player_and_creature();
+    assure_is_players_creature();
+    lua_pushnumber(L, creature_tile_type(creature));
+    return 1;
+}
+
 static int luaCreatureGetMaxFood(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
@@ -559,6 +570,10 @@ static void player_set_color(player_t *player, int color) {
      lua_pushcclosure((p)->L, f, 1), \
      lua_settable((p)->L, LUA_GLOBALSINDEX))    
 
+#define lua_register_player_global(p, name) \
+    (lua_pushnumber((p)->L, name), \
+     lua_setglobal((p)->L, #name))
+
 player_t *player_create(const char *pass) {
     int playerno;
 
@@ -606,6 +621,7 @@ player_t *player_create(const char *pass) {
     lua_register_player(player, "get_health",           luaCreatureGetHealth);
     lua_register_player(player, "get_speed",            luaCreatureGetSpeed);
     lua_register_player(player, "get_tile_food",        luaCreatureGetTileFood);
+    lua_register_player(player, "get_tile_type",        luaCreatureGetTileType);
     lua_register_player(player, "get_max_food",         luaCreatureGetMaxFood);
     lua_register_player(player, "get_distance",         luaCreatureGetDistance);
     lua_register_player(player, "set_message",          luaCreatureSetMessage);
@@ -628,35 +644,23 @@ player_t *player_create(const char *pass) {
     lua_register(player->L,     "king_player",          luaKingPlayer);
     lua_register(player->L,     "player_score",         luaPlayerScore);
 
-    lua_pushnumber(player->L, CREATURE_IDLE);
-    lua_setglobal(player->L, "CREATURE_IDLE");
+    lua_register_player_global(player, CREATURE_IDLE);
+    lua_register_player_global(player, CREATURE_WALK);
+    lua_register_player_global(player, CREATURE_HEAL);
+    lua_register_player_global(player, CREATURE_EAT);
+    lua_register_player_global(player, CREATURE_ATTACK);
+    lua_register_player_global(player, CREATURE_CONVERT);
+    lua_register_player_global(player, CREATURE_SPAWN);
+    lua_register_player_global(player, CREATURE_FEED);
 
-    lua_pushnumber(player->L, CREATURE_WALK);
-    lua_setglobal(player->L, "CREATURE_WALK");
-
-    lua_pushnumber(player->L, CREATURE_HEAL);
-    lua_setglobal(player->L, "CREATURE_HEAL");
-
-    lua_pushnumber(player->L, CREATURE_EAT);
-    lua_setglobal(player->L, "CREATURE_EAT");
-
-    lua_pushnumber(player->L, CREATURE_ATTACK);
-    lua_setglobal(player->L, "CREATURE_ATTACK");
-
-    lua_pushnumber(player->L, CREATURE_CONVERT);
-    lua_setglobal(player->L, "CREATURE_CONVERT");
-
-    lua_pushnumber(player->L, CREATURE_SPAWN);
-    lua_setglobal(player->L, "CREATURE_SPAWN");
-
-    lua_pushnumber(player->L, CREATURE_FEED);
-    lua_setglobal(player->L, "CREATURE_FEED");
+    lua_register_player_global(player, TILE_SOLID);
+    lua_register_player_global(player, TILE_PLAIN);
+    lua_register_player_global(player, TILE_WATER);
+    lua_register_player_global(player, TILE_LAVA);
 
     lua_pushnumber(player->L, playerno);
-    lua_setglobal(player->L, "player_number");
 
-    lua_pushnumber(L, MAXPLAYERS);
-    lua_setglobal(L, "MAXPLAYERS");
+    lua_setglobal(player->L, "player_number");
 
     // Initiale Cyclen setzen
     lua_set_cycles(player->L, player->max_cycles);
