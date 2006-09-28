@@ -81,7 +81,7 @@ void player_on_creature_spawned(player_t *player, creature_t *creature, creature
     lua_pushliteral(player->L, "_spawned_creatures");
     lua_rawget(player->L, LUA_GLOBALSINDEX);         
     if (lua_isnil(player->L, -1)) {
-        static char msg[] = "cannot locate _spawned_creatures table. did you delete it?\n";
+        static char msg[] = "cannot locate _spawned_creatures table. did you delete it?\n\r";
         player_writeto(player, msg, sizeof(msg) - 1);
     } else {
         lua_pushnumber(player->L,  parent ? creature_num(parent) : -1);
@@ -110,7 +110,7 @@ void player_on_creature_killed(player_t *player, creature_t *victim, creature_t 
     lua_pushliteral(player->L, "_killed_creatures");
     lua_rawget(player->L, LUA_GLOBALSINDEX);         
     if (lua_isnil(player->L, -1)) {
-        static char msg[] = "cannot locate _killed_creatures table. did you delete it?\n";
+        static char msg[] = "cannot locate _killed_creatures table. did you delete it?\r\n";
         player_writeto(player, msg, sizeof(msg) - 1);
     } else {
         lua_pushnumber(player->L,  killer ? creature_num(killer) : -1);
@@ -143,7 +143,7 @@ void player_on_creature_attacked(player_t *player, int victim, int attacker) {
     lua_pushliteral(player->L, "_attacked_creatures");
     lua_rawget(player->L, LUA_GLOBALSINDEX);         
     if (lua_isnil(player->L, -1)) {
-        static char msg[] = "cannot locate _attacked_creatures table. did you delete it?\n";
+        static char msg[] = "cannot locate _attacked_creatures table. did you delete it?\r\n";
         player_writeto(player, msg, sizeof(msg) - 1);
     } else {
         lua_pushnumber(player->L,  victim);
@@ -236,17 +236,17 @@ static int call_user_lua(player_t *player) {
 
     switch (ret) {
         case LUA_ERRRUN:
-            snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s\n", lua_tostring(player->L, -1));
+            snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s\r\n", lua_tostring(player->L, -1));
             player_writeto(player, errorbuf, strlen(errorbuf));
             lua_pop(player->L, 2);
             return 0;
         case LUA_ERRMEM:
-            snprintf(errorbuf, sizeof(errorbuf), "mem error: %s\n", lua_tostring(player->L, -1));
+            snprintf(errorbuf, sizeof(errorbuf), "mem error: %s\r\n", lua_tostring(player->L, -1));
             player_writeto(player, errorbuf, strlen(errorbuf));
             lua_pop(player->L, 2);
             return 0;
         case LUA_ERRERR:
-            snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)\n");
+            snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)\r\n");
             player_writeto(player, errorbuf, strlen(errorbuf));
             lua_pop(player->L, 2);
             return 0;
@@ -276,7 +276,7 @@ static int luaPrint(lua_State *L) {
             player_writeto(player, buffer, strlen(buffer));
         }
     }
-    player_writeto(player, "\n", 1);
+    player_writeto(player, "\r\n", 2);
     return 0;
 }
 
@@ -810,7 +810,7 @@ void player_execute_client_lua(player_t *player, const char *code, size_t codele
         if (!msg) 
             msg = "(error with no message)";
         player_writeto(player, msg, strlen(msg));
-        player_writeto(player, "\n", 1); 
+        player_writeto(player, "\r\n", 2); 
     }
 }
 
@@ -838,14 +838,14 @@ void player_think() {
         
         // Killen?
         if (player->kill_me) {
-            player_writeto(player, "player was killed\n", 18);
+            player_writeto(player, "player was killed\r\n", 19);
             player_destroy(player);
             continue;
         }
 
         // Zu wenig Score?
         if (player->score <= PLAYER_KICK_SCORE) {
-            player_writeto(player, "score too low. try harder!\n", 27);
+            player_writeto(player, "score too low. try harder!\r\n", 28);
             player_destroy(player);
             continue;
         }

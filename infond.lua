@@ -159,9 +159,9 @@ end
 
 function Client:writeln(line)
     if line then 
-        self:write(line .. "\n")
+        self:write(line .. "\r\n")
     else
-        self:write("\n")
+        self:write("\r\n")
     end
 end
 
@@ -183,12 +183,12 @@ end
 -- gelesen werden kann (len = 32 (space), type = 32 (space).
 function Client:welcome(msg)
     local msglen = string.len(msg)
-    if msglen > 30 then
+    if msglen > 28 then
         print('welcome message too long')
         msg = "Press <enter>"
         msglen = string.len(msg)
     end
-    self:write("  \n" .. msg .. string.rep(" ", 30 - msglen) .. "\n")
+    self:write("  \r\n" .. msg .. string.rep(" ", 28 - msglen) .. "\r\n")
 end
 
 function Client.writeAll(line)
@@ -304,7 +304,7 @@ end
 
 function clientlist(adminfd)
     table.foreach(clients, function (fd, obj)
-                               client_write(adminfd, fd .. " - " .. obj.addr .. "\n")
+                               client_write(adminfd, fd .. " - " .. obj.addr .. "\r\n")
                            end)
 end
 

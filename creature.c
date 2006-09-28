@@ -475,10 +475,8 @@ void creature_do_spawn(creature_t *creature, int delta) {
     if (creature->spawn_food == creature_spawn_food(creature)) {
         creature_t *baby = creature_spawn(creature->player, creature, creature->x, creature->y, CREATURE_SMALL);
         if (!baby) {
-            static char msg[] = "uuh. sorry. couldn't spawn your new born creature\n";
+            static char msg[] = "uuh. sorry. couldn't spawn your new born creature\r\n";
             player_writeto(creature->player, msg, sizeof(msg) - 1);
-        } else {
-            baby->food = 1000;
         }
         creature_set_state(creature, CREATURE_IDLE);
     }

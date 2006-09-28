@@ -1,8 +1,8 @@
-PREFIX  ?= .
+PREFIX  ?= ./
 LUADIR   = lua-5.1.1
-REVISION = $(shell svnversion .)
+REVISION = $(shell svnversion . || echo 'exported')
 
-COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)" -I$(LUADIR)/src/ # -DCHEATS
+COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="\"$(REVISION)\"" -I$(LUADIR)/src/ # -DCHEATS
 ifdef WINDOWS
 	COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
 else

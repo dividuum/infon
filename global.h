@@ -29,7 +29,7 @@ extern int game_time;
 extern int game_paused;
 extern int game_exit;
 
-#define GAME_NAME "Infon Battle Arena 'Network Edition'"
+#define GAME_NAME "Infon Battle Arena r" REVISION
 
 // Pfadsuche, bei der mehrere beieinanderliegende
 // Tiles zu einem Area zusammengefasst werden. Die

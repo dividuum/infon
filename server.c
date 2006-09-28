@@ -319,7 +319,7 @@ void server_destroy(client_t *client, char *reason) {
     } else {
         evbuffer_add(client->out_buf, "connection terminating: ", 25);
         evbuffer_add(client->out_buf, reason, strlen(reason));
-        evbuffer_add(client->out_buf, "\n", 1);
+        evbuffer_add(client->out_buf, "\r\n", 2);
     }
 
     if (!client->is_demo_dumper) 

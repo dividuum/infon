@@ -333,7 +333,7 @@ static int db_errorfb (lua_State *L) {
   if (lua_gettop(L) == arg)
     lua_pushliteral(L, "");
   else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
-  else lua_pushliteral(L, "\n");
+  else lua_pushliteral(L, "\r\n");
   lua_pushliteral(L, "stack traceback:");
   while (lua_getstack(L1, level++, &ar)) {
     if (level > LEVELS1 && firstpart) {
@@ -341,14 +341,14 @@ static int db_errorfb (lua_State *L) {
       if (!lua_getstack(L1, level+LEVELS2, &ar))
         level--;  /* keep going */
       else {
-        lua_pushliteral(L, "\n\t...");  /* too many levels */
+        lua_pushliteral(L, "\r\n\t...");  /* too many levels */
         while (lua_getstack(L1, level+LEVELS2, &ar))  /* find last levels */
           level++;
       }
       firstpart = 0;
       continue;
     }
-    lua_pushliteral(L, "\n\t");
+    lua_pushliteral(L, "\r\n\t");
     lua_getinfo(L1, "Snl", &ar);
     lua_pushfstring(L, "%s:", ar.short_src);
     if (ar.currentline > 0)
