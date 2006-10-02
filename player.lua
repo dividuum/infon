@@ -410,7 +410,7 @@ function player_think()
             creature.message = 'uuh. self.thread is not a coroutine.'
         elseif coroutine.status(creature.thread) == 'dead' then
             if not creature.message then 
-                creature.message = 'main() terminated (maybe it was killed for using too much cpu?)'
+                creature.message = 'main() terminated (maybe it was killed for using too much cpu/memory?)'
             end
         else
             local ok, msg = coroutine.resume(creature.thread, creature)

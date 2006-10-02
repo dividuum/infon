@@ -166,11 +166,11 @@ function Client:writeln(line)
 end
 
 function Client:check_repeat(name, time)
-    if self[name] and self[name] + time > game_time() then
-        return false
+    if not self[name] or game_time() < self[name] or game_time() > self[name] + time then
+        self[name] = game_time()
+        return true
     else
-       self[name] = game_time()
-       return true
+        return false
     end
 end
 

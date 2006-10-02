@@ -41,7 +41,7 @@ static player_t players[MAXPLAYERS];
 static player_t *king_player = NULL;
 
 void player_score(player_t *player, int scoredelta, const char *reason) {
-    static char buf[1024];
+    char buf[1024];
     snprintf(buf, sizeof(buf), "%s %s %d point%s: %s",
                                player->name, 
                                scoredelta > 0 ? "gained" : "lost",
@@ -225,7 +225,7 @@ static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
 
 // Erwartet Funktion auf dem Stack
 static int call_user_lua(player_t *player) {
-    static char errorbuf[1000];
+    char errorbuf[1000];
     lua_pushliteral(player->L, "traceback");    // func 'traceback'
     lua_rawget(player->L, LUA_REGISTRYINDEX);   // func traceback
     lua_insert(player->L, -2);                  // traceback func

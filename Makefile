@@ -2,7 +2,18 @@ PREFIX  ?= ./
 LUADIR   = lua-5.1.1
 REVISION = $(shell svnversion . || echo 'exported')
 
+# EVENT_NAME = Computer Night 2006
+# EVENT_HOST = 172.30.100.1
+
 COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="\"$(REVISION)\"" -I$(LUADIR)/src/ # -DCHEATS
+
+ifdef EVENT_NAME
+	COMMON_CFLAGS += -DEVENT_NAME="\"$(EVENT_NAME)\""
+endif
+ifdef EVENT_HOST
+	COMMON_CFLAGS += -DEVENT_HOST="\"$(EVENT_HOST)\""
+endif
+
 ifdef WINDOWS
 	COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
 else

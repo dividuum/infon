@@ -5,7 +5,7 @@ listenport = 1234
 debugpass  = "" 
 
 join_info  = "this message can be changed in config.lua"
-maps       = {"foo", "gpn", "water"}
+maps       = {"foo", "gpn", "water", "cn"}
 rules      = "default"
 
 time_limit = nil -- Zeitlimit in Millisekunden
