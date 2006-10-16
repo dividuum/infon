@@ -349,12 +349,12 @@ void creature_do_attack(creature_t *creature, int delta) {
 
     target->health -= hitpoints;
 
-    player_on_creature_attacked(target->player,
-                                creature_num(target), 
-                                creature_num(creature));
-
-    if (target->health > 0)
+    if (target->health > 0) {
+        player_on_creature_attacked(target->player,
+                                    target, 
+                                    creature);
         return;
+    }
 
     creature_make_smile(creature, SEND_BROADCAST);
     creature_kill(target, creature);
@@ -425,17 +425,14 @@ int creature_set_type(creature_t *creature, creature_type type) {
     if (type < 0 || type >= CREATURE_TYPES)
         return 0;
 
-    creature_type oldtype = creature->type;
     creature->type = type;
     
-    if (creature->health > creature_max_health(creature))
-        creature->health = creature_max_health(creature);
+    creature_set_health(creature, creature->health);
+
     if (creature->food   > creature_max_food(creature))
         creature->food   = creature_max_food(creature);
 
-    if (creature->type != oldtype) 
-        creature->dirtymask |= CREATURE_DIRTY_TYPE;
-
+    creature->dirtymask |= CREATURE_DIRTY_TYPE;
     return 1;
 }
 
@@ -808,6 +805,18 @@ int creature_set_path(creature_t *creature, int x, int y) {
     path_delete(creature->path);
 
     creature->path = newpath;
+    return 1;
+}
+
+int creature_set_health(creature_t *creature, int health) {
+    if (health > creature_max_health(creature))
+        health = creature_max_health(creature);
+    
+    if (health < 0)
+        health = 0;
+
+    creature->health = health;
+
     return 1;
 }
 

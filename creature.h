@@ -69,6 +69,7 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
 void        creature_kill(creature_t *creature, creature_t *killer);
 
 int         creature_set_path(creature_t *creature, int x, int y);
+int         creature_set_health(creature_t *creature, int health);
 int         creature_set_target(creature_t *creature, int target);
 int         creature_set_state(creature_t *creature, int state);
 int         creature_set_conversion_type(creature_t *creature, creature_type type);

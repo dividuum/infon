@@ -314,14 +314,10 @@ end
 ------------------------------------------------------------------------
 function this_function_call_fails_if_cpu_limit_exceeded() end
 
-_spawned_creatures  = {}
-_killed_creatures   = {}
-_attacked_creatures = {}
-
 -- Globales Array alle Kreaturen
 creatures = {}
 
-function player_think()
+function player_think(events)
     can_yield = false
 
     -- Gesetzt nach Rundenstart und/oder Joinen
@@ -330,71 +326,62 @@ function player_think()
         if not ok then
             print("onGameStart failed: " .. msg)
         end
-        _player_created = nil
     end
-    
-    -- Getoetete Kreaturen handlen
-    for victim, killer in pairs(_killed_creatures) do
-        if killer == -1 then 
-           killer = nil
-        end
-        assert(creatures[victim])
-        if creatures[victim].onKilled then 
-            local ok, msg = pcall(creatures[victim].onKilled, creatures[victim], killer)
-            if not ok then 
-                print("cannot call onKilled: " .. msg)
+
+    -- Events abarbeiten
+    for n, event in ipairs(events) do 
+        local event_type, id, other = unpack(event) 
+        if event_type == CREATURE_SPAWNED then
+            -- id = id der neuen creature, other = id des parents oder -1
+            parent = other ~= -1 and other or nil
+            local creature = {}
+            setmetatable(creature, {
+                __index = function(self, what)
+                    if Creature[what] then
+                        return Creature[what]
+                    end
+                end
+            })
+            creatures[id] = creature
+            creature.id = id
+            if creature.onSpawned then 
+                local ok, msg = pcall(creature.onSpawned, creature, parent)
+                if not ok then
+                    print("onSpawned failed: " .. msg)
+                end
+            else
+                print("onSpawned method deleted")
             end
-        else
-            print("onKilled method deleted")
-        end
-        creatures[victim] = nil
-    end
-    
-    -- Angegriffene Kreaturen
-    for attacker, victim in pairs(_attacked_creatures) do
-        if creatures[victim] then -- Getoetete Viecher ueberspringen
-            if creatures[victim].onAttacked then 
-                local ok, msg = pcall(creatures[victim].onAttacked, creatures[victim], attacker)
+            creature:restart()
+        elseif event_type == CREATURE_KILLED then
+            -- id = id der getoeteten creature, other = id des killers oder -1
+            killer = other ~= -1 and other or nil
+            assert(creatures[id])
+            if creatures[id].onKilled then 
+                local ok, msg = pcall(creatures[id].onKilled, creatures[id], killer)
+                if not ok then 
+                    print("cannot call onKilled: " .. msg)
+                end
+            else
+                print("onKilled method deleted")
+            end
+            creatures[id] = nil
+        elseif event_type == CREATURE_ATTACKED then
+            -- id = id der angegriffenen creature, other = id des angreifers
+            if creatures[id].onAttacked then 
+                local ok, msg = pcall(creatures[id].onAttacked, creatures[id], other)
                 if not ok then 
                     print("onAttacked failed: " .. msg)
                 end
             else
                 print("onAttacked method deleted")
             end
-        end
-    end
-
-    -- Erzeugte Kreaturen
-    for id, parent in pairs(_spawned_creatures) do
-        if parent == -1 then
-           parent = nil
-        end
-        local creature = {}
-        setmetatable(creature, {
-            __index = function(self, what)
-                if Creature[what] then
-                    return Creature[what]
-                end
-            end
-        })
-        creatures[id] = creature
-        creature.id = id
-        if creature.onSpawned then 
-            local ok, msg = pcall(creature.onSpawned, creature, parent)
-            if not ok then
-                print("onSpawned failed: " .. msg)
-            end
         else
-            print("onSpawned method deleted")
+            error("invalid event " .. event_type)
         end
-        creature:restart()
     end
 
-    -- Transfertabellen leeren
-    _spawned_creatures  = {}
-    _killed_creatures   = {}
-    _attacked_creatures = {}
-
+    -- Vor jeder Runde eventuell vorhandene Funktion onRoundStart aufrufen
     if onRoundStart then
         local ok, msg = pcall(onRoundStart)
         if not ok then
@@ -428,13 +415,13 @@ function player_think()
 
     can_yield = false
 
+    -- Nach jeder Runde eventuell vorhandene Funktion onRoundStart aufrufen
     if onRoundEnd then
         local ok, msg = pcall(onRoundEnd)
         if not ok then
             print("onRoundEnd failed: " .. msg)
         end
     end
-    
 end
 
 ------------------------------------------------------------------------
