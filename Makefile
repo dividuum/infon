@@ -24,12 +24,12 @@ ifdef WINDOWS
 	MINGW    = $(HOME)/progs/mingw32/
 	SDLDIR   = $(MINGW)
 	CC       = /opt/xmingw/bin/i386-mingw32msvc-gcc
-	CFLAGS   = $(COMMON_CFLAGS) -I$(MINGW)/include
+	CFLAGS  += $(COMMON_CFLAGS) -I$(MINGW)/include
 	WINDRES  = /opt/xmingw/bin/i386-mingw32msvc-windres
 	LUAPLAT  = mingw
 else
 	SDLDIR   = $(shell sdl-config --prefix)
-	CFLAGS   = $(COMMON_CFLAGS)
+	CFLAGS  += $(COMMON_CFLAGS)
 	LUAPLAT  = debug #linux
 	LDFLAGS += -ldl
 endif

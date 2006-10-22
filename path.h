@@ -50,11 +50,12 @@ struct open_s {
 struct pathnode_s {
     int x;
     int y;
-    int dist;
     pathnode_t *next;
 };
 
 pathnode_t *finder_find(pathfinder_t *finder, map_t *map, int sx, int sy, int ex, int ey);
+pathnode_t *pathnode_new(int x, int y);
+
 void        path_delete(pathnode_t *path);
 
 void        finder_init    (pathfinder_t *finder);

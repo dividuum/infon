@@ -83,6 +83,10 @@ int creature_num(const creature_t *creature) {
     return creature - creatures;
 }
 
+int creature_groundbased(const creature_t *creature) {
+    return creature->type != CREATURE_FLYER;
+}
+
 maptype_e creature_tile_type(const creature_t *creature) {
     return world_get_type(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y));
 }
@@ -205,6 +209,9 @@ again:
 
     creature->x += dx * travelled / dist_to_waypoint;
     creature->y += dy * travelled / dist_to_waypoint;
+    
+    assert(!creature_groundbased(creature) || world_walkable(X_TO_TILEX(creature->x), 
+                                                             Y_TO_TILEY(creature->y)));
 }
 
 // ------------- Food -> Health -------------
@@ -774,36 +781,23 @@ void creature_moveall(int delta) {
 int creature_set_path(creature_t *creature, int x, int y) {
     pathnode_t *newpath;
 
-    switch (creature->type) {
-        case CREATURE_SMALL:
-        case CREATURE_BIG:
-            // Bodenbasierte Viecher
-            if (!world_walkable(X_TO_TILEX(x), Y_TO_TILEY(y)))
-                return 0;
+    if (creature_groundbased(creature)) {
+        if (!world_walkable(X_TO_TILEX(x), Y_TO_TILEY(y)))
+            return 0;
+        
+        newpath = world_findpath(creature->x, creature->y, x, y);
 
-            newpath = world_findpath(creature->x, creature->y, x, y);
-            break;
-        case CREATURE_FLYER:
-            // Fliegendes Vieh
-            if (!world_is_within_border(X_TO_TILEX(x), Y_TO_TILEY(y)))
-                return 0;
+        if (!newpath)
+            return 0;
+    } else {
+        // Fliegendes Vieh
+        if (!world_is_within_border(X_TO_TILEX(x), Y_TO_TILEY(y)))
+            return 0;
 
-            newpath = malloc(sizeof(pathnode_t));
-            if (newpath) {
-                newpath->x = x;
-                newpath->y = y;
-                newpath->next = NULL;
-            }
-            break;
-        default:
-            assert(0);
+        newpath = pathnode_new(x, y); 
     }
 
-    if (!newpath)
-        return 0;
-
     path_delete(creature->path);
-
     creature->path = newpath;
     return 1;
 }
