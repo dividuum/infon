@@ -238,7 +238,6 @@ void gui_creature_from_network(packet_t *packet) {
         } else {
             if (CREATURE_USED(creature))        PROTOCOL_ERROR();
             memset(creature, 0, sizeof(gui_creature_t));
-            creature->used   = 1;
             if (playerno >= MAXPLAYERS)         PROTOCOL_ERROR();
             creature->player = playerno;
 
@@ -248,6 +247,7 @@ void gui_creature_from_network(packet_t *packet) {
 
             creature->last_x = x;
             creature->last_y = y;
+            creature->used   = 1;
 
             // XXX: x, y checken?
             gui_creature_add_path(creature,

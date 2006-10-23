@@ -46,9 +46,8 @@ typedef struct tile_s {
 #define TILE_X1(x) ((x) * TILE_WIDTH)
 #define TILE_Y1(y) ((y) * TILE_HEIGHT)
 
-// XXX: Add +1?
-#define TILE_X2(x) (TILE_X1(x) + TILE_WIDTH)
-#define TILE_Y2(y) (TILE_Y1(y) + TILE_HEIGHT)
+#define TILE_X2(x) (TILE_X1(x) + TILE_WIDTH  - 1)
+#define TILE_Y2(y) (TILE_Y1(y) + TILE_HEIGHT - 1)
 
 #define TILE_XCENTER(x) (TILE_X1(x) + TILE_WIDTH  / 2)
 #define TILE_YCENTER(y) (TILE_Y1(y) + TILE_HEIGHT / 2)

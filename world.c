@@ -65,19 +65,19 @@ int world_walkable(int x, int y) {
 }
 
 int world_dig(int x, int y, maptype_e type) {
-    if (type == SOLID)
+    if (type == TILE_SOLID)
         return 0;
 
     if (!world_is_within_border(x, y))
         return 0;
 
-    if (MAPTILE(x, y).type != SOLID)
+    if (MAPTILE(x, y).type != TILE_SOLID)
         return 0;
     
     // fprintf(stderr, "world_dig(%d, %d, %d)\n", x, y, type);
 
     // Pfadsuche fuer Bodenbasierte Viecher aktualisieren
-    if (type == PLAIN)
+    if (type == TILE_PLAIN)
         map_dig(walkmap, x, y);
     
     MAPTILE(x, y).type = type;
@@ -96,6 +96,14 @@ int world_get_food(int x, int y) {
     return MAPTILE(x, y).food;
 }
 
+maptype_e world_get_type(int x, int y) {
+    if (!world_is_on_map(x, y))
+        return 0;
+
+    return MAPTILE(x, y).type;
+}
+
+
 static int food_to_network_food(int food) {
     return food == 0 ? 0xFF : food / 1000;
 }
@@ -104,7 +112,7 @@ int world_add_food(int x, int y, int amount) {
     if (!world_is_on_map(x, y))
         return 0;
 
-    if (MAPTILE(x, y).type != PLAIN)
+    if (MAPTILE(x, y).type != TILE_PLAIN)
         return 0;
 
     int old = MAPTILE(x, y).food;
@@ -123,7 +131,7 @@ int world_food_eat(int x, int y, int amount) {
     if (!world_is_on_map(x, y))
         return 0;
 
-    if (MAPTILE(x, y).type != PLAIN)
+    if (MAPTILE(x, y).type != TILE_PLAIN)
         return 0;
 
     int ontile = MAPTILE(x, y).food;
@@ -160,7 +168,7 @@ void world_find_plain(int *x, int *y) {
     while (1) {
         int xx = rand() % world_w;
         int yy = rand() % world_h;
-        if (MAPTILE(xx, yy).type == PLAIN) {
+        if (MAPTILE(xx, yy).type == TILE_PLAIN) {
             *x = xx;
             *y = yy;
             return;
@@ -241,14 +249,14 @@ void world_init() {
     lua_register(L, "world_is_walkable",    luaWorldWalkable);
     lua_register(L, "world_find_digged",    luaWorldFindDigged);
 
-    lua_pushnumber(L, SOLID);
-    lua_setglobal(L, "SOLID"); 
+    lua_pushnumber(L, TILE_SOLID);
+    lua_setglobal(L, "TILE_SOLID"); 
 
-    lua_pushnumber(L, PLAIN);
-    lua_setglobal(L, "PLAIN"); 
+    lua_pushnumber(L, TILE_PLAIN);
+    lua_setglobal(L, "TILE_PLAIN"); 
 
-    lua_pushnumber(L, WATER);
-    lua_setglobal(L, "WATER"); 
+    lua_pushnumber(L, TILE_WATER);
+    lua_setglobal(L, "TILE_WATER"); 
 
     lua_pushnumber(L, TILE_WIDTH);
     lua_setglobal(L, "TILE_WIDTH"); 
@@ -290,7 +298,7 @@ void world_init() {
     world_send_info(SEND_BROADCAST);
 
     // Koth Tile freigraben
-    world_dig(koth_x, koth_y, PLAIN);
+    world_dig(koth_x, koth_y, TILE_PLAIN);
 }
 
 void world_shutdown() {

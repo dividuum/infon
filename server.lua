@@ -191,7 +191,7 @@ function Client:shell()
             if code == "" then 
                 break
             end
-            local ok, msg = xpcall(loadstring(code), _TRACEBACK)
+            local ok, msg = xpcall(loadstring(code), debug.traceback)
             if not ok then 
                 self:writeln(msg)
             end
@@ -314,7 +314,6 @@ function Client:handler()
     self:centerln("Welcome to " .. GAME_NAME)
     self:writeln("")
     --                  von http://www.asciiworld.com/animals_birds.html
-    self:writeln("                                     \\")
     self:writeln("                     .___             `.")
     self:writeln("        ___              `~\\           |               \\")
     self:writeln("      o~   `.               |         /'                |")
@@ -329,7 +328,10 @@ function Client:handler()
     self:writeln("              ~~`---'             /               |")
     self:writeln("                               ,-'              _/'")
     self:writeln("")
-    self:writeln("")
+    self:writeln("-------------------------------------------------------------")
+    self:centerln("this version is now based on lua 5.1.1")
+    self:centerln("See http://lua-users.org/wiki/MigratingToFiveOne")
+    self:writeln("-------------------------------------------------------------")
     self:writeln("enter '?' for help")
     self:mainmenu()
 end

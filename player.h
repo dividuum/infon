@@ -50,10 +50,19 @@ typedef struct player_s {
     int           max_cycles;
     int           cpu_usage;
 
+    int           max_mem;
+    int           mem_enforce;
+
     int           kill_me;
 
     unsigned char dirtymask;
 } player_t;
+
+typedef enum {
+    CREATURE_SPAWNED,
+    CREATURE_KILLED,
+    CREATURE_ATTACKED
+} creature_event;
 
 struct creature_s;
 
@@ -66,7 +75,7 @@ int         player_detach_client(client_t *client, player_t *player);
 
 void        player_on_creature_spawned(player_t *player,  struct creature_s *creature, struct creature_s *parent);
 void        player_on_creature_killed(player_t *player, struct creature_s *victim, struct creature_s *killer);
-void        player_on_creature_attacked(player_t *player, int victim, int attacker);
+void        player_on_creature_attacked(player_t *player, struct creature_s *victim, struct creature_s *attacker);
 
 void        player_execute_client_lua(player_t *player, const char *code, size_t codelen, const char *where);
 

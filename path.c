@@ -37,8 +37,10 @@ inline int path_calc_cost(int x1, int y1, int x2, int y2) {
 
 pathnode_t *pathnode_new(int x, int y) {
     pathnode_t *node = (pathnode_t*)malloc(sizeof(pathnode_t));
-    node->x = x;
-    node->y = y;
+    assert(node);
+    node->x    = x;
+    node->y    = y;
+    node->next = NULL;
     return node;
 }
 
@@ -177,11 +179,8 @@ pathnode_t *finder_find(pathfinder_t *finder, map_t *map, int sx, int sy, int ex
     const tile_t *etile = MAP_TILE(map, tex, tey);
 
     // Ziel und Quelle gleich
-    if (sx == ex && sy == ey) {
-        pathnode_t *path = pathnode_new(ex, ey); 
-        path->next = NULL;
-        return path;
-    }
+    if (sx == ex && sy == ey) 
+        return pathnode_new(ex, ey); 
 
     // Gibt es ueberhaupt eine Verbindung?
     if (stile->region != etile->region) 
@@ -193,21 +192,14 @@ pathnode_t *finder_find(pathfinder_t *finder, map_t *map, int sx, int sy, int ex
     // Spezialfall: Nur ein Tile
     if ((ABS(tsx - tex) == 1 && (tsy == tey)) ||
         ((tsx == tex) && ABS(tsy - tey) == 1)) 
-    {
-        pathnode_t *path = pathnode_new(ex, ey); 
-        path->next = NULL;
-        return path;
-    }
+        return pathnode_new(ex, ey); 
 
     const area_t *sarea = stile->area;
     const area_t *earea = etile->area;
 
     // Ziel und Quelle im gleichen Area?
-    if (sarea == earea) {
-        pathnode_t *path = pathnode_new(ex, ey); 
-        path->next = NULL;
-        return path;
-    }
+    if (sarea == earea) 
+        return pathnode_new(ex, ey); 
 
     // Neue Path id zum eindeutigen erkennen, ob
     // path_prev in portal_t aktuell oder veraltet ist holen.
@@ -335,28 +327,25 @@ pathnode_t *finder_find(pathfinder_t *finder, map_t *map, int sx, int sy, int ex
     pathnode_t *curpath = &pathstart;
     int lastx = sx, lasty = sy;
     do {
-        // Die cx und cy Koordinaten befinden sich jeweils an der linken bzw
-        // oberen Kante eines Tiles. Kommt ein Pfad daher von Rechts oder von 
-        // Unten zu einem solchen Portal, so wuerde der hier erzeugte Knoten noch im 
-        // aktuell durchlaufenen Area liegen. Wird ein solcher Weg abgelaufen und
-        // direkt nach dem Knoten folgt eine ~90 Grad Kurve, so kann es sein, dass 
-        // die x bzw y Koordinate fuer eine kurze Zeit nicht veraendert wird, 
-        // d.h. das Area, obwohl schon auf dem Weg zum naechsten Knoten, nicht 
-        // verlassen wird. Wird in diesem Moment eine erneute Suche zum gleichen
-        // Ziel begonnen, wird der zuvor bereits ueberquerte Knoten erneut
-        // als Pfadknoten gefunden und es kommt zu einer haesslichen Endlosschleife.
-        // Daher wird von x bzw y der Wert 1 subtrahiert, falls das Portal von 
-        // Rechts bzw von unten angesteuert wird.
-        curpath->next = pathnode_new(pathportal->cx - (pathportal->cx <= lastx), 
-                                     pathportal->cy - (pathportal->cy <= lasty));
-        lastx = pathportal->cx;
-        lasty = pathportal->cy;
-        curpath       = curpath->next;
-        pathportal    = pathportal->path_prev;
+        if (pathportal->dir == PORTAL_DIR_HORIZONTAL) {
+            curpath->next = pathnode_new(pathportal->cx, 
+                                         pathportal->cy + (lasty  > pathportal->cy));
+            curpath       = curpath->next;
+            curpath->next = pathnode_new(pathportal->cx, 
+                                         pathportal->cy + (lasty <= pathportal->cy));
+        } else {
+            curpath->next = pathnode_new(pathportal->cx + (lastx  > pathportal->cx), 
+                                         pathportal->cy);
+            curpath       = curpath->next;
+            curpath->next = pathnode_new(pathportal->cx + (lastx <= pathportal->cx), 
+                                         pathportal->cy);
+        }
+        curpath    = curpath->next;
+        lastx      = curpath->x;
+        lasty      = curpath->y;
+        pathportal = pathportal->path_prev;
     } while (pathportal);
     curpath->next = pathnode_new(ex, ey);
-    curpath->next->next = NULL;
-
     return pathstart.next;
 }
 

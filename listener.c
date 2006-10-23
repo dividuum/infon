@@ -36,8 +36,8 @@
 #include "listener.h"
 #include "server.h"
 
-int          listenfd = -1;
-struct event listener_event;
+static int listenfd = -1;
+static struct event listener_event;
 
 static void listener_cb(int fd, short event, void *arg) {
     struct event *cb_event = arg;

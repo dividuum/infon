@@ -57,12 +57,16 @@ void print_fps() {
 
 int main(int argc, char *argv[]) {
     int width = 800, height = 600, fullscreen = 0;
+    char *host = NULL;
+#ifdef EVENT_HOST
+    host = EVENT_HOST;
+#else
 #ifdef WIN32
     char *sep = strrchr(argv[0], '\\');
     if (sep) { *sep = '\0'; chdir(argv[0]); }
 
     if (argc == 2 && stricmp(argv[1], "/s") == 0) {
-        argv[1] = "bl0rg.net";
+        host  = "bl0rg.net";
         width = 1024, height = 768, fullscreen = 1;
     } else if (argc == 3 && stricmp(argv[1], "/p") == 0) {
         exit(0);
@@ -72,10 +76,14 @@ int main(int argc, char *argv[]) {
         die("you must supply the gameservers hostname\n"
             "as first command line parameter.\n\n"
             "example: 'infon.exe bl0rg.net'");
+    } else {
+        host = argv[1];
     }
 #else
     if (argc != 2)
         die("usage: %s <serverip[:port]>", argv[0]);
+    host = argv[1];
+#endif
 #endif
 
 #ifndef WIN32
@@ -85,7 +93,7 @@ int main(int argc, char *argv[]) {
 
     srand(time(0));
 
-    client_init(argv[1], NULL);
+    client_init(host, NULL);
 
     video_init(width, height, fullscreen);
     sprite_init();

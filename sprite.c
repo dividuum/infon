@@ -166,7 +166,7 @@ void sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2
 }
 
 void sprite_init() {
-    gfx = sprite_load_surface("gfx/theme.png");
+    gfx = sprite_load_surface(PREFIX "gfx/theme.png");
     SDL_SetAlpha(gfx, 0, 0);
 
     sprite_load_background();

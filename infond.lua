@@ -22,7 +22,7 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
-require 'config.lua'
+require 'config'
 
 -----------------------------------------------------------
 -- Klasse fuer Clientverbindung
@@ -159,18 +159,18 @@ end
 
 function Client:writeln(line)
     if line then 
-        self:write(line .. "\n")
+        self:write(line .. "\r\n")
     else
-        self:write("\n")
+        self:write("\r\n")
     end
 end
 
 function Client:check_repeat(name, time)
-    if self[name] and self[name] + time > game_time() then
-        return false
+    if not self[name] or game_time() < self[name] or game_time() > self[name] + time then
+        self[name] = game_time()
+        return true
     else
-       self[name] = game_time()
-       return true
+        return false
     end
 end
 
@@ -183,12 +183,12 @@ end
 -- gelesen werden kann (len = 32 (space), type = 32 (space).
 function Client:welcome(msg)
     local msglen = string.len(msg)
-    if msglen > 30 then
+    if msglen > 28 then
         print('welcome message too long')
         msg = "Press <enter>"
         msglen = string.len(msg)
     end
-    self:write("  \n" .. msg .. string.rep(" ", 30 - msglen) .. "\n")
+    self:write("  \r\n" .. msg .. string.rep(" ", 28 - msglen) .. "\r\n")
 end
 
 function Client.writeAll(line)
@@ -245,6 +245,17 @@ function world_main()
     end
 end
 
+current_map = 1
+map         = maps[current_map]
+
+function world_rotate_map()
+    current_map = current_map + 1
+    if current_map > #maps then
+       current_map = 1
+    end
+    map = maps[current_map]
+end
+
 function world_init()
     dofile("level/" .. map .. ".lua")
     local w,  h  = level_size()
@@ -278,7 +289,7 @@ end
 function p(x) 
     if type(x) == "table" then
         print("+--- Table: " .. tostring(x))
-        for key, val in x do
+        for key, val in pairs(x) do
             print("| " .. tostring(key) .. " " .. tostring(val))
         end
         print("+-----------------------")
@@ -293,7 +304,7 @@ end
 
 function clientlist(adminfd)
     table.foreach(clients, function (fd, obj)
-                               client_write(adminfd, fd .. " - " .. obj.addr .. "\n")
+                               client_write(adminfd, fd .. " - " .. obj.addr .. "\r\n")
                            end)
 end
 
@@ -327,4 +338,4 @@ end
 -- Clienthandler laden
 -----------------------------------------------------------
 
-require "server.lua"
+require "server"

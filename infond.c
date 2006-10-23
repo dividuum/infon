@@ -50,16 +50,10 @@ int main(int argc, char *argv[]) {
 
     srand(time(0));
 
-    L = lua_open();
+    L = luaL_newstate();
 
-    lua_baselibopen(L);
-    lua_tablibopen(L);
-    lua_iolibopen(L);
-    lua_strlibopen(L);
-    lua_dblibopen(L);
-    lua_mathlibopen(L);
-
-    lua_dofile(L, "infond.lua");
+    luaL_openlibs(L);
+    luaL_dofile(L, "infond.lua");
 
     game_init();
     server_init();

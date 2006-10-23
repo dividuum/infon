@@ -22,6 +22,11 @@
 -- Unsicheres Zeugs weg
 ------------------------------------------------------------------------
 
+_TRACEBACK = debug.traceback
+
+save_in_registry('traceback', debug.traceback)
+save_in_registry = nil
+
 dofile          = nil
 getfenv         = nil
 setfenv         = nil
@@ -30,6 +35,9 @@ _VERSION        = nil
 newproxy        = nil
 debug           = nil
 gcinfo          = nil
+os              = nil
+package         = nil
+io              = nil
 
 collectgarbage()
 collectgarbage  = nil
@@ -147,6 +155,10 @@ function Creature:tile_food()
     return get_tile_food(self.id)
 end
 
+function Creature:tile_type()
+    return get_tile_type(self.id)
+end
+
 function Creature:type()
     return get_type(self.id)
 end
@@ -239,7 +251,7 @@ function Creature:restart()
     if self.onRestart then
         local ok, msg = pcall(self.onRestart, self)
         if not ok then 
-            print(msg)
+            print("restarting main failed: " .. msg)
         end
     else
         print("onRestart method deleted")
@@ -271,7 +283,7 @@ end
 function p(x) 
     if type(x) == "table" then
         print("+--- Table: " .. tostring(x))
-        for key, val in x do
+        for key, val in pairs(x) do
             print("| " .. tostring(key) .. " " .. tostring(val))
         end
         print("+-----------------------")
@@ -285,14 +297,14 @@ end
 ------------------------------------------------------------------------
 
 function restart()
-    for id, creature in creatures do
+    for id, creature in pairs(creatures) do
         creature.message = nil
         creature:restart()
     end
 end
 
 function info()
-    for id, creature in creatures do
+    for id, creature in pairs(creatures) do
         print("creature " .. id .. ": " .. (creature.message or "-"))
     end
 end
@@ -300,119 +312,121 @@ end
 ------------------------------------------------------------------------
 -- Callbacks von C
 ------------------------------------------------------------------------
-
-_spawned_creatures  = {}
-_killed_creatures   = {}
-_attacked_creatures = {}
+function this_function_call_fails_if_cpu_limit_exceeded() end
 
 -- Globales Array alle Kreaturen
 creatures = {}
 
-function player_think()
+function player_think(events)
     can_yield = false
-    
-    -- Getoetete Kreaturen handlen
-    for victim, killer in _killed_creatures do
-        if killer == -1 then 
-           killer = nil
+
+    -- Gesetzt nach Rundenstart und/oder Joinen
+    if _player_created and onGameStart then
+        local ok, msg = pcall(onGameStart)
+        if not ok then
+            print("onGameStart failed: " .. msg)
         end
-        assert(creatures[victim])
-        if creatures[victim].onKilled then 
-            local ok, msg = pcall(creatures[victim].onKilled, creatures[victim], killer)
-            if not ok then 
-                print(msg)
-            end
-        else
-            print("onKilled method deleted")
-        end
-        creatures[victim] = nil
     end
-    
-    -- Angegriffene Kreaturen
-    for attacker, victim in _attacked_creatures do
-        if creatures[victim] then -- Getoetete Viecher ueberspringen
-            if creatures[victim].onAttacked then 
-                local ok, msg = pcall(creatures[victim].onAttacked, creatures[victim], attacker)
+
+    -- Events abarbeiten
+    for n, event in ipairs(events) do 
+        local event_type, id, other = unpack(event) 
+        if event_type == CREATURE_SPAWNED then
+            -- id = id der neuen creature, other = id des parents oder -1
+            parent = other ~= -1 and other or nil
+            local creature = {}
+            setmetatable(creature, {
+                __index = function(self, what)
+                    if Creature[what] then
+                        return Creature[what]
+                    end
+                end
+            })
+            creatures[id] = creature
+            creature.id = id
+            if creature.onSpawned then 
+                local ok, msg = pcall(creature.onSpawned, creature, parent)
+                if not ok then
+                    print("onSpawned failed: " .. msg)
+                end
+            else
+                print("onSpawned method deleted")
+            end
+            creature:restart()
+        elseif event_type == CREATURE_KILLED then
+            -- id = id der getoeteten creature, other = id des killers oder -1
+            killer = other ~= -1 and other or nil
+            assert(creatures[id])
+            if creatures[id].onKilled then 
+                local ok, msg = pcall(creatures[id].onKilled, creatures[id], killer)
                 if not ok then 
-                    print(msg)
+                    print("cannot call onKilled: " .. msg)
+                end
+            else
+                print("onKilled method deleted")
+            end
+            creatures[id] = nil
+        elseif event_type == CREATURE_ATTACKED then
+            -- id = id der angegriffenen creature, other = id des angreifers
+            if creatures[id].onAttacked then 
+                local ok, msg = pcall(creatures[id].onAttacked, creatures[id], other)
+                if not ok then 
+                    print("onAttacked failed: " .. msg)
                 end
             else
                 print("onAttacked method deleted")
             end
-        end
-    end
-
-    -- Erzeugte Kreaturen
-    for id, parent in _spawned_creatures do
-        if parent == -1 then
-           parent = nil
-        end
-        local creature = {}
-        setmetatable(creature, {
-            __index = function(self, what)
-                if Creature[what] then
-                    return Creature[what]
-                end
-            end
-        })
-        creatures[id] = creature
-        creature.id = id
-        if creature.onSpawned then 
-            local ok, msg = pcall(creature.onSpawned, creature, parent)
-            if not ok then
-                print(msg)
-            end
         else
-            print("onSpawned method deleted")
+            error("invalid event " .. event_type)
         end
-        creature:restart()
     end
 
-    -- Transfertabellen leeren
-    _spawned_creatures  = {}
-    _killed_creatures   = {}
-    _attacked_creatures = {}
-
+    -- Vor jeder Runde eventuell vorhandene Funktion onRoundStart aufrufen
     if onRoundStart then
         local ok, msg = pcall(onRoundStart)
         if not ok then
-            print(msg)
+            print("onRoundEnd failed: " .. msg)
         end
     end
     
     can_yield = true
 
     -- Vorhandene Kreaturen durchlaufen
-    for id, creature in creatures do
+    for id, creature in pairs(creatures) do
         if type(creature.thread) ~= 'thread' then
             creature.message = 'uuh. self.thread is not a coroutine.'
         elseif coroutine.status(creature.thread) == 'dead' then
             if not creature.message then 
-                creature.message = 'main() terminated (maybe it was killed for using too much cpu?)'
+                creature.message = 'main() terminated (maybe it was killed for using too much cpu/memory?)'
             end
         else
             local ok, msg = coroutine.resume(creature.thread, creature)
             if not ok then
-                print(msg)
                 creature.message = msg
+                -- Falls die Coroutine abgebrochen wurde, weil zuviel
+                -- CPU benutzt wurde, so triggert folgeder Funktions
+                -- Aufruf den Abbruch von player_think. Um zu ermitteln,
+                -- wo zuviel CPU gebraucht wurde, kann der Traceback
+                -- in creature.message mittels 'i' angezeigt werden.
+                this_function_call_fails_if_cpu_limit_exceeded()
             end
         end
     end
 
     can_yield = false
 
+    -- Nach jeder Runde eventuell vorhandene Funktion onRoundStart aufrufen
     if onRoundEnd then
         local ok, msg = pcall(onRoundEnd)
         if not ok then
-            print(msg)
+            print("onRoundEnd failed: " .. msg)
         end
     end
-    
 end
 
 ------------------------------------------------------------------------
 -- Default Laden
 ------------------------------------------------------------------------
 
-require 'player-default.lua'
+require 'player-default'
 require = nil

@@ -83,6 +83,14 @@ int creature_num(const creature_t *creature) {
     return creature - creatures;
 }
 
+int creature_groundbased(const creature_t *creature) {
+    return creature->type != CREATURE_FLYER;
+}
+
+maptype_e creature_tile_type(const creature_t *creature) {
+    return world_get_type(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y));
+}
+
 int creature_food_on_tile(const creature_t *creature) {
     return world_get_food(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y));
 }
@@ -201,6 +209,9 @@ again:
 
     creature->x += dx * travelled / dist_to_waypoint;
     creature->y += dy * travelled / dist_to_waypoint;
+    
+    assert(!creature_groundbased(creature) || world_walkable(X_TO_TILEX(creature->x), 
+                                                             Y_TO_TILEY(creature->y)));
 }
 
 // ------------- Food -> Health -------------
@@ -345,12 +356,12 @@ void creature_do_attack(creature_t *creature, int delta) {
 
     target->health -= hitpoints;
 
-    player_on_creature_attacked(target->player,
-                                creature_num(target), 
-                                creature_num(creature));
-
-    if (target->health > 0)
+    if (target->health > 0) {
+        player_on_creature_attacked(target->player,
+                                    target, 
+                                    creature);
         return;
+    }
 
     creature_make_smile(creature, SEND_BROADCAST);
     creature_kill(target, creature);
@@ -367,8 +378,8 @@ int creature_conversion_speed(creature_t *creature) {
 static const int conversion_food_needed[CREATURE_TYPES][CREATURE_TYPES] = 
                                // TO
     { {    0,   8000,   5000,      0 },// FROM
-      {    0,      0,      0,      0 },
-      {    0,   5000,      0,      0 },
+      { 8000,      0,      0,      0 },
+      { 5000,      0,      0,      0 },
       {    0,      0,      0,      0 } };
 
 int creature_conversion_food(const creature_t *creature, creature_type type) {
@@ -421,17 +432,14 @@ int creature_set_type(creature_t *creature, creature_type type) {
     if (type < 0 || type >= CREATURE_TYPES)
         return 0;
 
-    creature_type oldtype = creature->type;
     creature->type = type;
     
-    if (creature->health > creature_max_health(creature))
-        creature->health = creature_max_health(creature);
+    creature_set_health(creature, creature->health);
+
     if (creature->food   > creature_max_food(creature))
         creature->food   = creature_max_food(creature);
 
-    if (creature->type != oldtype) 
-        creature->dirtymask |= CREATURE_DIRTY_TYPE;
-
+    creature->dirtymask |= CREATURE_DIRTY_TYPE;
     return 1;
 }
 
@@ -471,10 +479,8 @@ void creature_do_spawn(creature_t *creature, int delta) {
     if (creature->spawn_food == creature_spawn_food(creature)) {
         creature_t *baby = creature_spawn(creature->player, creature, creature->x, creature->y, CREATURE_SMALL);
         if (!baby) {
-            static char msg[] = "uuh. sorry. couldn't spawn your new born creature\n";
+            static char msg[] = "uuh. sorry. couldn't spawn your new born creature\r\n";
             player_writeto(creature->player, msg, sizeof(msg) - 1);
-        } else {
-            baby->food = 1000;
         }
         creature_set_state(creature, CREATURE_IDLE);
     }
@@ -775,37 +781,36 @@ void creature_moveall(int delta) {
 int creature_set_path(creature_t *creature, int x, int y) {
     pathnode_t *newpath;
 
-    switch (creature->type) {
-        case CREATURE_SMALL:
-        case CREATURE_BIG:
-            // Bodenbasierte Viecher
-            if (!world_walkable(X_TO_TILEX(x), Y_TO_TILEY(y)))
-                return 0;
+    if (creature_groundbased(creature)) {
+        if (!world_walkable(X_TO_TILEX(x), Y_TO_TILEY(y)))
+            return 0;
+        
+        newpath = world_findpath(creature->x, creature->y, x, y);
 
-            newpath = world_findpath(creature->x, creature->y, x, y);
-            break;
-        case CREATURE_FLYER:
-            // Fliegendes Vieh
-            if (!world_is_within_border(X_TO_TILEX(x), Y_TO_TILEY(y)))
-                return 0;
+        if (!newpath)
+            return 0;
+    } else {
+        // Fliegendes Vieh
+        if (!world_is_within_border(X_TO_TILEX(x), Y_TO_TILEY(y)))
+            return 0;
 
-            newpath = malloc(sizeof(pathnode_t));
-            if (newpath) {
-                newpath->x = x;
-                newpath->y = y;
-                newpath->next = NULL;
-            }
-            break;
-        default:
-            assert(0);
+        newpath = pathnode_new(x, y); 
     }
 
-    if (!newpath)
-        return 0;
-
     path_delete(creature->path);
-
     creature->path = newpath;
+    return 1;
+}
+
+int creature_set_health(creature_t *creature, int health) {
+    if (health > creature_max_health(creature))
+        health = creature_max_health(creature);
+    
+    if (health < 0)
+        health = 0;
+
+    creature->health = health;
+
     return 1;
 }
 

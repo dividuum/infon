@@ -109,21 +109,21 @@ void gui_world_draw() {
 
 static int gui_world_settype(int x, int y, int type) {
     switch (type) {
-        case SOLID:
+        case TILE_SOLID:
             if (x == 0 || x == world_w - 1 || y == 0 || y == world_h - 1) {
                 MAPTILE(x, y).map = sprite_get(SPRITE_BORDER + rand() % SPRITE_NUM_BORDER);
             } else {
                 MAPTILE(x, y).map = sprite_get(SPRITE_SOLID  + rand() % SPRITE_NUM_SOLID);
             };
             break;
-        case PLAIN:
+        case TILE_PLAIN:
             if (x == koth_x && y == koth_y) {
                 MAPTILE(x, y).map = sprite_get(SPRITE_KOTH);
             } else {
                 MAPTILE(x, y).map = sprite_get(SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN);
             }
             break;
-        case WATER:
+        case TILE_WATER:
             MAPTILE(x, y).map = sprite_get(SPRITE_WATER + rand() % SPRITE_NUM_WATER);
             break;
         default:
@@ -208,7 +208,7 @@ void gui_world_info_from_network(packet_t *packet) {
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
-            gui_world_settype(x, y, SOLID);
+            gui_world_settype(x, y, TILE_SOLID);
         }
     }
 

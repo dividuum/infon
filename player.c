@@ -41,7 +41,7 @@ static player_t players[MAXPLAYERS];
 static player_t *king_player = NULL;
 
 void player_score(player_t *player, int scoredelta, const char *reason) {
-    static char buf[1024];
+    char buf[1024];
     snprintf(buf, sizeof(buf), "%s %s %d point%s: %s",
                                player->name, 
                                scoredelta > 0 ? "gained" : "lost",
@@ -77,17 +77,34 @@ void player_score(player_t *player, int scoredelta, const char *reason) {
     printf("stat: %10d %3d '%10s' %5d: %s\n", game_time, player_num(player), player->name, player->score, reason);
 }
 
+void player_init_events(player_t *player) {
+    lua_pushliteral(player->L, "events");
+    lua_newtable(player->L);
+    lua_settable(player->L, LUA_REGISTRYINDEX);
+}
+
+// Erwartet Name an -2 und Wert an -1
+void player_add_event(player_t *player, creature_event event) {
+    lua_pushliteral(player->L, "events");
+    lua_rawget(player->L, LUA_REGISTRYINDEX); // name val _events        
+    assert(!lua_isnil(player->L, -1));
+    lua_createtable(player->L, 3, 0);         // name val _events t
+    lua_pushnumber(player->L, event);         // name val _events t e
+    lua_rawseti(player->L, -2, 1);            // name val _events t
+    lua_insert(player->L, -3);                // name t val _events 
+    lua_insert(player->L, -4);                // _events name t val
+    lua_rawseti(player->L, -2, 3);            // _events name t
+    lua_insert(player->L, -2);                // _events t name
+    lua_rawseti(player->L, -2, 2);            // _events t
+    size_t size = lua_objlen(player->L, -2);
+    lua_rawseti(player->L, -2, size + 1);     // _events
+    lua_pop(player->L, 1);                    //
+}
+
 void player_on_creature_spawned(player_t *player, creature_t *creature, creature_t *parent) {
-    lua_pushliteral(player->L, "_spawned_creatures");
-    lua_rawget(player->L, LUA_GLOBALSINDEX);         
-    if (lua_isnil(player->L, -1)) {
-        static char msg[] = "cannot locate _spawned_creatures table. did you delete it?\n";
-        player_writeto(player, msg, sizeof(msg) - 1);
-    } else {
-        lua_pushnumber(player->L,  parent ? creature_num(parent) : -1);
-        lua_rawseti(player->L, -2, creature_num(creature));
-    }
-    lua_pop(player->L, 1);
+    lua_pushnumber(player->L, creature_num(creature));
+    lua_pushnumber(player->L, parent ? creature_num(parent) : -1);
+    player_add_event(player, CREATURE_SPAWNED);
 
     player->num_creatures++;
         
@@ -107,18 +124,12 @@ void player_on_creature_spawned(player_t *player, creature_t *creature, creature
 }
 
 void player_on_creature_killed(player_t *player, creature_t *victim, creature_t *killer) {
-    lua_pushliteral(player->L, "_killed_creatures");
-    lua_rawget(player->L, LUA_GLOBALSINDEX);         
-    if (lua_isnil(player->L, -1)) {
-        static char msg[] = "cannot locate _killed_creatures table. did you delete it?\n";
-        player_writeto(player, msg, sizeof(msg) - 1);
-    } else {
-        lua_pushnumber(player->L,  killer ? creature_num(killer) : -1);
-        lua_rawseti(player->L, -2, creature_num(victim));
-    }
-    lua_pop(player->L, 1);
+    lua_pushnumber(player->L, creature_num(victim));
+    lua_pushnumber(player->L, killer ? creature_num(killer) : -1);
+    player_add_event(player, CREATURE_KILLED);
 
     player->num_creatures--;
+
     assert(player->num_creatures >= 0);
 
     if (player->num_creatures == 0)
@@ -139,17 +150,10 @@ void player_on_creature_killed(player_t *player, creature_t *victim, creature_t 
     }
 }
 
-void player_on_creature_attacked(player_t *player, int victim, int attacker) {
-    lua_pushliteral(player->L, "_attacked_creatures");
-    lua_rawget(player->L, LUA_GLOBALSINDEX);         
-    if (lua_isnil(player->L, -1)) {
-        static char msg[] = "cannot locate _attacked_creatures table. did you delete it?\n";
-        player_writeto(player, msg, sizeof(msg) - 1);
-    } else {
-        lua_pushnumber(player->L,  victim);
-        lua_rawseti(player->L, -2, attacker);
-    }
-    lua_pop(player->L, 1);
+void player_on_creature_attacked(player_t *player, creature_t *victim, creature_t *attacker) {
+    lua_pushnumber(player->L, creature_num(victim));
+    lua_pushnumber(player->L, creature_num(attacker));
+    player_add_event(player, CREATURE_ATTACKED);
 }
 
 void player_on_all_dead(player_t *player) {
@@ -165,9 +169,9 @@ void player_on_all_dead(player_t *player) {
 
 void player_on_created(player_t *player) {
     // Zeiten zuruecksetzen
-    player->all_dead_time = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
+    player->all_dead_time         = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
     player->all_disconnected_time = game_time;
-    player->spawn_time    = game_time;
+    player->spawn_time            = game_time;
 
     // Rule Handler aufrufen
     lua_pushliteral(L, "onPlayerCreated");
@@ -177,11 +181,90 @@ void player_on_created(player_t *player) {
         fprintf(stderr, "error calling onPlayerCreated: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
+    
+    lua_pushliteral(player->L, "_player_created");
+    lua_pushnumber(player->L, player_num(player));
+    lua_rawset(player->L, LUA_GLOBALSINDEX);         
+}
+
+static int luaSaveInRegistry(lua_State *L) {
+    player_t *player = lua_touserdata(L, lua_upvalueindex(1));
+    lua_settable(player->L, LUA_REGISTRYINDEX);
+    assert(player->L == L);
+    return 0;
+}
+
+static int player_at_panic(lua_State *L) {
+    printf("Aeiik! LUA panic. Cannot continue. Please file a bug report\n");
+    abort();
+    return 0; // never reached
+}
+
+static int player_at_cpu_exceeded(lua_State *L) {
+    lua_pushliteral(L, "traceback");
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    lua_pushliteral(L, "cpu limit exceeded");
+    lua_call(L, 1, 1);
+    return 1;
+}
+
+static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
+    player_t *player = (player_t*)ud;
+    (void)osize;  /* not used */
+
+    // printf("alloc %p, o=%d, n=%d\n", ptr, osize, nsize);
+
+    if (nsize == 0) {
+        free(ptr);
+        return NULL;
+    } else {
+        if (player->mem_enforce && 
+            lua_gc(player->L, LUA_GCCOUNT, 0) >= player->max_mem)
+            return NULL;
+
+        return realloc(ptr, nsize);
+    }
+}
+
+
+// Erwartet Funktion sowie params Parameter auf dem Stack
+static int call_user_lua(player_t *player, int params) {
+    char errorbuf[1000];
+    lua_pushliteral(player->L, "traceback");    // func params* 'traceback'
+    lua_rawget(player->L, LUA_REGISTRYINDEX);   // func params* traceback
+    lua_insert(player->L, -2 - params);         // traceback func params*
+
+    // XXX: Geht davon aus, das vor dem installieren des Errorhandlers (setjmp, etc..) 
+    //      kein Speicherbedingter Fehler auftritt.
+    player->mem_enforce = 1;
+    int ret = lua_pcall(player->L, params, 0, -2 - params);
+    player->mem_enforce = 0;
+
+    switch (ret) {
+        case LUA_ERRRUN:
+            snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s\r\n", lua_tostring(player->L, -1));
+            player_writeto(player, errorbuf, strlen(errorbuf));
+            lua_pop(player->L, 2);
+            return 0;
+        case LUA_ERRMEM:
+            snprintf(errorbuf, sizeof(errorbuf), "mem error: %s\r\n", lua_tostring(player->L, -1));
+            player_writeto(player, errorbuf, strlen(errorbuf));
+            lua_pop(player->L, 2);
+            return 0;
+        case LUA_ERRERR:
+            snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)\r\n");
+            player_writeto(player, errorbuf, strlen(errorbuf));
+            lua_pop(player->L, 2);
+            return 0;
+        default: 
+            lua_pop(player->L, 1);
+            return 1;
+    }
 }
 
 static int luaPrint(lua_State *L) {
     player_t *player = lua_touserdata(L, lua_upvalueindex(1));
-    lua_consumecycles(L, 100);
+    // lua_consumecycles(L, 100);
     int n=lua_gettop(L);
     int i;
     for (i=1; i<=n; i++) {
@@ -199,14 +282,12 @@ static int luaPrint(lua_State *L) {
             player_writeto(player, buffer, strlen(buffer));
         }
     }
-    player_writeto(player, "\n", 1);
+    player_writeto(player, "\r\n", 2);
     return 0;
 }
 
 static int player_get_cpu_usage(player_t *player) {
-    int cycles_left = lua_getcycles(player->L);
-    if (cycles_left < 0)
-        cycles_left = 0;
+    int cycles_left = lua_get_cycles(player->L);
     return 100 * (player->max_cycles - cycles_left) / player->max_cycles;
 }
 
@@ -235,15 +316,15 @@ static int player_get_cpu_usage(player_t *player) {
 static int luaCreatureSuicide(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    lua_consumecycles(L, 100);
-    creature_kill(creature, creature);
+    // lua_consumecycles(L, 100);
+    creature_set_health(creature, 0);
     return 0;
 }
 
 static int luaCreatureSetPath(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    lua_consumecycles(L, 500);
+    // lua_consumecycles(L, 500);
     lua_pushboolean(L, creature_set_path(creature, 
                                          luaL_checklong(L, 2), 
                                          luaL_checklong(L, 3)));
@@ -253,7 +334,7 @@ static int luaCreatureSetPath(lua_State *L) {
 static int luaCreatureSetTarget(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    lua_consumecycles(L, 20);
+    // lua_consumecycles(L, 20);
     lua_pushboolean(L, creature_set_target(creature, 
                                            luaL_checklong(L, 2)));
     return 1;
@@ -262,7 +343,7 @@ static int luaCreatureSetTarget(lua_State *L) {
 static int luaCreatureSetConvert(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    lua_consumecycles(L, 20);
+    // lua_consumecycles(L, 20);
     lua_pushboolean(L, creature_set_conversion_type(creature, 
                                                     luaL_checklong(L, 2)));
     return 1;
@@ -271,7 +352,7 @@ static int luaCreatureSetConvert(lua_State *L) {
 static int luaCreatureSetMessage(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    lua_consumecycles(L, 500);
+    // lua_consumecycles(L, 500);
     creature_set_message(creature, luaL_checkstring(L, 2));
     return 0;
 }
@@ -279,7 +360,7 @@ static int luaCreatureSetMessage(lua_State *L) {
 static int luaCreatureGetNearestEnemy(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
-    lua_consumecycles(L, 500);
+    // lua_consumecycles(L, 500);
     int mindist;
     const creature_t *nearest = creature_nearest_enemy(creature, &mindist);
     if (!nearest)
@@ -325,6 +406,13 @@ static int luaCreatureGetTileFood(lua_State *L) {
     return 1;
 }
 
+static int luaCreatureGetTileType(lua_State *L) {
+    get_player_and_creature();
+    assure_is_players_creature();
+    lua_pushnumber(L, creature_tile_type(creature));
+    return 1;
+}
+
 static int luaCreatureGetMaxFood(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
@@ -343,7 +431,7 @@ static int luaCreatureGetDistance(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
     const creature_t *target = creature_get_checked_lua(L, 2);
-    lua_consumecycles(L, 100);
+    // lua_consumecycles(L, 100);
     lua_pushnumber(L, creature_dist(creature, target));
     return 1;
 }
@@ -402,7 +490,7 @@ static int luaCreatureSetState(lua_State *L) {
 
 static int luaGetCPUUsage(lua_State *L) { 
     get_player();
-    lua_consumecycles(L, 1000);
+    // lua_consumecycles(L, 1000);
     lua_pushnumber(L, player_get_cpu_usage(player));
     return 1;
 }
@@ -488,6 +576,10 @@ static void player_set_color(player_t *player, int color) {
      lua_pushcclosure((p)->L, f, 1), \
      lua_settable((p)->L, LUA_GLOBALSINDEX))    
 
+#define lua_register_player_global(p, name) \
+    (lua_pushnumber((p)->L, name), \
+     lua_setglobal((p)->L, #name))
+
 player_t *player_create(const char *pass) {
     int playerno;
 
@@ -504,18 +596,22 @@ player_t *player_create(const char *pass) {
 
     snprintf(player->name, sizeof(player->name), "player%d", playerno);
     snprintf(player->pass, sizeof(player->pass), "%s", pass);
-    player->L = lua_open();
 
-    player->max_cycles    = LUA_MAX_CPU;
+    player->max_mem     = LUA_MAX_MEM;
+    player->mem_enforce = 0;
+    
+    player->max_cycles = LUA_MAX_CPU;
+
+    player->L = lua_newstate(player_allocator, player);
+
+    lua_atcpu_exceeded(player->L, player_at_cpu_exceeded);
+    lua_atpanic       (player->L, player_at_panic);
 
     player_set_color(player, playerno);
     
-    lua_baselibopen(player->L);
-    lua_dblibopen(player->L);
-    lua_tablibopen(player->L);
-    lua_strlibopen(player->L);
-    lua_mathlibopen(player->L);
+    luaL_openlibs(player->L);
 
+    lua_register_player(player, "save_in_registry",     luaSaveInRegistry);
     lua_register_player(player, "print",                luaPrint);
     lua_register_player(player, "suicide",              luaCreatureSuicide);
     lua_register_player(player, "set_path",             luaCreatureSetPath);
@@ -531,6 +627,7 @@ player_t *player_create(const char *pass) {
     lua_register_player(player, "get_health",           luaCreatureGetHealth);
     lua_register_player(player, "get_speed",            luaCreatureGetSpeed);
     lua_register_player(player, "get_tile_food",        luaCreatureGetTileFood);
+    lua_register_player(player, "get_tile_type",        luaCreatureGetTileType);
     lua_register_player(player, "get_max_food",         luaCreatureGetMaxFood);
     lua_register_player(player, "get_distance",         luaCreatureGetDistance);
     lua_register_player(player, "set_message",          luaCreatureSetMessage);
@@ -553,41 +650,33 @@ player_t *player_create(const char *pass) {
     lua_register(player->L,     "king_player",          luaKingPlayer);
     lua_register(player->L,     "player_score",         luaPlayerScore);
 
-    lua_pushnumber(player->L, CREATURE_IDLE);
-    lua_setglobal(player->L, "CREATURE_IDLE");
+    lua_register_player_global(player, CREATURE_IDLE);
+    lua_register_player_global(player, CREATURE_WALK);
+    lua_register_player_global(player, CREATURE_HEAL);
+    lua_register_player_global(player, CREATURE_EAT);
+    lua_register_player_global(player, CREATURE_ATTACK);
+    lua_register_player_global(player, CREATURE_CONVERT);
+    lua_register_player_global(player, CREATURE_SPAWN);
+    lua_register_player_global(player, CREATURE_FEED);
 
-    lua_pushnumber(player->L, CREATURE_WALK);
-    lua_setglobal(player->L, "CREATURE_WALK");
+    lua_register_player_global(player, TILE_SOLID);
+    lua_register_player_global(player, TILE_PLAIN);
+    lua_register_player_global(player, TILE_WATER);
+    lua_register_player_global(player, TILE_LAVA);
 
-    lua_pushnumber(player->L, CREATURE_HEAL);
-    lua_setglobal(player->L, "CREATURE_HEAL");
-
-    lua_pushnumber(player->L, CREATURE_EAT);
-    lua_setglobal(player->L, "CREATURE_EAT");
-
-    lua_pushnumber(player->L, CREATURE_ATTACK);
-    lua_setglobal(player->L, "CREATURE_ATTACK");
-
-    lua_pushnumber(player->L, CREATURE_CONVERT);
-    lua_setglobal(player->L, "CREATURE_CONVERT");
-
-    lua_pushnumber(player->L, CREATURE_SPAWN);
-    lua_setglobal(player->L, "CREATURE_SPAWN");
-
-    lua_pushnumber(player->L, CREATURE_FEED);
-    lua_setglobal(player->L, "CREATURE_FEED");
+    lua_register_player_global(player, CREATURE_SPAWNED);
+    lua_register_player_global(player, CREATURE_KILLED);
+    lua_register_player_global(player, CREATURE_ATTACKED);
 
     lua_pushnumber(player->L, playerno);
+
     lua_setglobal(player->L, "player_number");
 
-    lua_pushnumber(L, MAXPLAYERS);
-    lua_setglobal(L, "MAXPLAYERS");
-
     // Initiale Cyclen setzen
-    lua_setcycles(player->L, player->max_cycles);
+    lua_set_cycles(player->L, player->max_cycles);
+    player_init_events(player);
 
-    lua_setmaxmem(player->L, LUA_MAX_MEM);
-    lua_dofile(player->L, "player.lua");
+    luaL_dofile(player->L, "player.lua");
     
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 
@@ -724,44 +813,33 @@ int player_detach_client(client_t *client, player_t *player) {
 }
 
 void player_execute_client_lua(player_t *player, const char *code, size_t codelen, const char *where) {
-    int status = luaL_loadbuffer(player->L, code, codelen, where);
-    
-    if (status == 0) {
-        int base = lua_gettop(player->L);
-        lua_pushliteral(player->L, "_TRACEBACK");
-        lua_rawget(player->L, LUA_GLOBALSINDEX);
-        lua_insert(player->L, base);
-        status = lua_pcall(player->L, 0, 1, base);
-        lua_remove(player->L, base);
+    int error = luaL_loadbuffer(player->L, code, codelen, where);
+
+    if (!error) {
+        call_user_lua(player, 0);
+    } else {
+        const char *msg = lua_tostring(player->L, -1);
+        if (!msg) 
+            msg = "(error with no message)";
+        player_writeto(player, msg, strlen(msg));
+        player_writeto(player, "\r\n", 2); 
     }
-
-    const char *msg = lua_tostring(player->L, -1);
-
-    if (status && !msg) 
-        msg = "(error with no message)";
-
-    if (msg) { 
-        if (strstr(msg, "attempt to yield across C function")) {
-            player_writeto(player, msg, strlen(msg));
-            player_writeto(player, "\n\n", 2); 
-            player_writeto(player, "--------------------------------------------------------------\n", 63);
-            player_writeto(player, "Long running operations are not allowed from interactive shell\n", 63);
-            player_writeto(player, "--------------------------------------------------------------\n", 63);
-        } else {
-            player_writeto(player, msg, strlen(msg));
-            player_writeto(player, "\n", 1); 
-        }
-    }
-    lua_pop(player->L, 1);
 }
 
 void player_think() {
-    static char errorbuf[1000];
     int playerno;
     player_t *player = &players[0];
     for (playerno = 0; playerno < MAXPLAYERS; playerno++, player++) {
         if (!PLAYER_USED(player))
             continue;
+
+        // Spieler CPU cyclen zuruecksetzen. Der Spieler
+        // kann damit sowohl seine Kreaturen steuern, als
+        // auch Befehle ueber Netzwerk ausfuehren.
+        lua_set_cycles(player->L, player->max_cycles);
+
+        // Incremental Garbage Collection
+        lua_gc(player->L, LUA_GCSTEP, 1);
 
         // Alle Viecher tot? neu spawnen.
         if (player->num_creatures == 0 && 
@@ -772,14 +850,14 @@ void player_think() {
         
         // Killen?
         if (player->kill_me) {
-            player_writeto(player, "player was killed\n", 18);
+            player_writeto(player, "player was killed\r\n", 19);
             player_destroy(player);
             continue;
         }
 
         // Zu wenig Score?
         if (player->score <= PLAYER_KICK_SCORE) {
-            player_writeto(player, "score too low. try harder!\n", 27);
+            player_writeto(player, "score too low. try harder!\r\n", 28);
             player_destroy(player);
             continue;
         }
@@ -792,39 +870,15 @@ void player_think() {
             continue;
         }
 
-        // Spieler CPU cyclen zuruecksetzen. Der Spieler
-        // kann damit sowohl seine Kreaturen steuern, als
-        // auch Befehle ueber Netzwerk ausfuehren.
-        lua_setcycles(player->L, player->max_cycles);
-        
-        // Spiele Luacode aufrufen
-        lua_pushliteral(player->L, "_TRACEBACK");
-        lua_rawget(player->L, LUA_GLOBALSINDEX); 
-        
+        // Player Code aufrufen
         lua_pushliteral(player->L, "player_think");
         lua_rawget(player->L, LUA_GLOBALSINDEX);         
-        
-        switch (lua_pcall(player->L, 0, 0, -2)) {
-            case LUA_ERRRUN:
-                snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s\n", lua_tostring(player->L, -1));
-                lua_pop(player->L, 1);
-                player_writeto(player, errorbuf, strlen(errorbuf));
-                break;
-            case LUA_ERRMEM:
-                snprintf(errorbuf, sizeof(errorbuf), "mem error: %s\n", lua_tostring(player->L, -1));
-                lua_pop(player->L, 1);
-                player_writeto(player, errorbuf, strlen(errorbuf));
-                break;
-            case LUA_ERRERR:
-                snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)\n");
-                lua_pop(player->L, 1);
-                player_writeto(player, errorbuf, strlen(errorbuf));
-                break;
-            default: 
-                break;
-        }
+        lua_pushliteral(player->L, "events");
+        lua_rawget(player->L, LUA_REGISTRYINDEX);
+        call_user_lua(player, 1);
 
-        lua_pop(player->L, 1);
+        // Events Strukur neu initialisieren
+        player_init_events(player);
 
         // Verbrauchte CPU Zeit speichern:
         // Dies ist die rein fuer player_think verbrauchte
@@ -975,7 +1029,9 @@ static int luaPlayerGetName(lua_State *L) {
 }
 
 static int luaPlayerGetUsedMem(lua_State *L) {
-    lua_pushnumber(L, lua_getusedmem(player_get_checked_lua(L, 1)->L));
+    player_t *player = player_get_checked_lua(L, 1); 
+    lua_pushnumber(L, lua_gc(player->L, LUA_GCCOUNT,  0) << 10 |
+                      lua_gc(player->L, LUA_GCCOUNTB, 0));
     return 1;
 }
 
@@ -988,7 +1044,7 @@ static int luaPlayerSetScore(lua_State *L) {
     player_t *player = player_get_checked_lua(L, 1); 
     int newscore = luaL_checklong(L, 2);
     int diff = newscore - player->score;
-    static char buf[128];
+    char buf[128];
     snprintf(buf, sizeof(buf), "set to %d", newscore);
     player_score(player, diff, buf);
     return 0;

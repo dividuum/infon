@@ -1,8 +1,19 @@
-LUADIR=lua-5.0.2
+PREFIX  ?= ./
+LUADIR   = lua-5.1.1
+REVISION = $(shell svnversion . || echo 'exported')
 
-REVISION=$(shell svnversion .)
+# EVENT_NAME = Computer Night 2006
+# EVENT_HOST = 172.30.100.1
 
-COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="$(REVISION)" -I$(LUADIR)/include/ # -DCHEATS
+COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="\"$(REVISION)\"" -I$(LUADIR)/src/ # -DCHEATS
+
+ifdef EVENT_NAME
+	COMMON_CFLAGS += -DEVENT_NAME="\"$(EVENT_NAME)\""
+endif
+ifdef EVENT_HOST
+	COMMON_CFLAGS += -DEVENT_HOST="\"$(EVENT_HOST)\""
+endif
+
 ifdef WINDOWS
 	COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
 else
@@ -10,18 +21,21 @@ else
 endif
 
 ifdef WINDOWS
-	MINGW  = $(HOME)/progs/mingw32/
-	SDLDIR = $(MINGW)
-	CC     = /opt/xmingw/bin/i386-mingw32msvc-gcc
-	CFLAGS = $(COMMON_CFLAGS) -I$(MINGW)/include
-	WINDRES= /opt/xmingw/bin/i386-mingw32msvc-windres
+	MINGW    = $(HOME)/progs/mingw32/
+	SDLDIR   = $(MINGW)
+	CC       = /opt/xmingw/bin/i386-mingw32msvc-gcc
+	CFLAGS  += $(COMMON_CFLAGS) -I$(MINGW)/include
+	WINDRES  = /opt/xmingw/bin/i386-mingw32msvc-windres
+	LUAPLAT  = mingw
 else
-	SDLDIR = $(shell sdl-config --prefix)
-	CFLAGS = $(COMMON_CFLAGS)
+	SDLDIR   = $(shell sdl-config --prefix)
+	CFLAGS  += $(COMMON_CFLAGS)
+	LUAPLAT  = debug #linux
+	LDFLAGS += -ldl
 endif
 
-CFLAGS     += -I$(SDLDIR)/include/SDL 
-LDFLAGS 	= -L$(LUADIR)/lib -levent -llua -llualib -lm -lz
+CFLAGS  += -I$(SDLDIR)/include/SDL -DPREFIX=\"$(PREFIX)\"
+LDFLAGS += -levent -lm -lz
 
 ifdef WINDOWS
 	MINGW=/home/dividuum/progs/mingw32/
@@ -60,11 +74,11 @@ linux-client-dist: $(GUI_EXECUTABLE)
 	tar cfvz infon-linux-i386-r$(REVISION).tgz README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
 
 linux-server-dist: infond
-	strip infond infond-static
+	# strip infond infond-static
 	# upx infond infond-static
 	tar cfvz infond-linux-i386-r$(REVISION).tgz README infond infond-static *.lua level/*.lua rules/*.lua
 
-infond: lua-5.0.2/lib/liblua.a  infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o
+infond: infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o $(LUADIR)/src/liblua.a  
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 
@@ -74,8 +88,8 @@ $(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui
 infon.res: infon.rc
 	$(WINDRES) -i $^ --input-format=rc -o $@ -O coff
 
-lua-5.0.2/lib/liblua.a:
-	$(MAKE) -C $(LUADIR)
+$(LUADIR)/src/liblua.a:
+	$(MAKE) -C $(LUADIR) $(LUAPLAT)
 
 clean:
 	-rm -f *.o infond infond-static infon infon.exe infon.res tags 

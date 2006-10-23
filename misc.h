@@ -35,4 +35,13 @@ void die(char *fmt, ...);
 #define max(a,b) ((a)>(b)?(a):(b))
 #endif
 
+#define save_lua_stack(L, diff)         \
+    lua_State *check_L = L;             \
+    int lua_stack = lua_gettop(check_L) - diff;\
+    fprintf(stderr, "%s> %d\n", __FUNCTION__, lua_stack);
+
+#define check_lua_stack()               \
+    fprintf(stderr, "%s< %d\n", __FUNCTION__, lua_gettop(check_L)); \
+    assert(lua_gettop(check_L) == lua_stack);
+
 #endif

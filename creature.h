@@ -27,6 +27,7 @@
 #include "player.h"
 #include "server.h"
 #include "common_creature.h"
+#include "common_world.h"
 
 typedef struct creature_s {
     int             x;
@@ -68,6 +69,7 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
 void        creature_kill(creature_t *creature, creature_t *killer);
 
 int         creature_set_path(creature_t *creature, int x, int y);
+int         creature_set_health(creature_t *creature, int health);
 int         creature_set_target(creature_t *creature, int target);
 int         creature_set_state(creature_t *creature, int state);
 int         creature_set_conversion_type(creature_t *creature, creature_type type);
@@ -80,12 +82,12 @@ int         creature_max_health(const creature_t *creature);
 int         creature_speed(const creature_t *creature);
 int         creature_dist(const creature_t *a, const creature_t *b);
 int         creature_food_on_tile(const creature_t *creature);
+maptype_e   creature_tile_type(const creature_t *creature);
 int         creature_max_food(const creature_t *creature);
 int         creature_hitpoints(const creature_t *creature);
 int         creature_attack_distance(const creature_t *creature);
 
 void        creature_kill_all_players_creatures(player_t *player);
-int         creature_king_player();
 void        creature_moveall(int delta);
 
 /* Network */
