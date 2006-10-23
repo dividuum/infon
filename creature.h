@@ -88,7 +88,6 @@ int         creature_hitpoints(const creature_t *creature);
 int         creature_attack_distance(const creature_t *creature);
 
 void        creature_kill_all_players_creatures(player_t *player);
-int         creature_king_player();
 void        creature_moveall(int delta);
 
 /* Network */

@@ -23,7 +23,6 @@
 
 void  client_tick();
 int   client_is_connected();
-char *client_intermission();
 
 void  client_init(char *source, char *demo_save_name);
 void  client_shutdown();

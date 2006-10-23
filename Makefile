@@ -74,7 +74,7 @@ linux-client-dist: $(GUI_EXECUTABLE)
 	tar cfvz infon-linux-i386-r$(REVISION).tgz README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
 
 linux-server-dist: infond
-	strip infond infond-static
+	# strip infond infond-static
 	# upx infond infond-static
 	tar cfvz infond-linux-i386-r$(REVISION).tgz README infond infond-static *.lua level/*.lua rules/*.lua
 
