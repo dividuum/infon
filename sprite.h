@@ -25,7 +25,7 @@
 
 #include "common_creature.h"
 
-#define SPRITE_NUM 8192
+#define SPRITE_NUM 16384
 
 // Tiles Konstanten
 #define SPRITE_BORDER       0
