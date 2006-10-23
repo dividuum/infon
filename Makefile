@@ -61,7 +61,7 @@ dist:
 	$(MAKE) linux-client-dist linux-server-dist
 
 source-dist: distclean
-	tar cvz -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
+	tar cvzh -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
 
 win32-client-dist: $(GUI_EXECUTABLE)
 	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
