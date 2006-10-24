@@ -321,10 +321,13 @@ function player_think(events)
     can_yield = false
 
     -- Gesetzt nach Rundenstart und/oder Joinen
-    if _player_created and onGameStart then
-        local ok, msg = pcall(onGameStart)
-        if not ok then
-            print("onGameStart failed: " .. msg)
+    if  _player_created then
+        _player_created = nil
+        if onGameStart then
+            local ok, msg = pcall(onGameStart)
+            if not ok then
+                print("onGameStart failed: " .. msg)
+            end
         end
     end
 
