@@ -80,20 +80,11 @@ function Client:joinmenu()
 end
 
 function Client:partmenu() 
-    if self:get_player() then
-        self:detach()
-        self:writeln("detached")
-    else
-        self:writeln("not attached")
-    end
+    self:detach()
+    self:writeln("detached")
 end
 
 function Client:namemenu() 
-    if not self:get_player() then
-        self:writeln("must join first")
-        return
-    end
-
     if not self:check_repeat("last_name", 1000) then
         self:writeln("changing too fast. please wait")
         return
@@ -106,11 +97,6 @@ function Client:namemenu()
 end
 
 function Client:colormenu() 
-    if not self:get_player() then
-        self:writeln("must join first")
-        return
-    end
-
     if not self:check_repeat("last_color", 1000) then
         self:writeln("changing too fast. please wait")
         return
@@ -126,10 +112,6 @@ function Client:colormenu()
 end
  
 function Client:luamenu() 
-    if not self:get_player() then
-        self:writeln("must join first")
-        return
-    end
     while true do 
         self:write("lua> ")
         local line = self:readln()
@@ -142,10 +124,6 @@ function Client:luamenu()
 end
 
 function Client:batchmenu()
-    if not self:get_player() then
-        self:writeln("must join first")
-        return
-    end
     self:writeln("enter your lua code. '.' ends input")
     local code = ""
     while true do 
@@ -160,10 +138,6 @@ function Client:batchmenu()
 end
 
 function Client:killmenu() 
-    if not self:get_player() then
-        self:writeln("must join first")
-        return
-    end
     self:write("kill all your creatures? [y/N] ")
     if self:readln() == "y" then
         self:kill()
@@ -232,42 +206,56 @@ function Client:showscores()
     self:writeln("-------+-----------+------+---------+-----+-------------")
 end
 
+function Client:menu_header()
+    self:writeln("-------------------------------------------------")
+    self:writeln(GAME_NAME)
+    self:writeln("visit http://infon.dividuum.de/ for documentation")
+    self:writeln("-------------------------------------------------")
+end
+
+function Client:menu_footer()
+    self:writeln("s - how scores")
+    self:writeln("q - uit")
+    self:writeln("-------------------------------------------------")
+end
+
 function Client:mainmenu()
     local prompt = "> "
     while true do 
         self:write(prompt)
         local input = self:readln()
+
         if input == "q" then
             self:disconnect("quitting") 
             break
-        elseif input == "j" then
-            self:joinmenu() 
-        elseif input == "p" then
-            self:partmenu() 
-        elseif input == "l" then
-            self:luamenu() 
-        elseif input == "c" then
-            self:colormenu() 
-        elseif input == "b" then
-            self:batchmenu() 
-        elseif input == "n" then
-            self:namemenu() 
         elseif input == "s" then
             self:showscores() 
-        elseif input == "r" then
-            self:execute("restart()")
-        elseif input == "i" then
-            self:execute("info()")
-        elseif input == "k" then
-            self:killmenu()
-        elseif input == "?" then
-            self:writeln("-------------------------------------------------")
-            self:writeln(GAME_NAME)
-            self:writeln("visit http://infon.dividuum.de/ for documentation")
-            self:writeln("-------------------------------------------------")
-            if not self:get_player() then
-                self:writeln("j - oin game")
-            else
+        elseif input == "prompt" then
+            self:write("new prompt: ")
+            prompt = self:readln()
+        elseif input == "shell" then
+            self:shell()
+        elseif input == "" then
+            -- nix
+        elseif self:get_player() then
+            if     input == "p" then
+                self:partmenu() 
+            elseif input == "l" then
+                self:luamenu() 
+            elseif input == "c" then
+                self:colormenu() 
+            elseif input == "b" then
+                self:batchmenu() 
+            elseif input == "n" then
+                self:namemenu() 
+            elseif input == "r" then
+                self:execute("restart()")
+            elseif input == "i" then
+                self:execute("info()")
+            elseif input == "k" then
+                self:killmenu()
+            elseif input == "?" then
+                self:menu_header()
                 self:writeln("n - ame")
                 self:writeln("c - olor")
                 self:writeln("p - art game")
@@ -276,19 +264,20 @@ function Client:mainmenu()
                 self:writeln("r - estart all your creatures")
                 self:writeln("i - nformation on your creatures")
                 self:writeln("k - ill me")
+                self:menu_footer()
+            else
+                self:writeln("huh? use '?' for help")
             end
-            self:writeln("s - how scores")
-            self:writeln("q - uit")
-            self:writeln("-------------------------------------------------")
-        elseif input == "prompt" then
-            self:write("new prompt: ")
-            prompt = self:readln()
-        elseif input == "shell" then
-            self:shell()
-        elseif input == "" then
-            -- nix
         else
-            self:writeln("huh? use '?' for help")
+            if     input == "j" then
+                self:joinmenu() 
+            elseif input == "?" then
+                self:menu_header()
+                self:writeln("j - oin game")
+                self:menu_footer()
+            else
+                self:writeln("huh? use '?' for help")
+            end
         end
     end
 end
@@ -328,10 +317,10 @@ function Client:handler()
     self:writeln("              ~~`---'             /               |")
     self:writeln("                               ,-'              _/'")
     self:writeln("")
-    self:writeln("-------------------------------------------------------------")
-    self:centerln("this version is now based on lua 5.1.1")
-    self:centerln("See http://lua-users.org/wiki/MigratingToFiveOne")
-    self:writeln("-------------------------------------------------------------")
+    -- self:writeln("-------------------------------------------------------------")
+    -- self:centerln("this version is now based on lua 5.1.1")
+    -- self:centerln("See http://lua-users.org/wiki/MigratingToFiveOne")
+    -- self:writeln("-------------------------------------------------------------")
     self:writeln("enter '?' for help")
     self:mainmenu()
 end
