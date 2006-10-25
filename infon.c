@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     if (sep) { *sep = '\0'; chdir(argv[0]); }
 
     if (argc == 2 && stricmp(argv[1], "/s") == 0) {
-        host  = "bl0rg.net";
+        host  = "infon.dividuum.de";
         width = 1024, height = 768, fullscreen = 1;
     } else if (argc == 3 && stricmp(argv[1], "/p") == 0) {
         exit(0);
@@ -75,7 +75,8 @@ int main(int argc, char *argv[]) {
     } else if (argc != 2) {
         die("you must supply the gameservers hostname\n"
             "as first command line parameter.\n\n"
-            "example: 'infon.exe bl0rg.net'");
+            "example: 'infon.exe infon.dividuum.de'\n\n"
+            "visit http://infon.dividuum.de/ for help");
     } else {
         host = argv[1];
     }

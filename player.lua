@@ -38,6 +38,7 @@ gcinfo          = nil
 os              = nil
 package         = nil
 io              = nil
+load            = nil
 
 collectgarbage()
 collectgarbage  = nil
@@ -343,6 +344,13 @@ function player_think(events)
                     if Creature[what] then
                         return Creature[what]
                     end
+                end,
+                __tostring = function(self)
+                    local x, y = get_pos(self.id)
+                    return "<creature " .. self.id .." [" .. x .. "," .. y .."]>"
+                end,
+                __concat = function (op1, op2)
+                    return tostring(op1) .. tostring(op2)
                 end
             })
             creatures[id] = creature
