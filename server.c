@@ -296,7 +296,7 @@ void server_send_packet(packet_t *packet, client_t *client) {
         server_writeto(client, packet, PACKET_HEADER_SIZE + packet->len);
 }
 
-void server_destroy(client_t *client, char *reason) {
+void server_destroy(client_t *client, const char *reason) {
     int fd = client_num(client);
 
     lua_pushliteral(L, "on_client_close");
@@ -318,7 +318,7 @@ void server_destroy(client_t *client, char *reason) {
         // FULL_FLUSH vor evbuffer_write
     } else {
         evbuffer_add(client->out_buf, "connection terminating: ", 25);
-        evbuffer_add(client->out_buf, reason, strlen(reason));
+        evbuffer_add(client->out_buf, (char*)reason, strlen(reason));
         evbuffer_add(client->out_buf, "\r\n", 2);
     }
 

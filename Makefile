@@ -86,7 +86,7 @@ $(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui
 	$(CC) $^ $(GUI_LDFLAGS) -o $@ 
 
 infon.res: infon.rc
-	$(WINDRES) -i $^ --input-format=rc -o $@ -O coff
+	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff
 
 $(LUADIR)/src/liblua.a:
 	$(MAKE) -C $(LUADIR) $(LUAPLAT)

@@ -22,6 +22,7 @@
 
 #include "misc.h"
 #include "video.h"
+#include "gui_game.h"
 #include "gui_creature.h"
 #include "gui_world.h"
 #include "gui_scroller.h"

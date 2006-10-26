@@ -3,8 +3,6 @@
 A ICON MOVEABLE PURE LOADONCALL DISCARDABLE "infon.ico"
 
 1 VERSIONINFO
-// FILEVERSION 0,1,1,1
-// PRODUCTVERSION 0,1,1,1
 FILETYPE VFT_APP
 {
   BLOCK "StringFileInfo"
@@ -12,18 +10,14 @@ FILETYPE VFT_APP
          BLOCK "040904E4"
          {
              VALUE "CompanyName", "fw@dividuum.de"
-             VALUE "FileVersion", ""
+             VALUE "FileVersion", REVISION
              VALUE "FileDescription", "Infon Battle Arena Client"
              VALUE "InternalName", "infon"
-             VALUE "LegalCopyright", ""
+             VALUE "LegalCopyright", "GPL"
              VALUE "LegalTrademarks", ""
              VALUE "OriginalFilename", ""
              VALUE "ProductName", "infon"
-             VALUE "ProductVersion", ""
+             VALUE "ProductVersion", REVISION
          }
      }
-//  BLOCK "VarFileInfo"
-//   {
-//       VALUE "Translation", 0x0409, 1252
-//   }
 }
