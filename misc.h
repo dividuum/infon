@@ -21,7 +21,8 @@
 #ifndef MISC_H
 #define MISC_H
 
-void die(char *fmt, ...);
+void die(const char *fmt, ...);
+int yesno(const char *fmt, ...);
 
 #ifndef abs
 #define abs(a) ((a)<0?-(a):(a))

@@ -187,13 +187,6 @@ void player_on_created(player_t *player) {
     lua_rawset(player->L, LUA_GLOBALSINDEX);         
 }
 
-static int luaSaveInRegistry(lua_State *L) {
-    player_t *player = lua_touserdata(L, lua_upvalueindex(1));
-    lua_settable(player->L, LUA_REGISTRYINDEX);
-    assert(player->L == L);
-    return 0;
-}
-
 static int player_at_panic(lua_State *L) {
     printf("Aeiik! LUA panic. Cannot continue. Please file a bug report\n");
     abort();
@@ -262,30 +255,6 @@ static int call_user_lua(player_t *player, int params) {
     }
 }
 
-static int luaPrint(lua_State *L) {
-    player_t *player = lua_touserdata(L, lua_upvalueindex(1));
-    // lua_consumecycles(L, 100);
-    int n=lua_gettop(L);
-    int i;
-    for (i=1; i<=n; i++) {
-        if (i>1) player_writeto(player, "\t", 1);
-        if (lua_isstring(L,i))
-            player_writeto(player, lua_tostring(L,i), lua_strlen(L, i));
-        else if (lua_isnil(L,i))
-            player_writeto(player, "nil", 3);
-        else if (lua_isboolean(L,i))
-            lua_toboolean(L,i) ? player_writeto(player, "true",  4): 
-                                 player_writeto(player, "false", 5);
-        else {
-            char buffer[128];
-            snprintf(buffer, sizeof(buffer), "%s:%p",lua_typename(L,lua_type(L,i)),lua_topointer(L,i));
-            player_writeto(player, buffer, strlen(buffer));
-        }
-    }
-    player_writeto(player, "\r\n", 2);
-    return 0;
-}
-
 static int player_get_cpu_usage(player_t *player) {
     int cycles_left = lua_get_cycles(player->L);
     return 100 * (player->max_cycles - cycles_left) / player->max_cycles;
@@ -312,6 +281,35 @@ static int player_get_cpu_usage(player_t *player) {
         return luaL_error(L, "%d isn't your creature",          \
                              creature_num(creature));           \
     } while(0)                                                                  
+
+static int luaSaveInRegistry(lua_State *L) {
+    get_player();
+    lua_settable(player->L, LUA_REGISTRYINDEX);
+    return 0;
+}
+
+static int luaPrint(lua_State *L) {
+    get_player();
+    int n=lua_gettop(L);
+    int i;
+    for (i=1; i<=n; i++) {
+        if (i>1) player_writeto(player, "\t", 1);
+        if (lua_isstring(L,i))
+            player_writeto(player, lua_tostring(L,i), lua_strlen(L, i));
+        else if (lua_isnil(L,i))
+            player_writeto(player, "nil", 3);
+        else if (lua_isboolean(L,i))
+            lua_toboolean(L,i) ? player_writeto(player, "true",  4): 
+                                 player_writeto(player, "false", 5);
+        else {
+            char buffer[128];
+            snprintf(buffer, sizeof(buffer), "%s:%p",lua_typename(L,lua_type(L,i)),lua_topointer(L,i));
+            player_writeto(player, buffer, strlen(buffer));
+        }
+    }
+    player_writeto(player, "\r\n", 2);
+    return 0;
+}
 
 static int luaCreatureSuicide(lua_State *L) {
     get_player_and_creature();

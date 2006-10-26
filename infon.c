@@ -73,10 +73,13 @@ int main(int argc, char *argv[]) {
     } else if (argc == 2 && strstr(argv[1], "/c:") == argv[1]) {
         die("There are no settings");
     } else if (argc != 2) {
-        die("you must supply the gameservers hostname\n"
-            "as first command line parameter.\n\n"
-            "example: 'infon.exe infon.dividuum.de'\n\n"
-            "visit http://infon.dividuum.de/ for help");
+        if (yesno("You did not specify a game server.\nConnect to 'infon.dividuum.de:1234'?"))
+            host = "infon.dividuum.de";
+        else
+            die("You must supply the game servers hostname\n"
+                "as first command line parameter.\n\n"
+                "Example: 'infon.exe infon.dividuum.de'\n\n"
+                "Visit http://infon.dividuum.de/ for help.");
     } else {
         host = argv[1];
     }

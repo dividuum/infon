@@ -70,7 +70,6 @@ static z_stream         strm;
 
 void client_destroy(const char *reason);
 void client_writeto(const void *data, size_t size);
-int  client_is_connected();
 
 static void client_handshake_from_network(packet_t *packet) {
     uint8_t serverprotocol;

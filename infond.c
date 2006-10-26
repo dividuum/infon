@@ -18,6 +18,11 @@
 
 */
 
+#ifdef __linux__
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,6 +50,13 @@ void sighandler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
+#ifdef __linux__ 
+    struct rlimit rlim;
+    getrlimit(RLIMIT_CORE, &rlim);
+    if (rlim.rlim_cur == 0) 
+        fprintf(stderr, "no coredump possible. enable them to help debug crashes.\n");
+#endif
+
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
 

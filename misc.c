@@ -26,7 +26,10 @@
 #include <windows.h>
 #endif
 
-void die(char *fmt, ...) {
+#include <assert.h>
+#include "global.h"
+
+void die(const char *fmt, ...) {
 #ifdef WIN32
     char buf[1024];
     va_list ap;
@@ -44,3 +47,17 @@ void die(char *fmt, ...) {
 #endif
     exit(1);
 }
+
+int yesno(const char *fmt, ...) {
+#ifdef WIN32
+    char buf[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    return MessageBoxA(GetActiveWindow(), buf, GAME_NAME, MB_ICONQUESTION | MB_YESNO) == IDYES;
+#else
+    assert(0);
+#endif
+}
+
