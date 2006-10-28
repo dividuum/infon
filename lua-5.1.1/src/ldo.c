@@ -474,6 +474,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
 void luaD_call (lua_State *L, StkId func, int nresults, int callflags) {
   unsigned short old_nCcalls = L->nCcalls;
   int pcr;
+  G(L)->cycles -= 100;
   L->nCcalls = (old_nCcalls + 8) | callflags;
   if (L->nCcalls >= LUAI_MAXCCALLS*8) {
     if (L->nCcalls < (LUAI_MAXCCALLS+1)*8)

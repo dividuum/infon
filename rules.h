@@ -30,6 +30,6 @@
 #define PLAYER_KICK_SCORE            (-500)
 
 #define LUA_MAX_MEM              (4 * 1024)
-#define LUA_MAX_CPU                  400000
+#define LUA_MAX_CPU                  450000
 
 #endif

@@ -56,29 +56,6 @@ int luaV_tostring (lua_State *L, StkId obj) {
   }
 }
 
-
-// static StkId traceexec (lua_State *L, const Instruction *pc) {
-//   lu_byte mask = L->hookmask;
-//   const Instruction *oldpc = GETPC(L);
-//   SAVEPC(L, pc);
-//   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
-//     if (L->hookcount == 0) {
-//       resethookcount(L);
-//       luaD_callhook(L, LUA_HOOKCOUNT, -1);
-//     }
-//   }
-//   if (mask & LUA_MASKLINE) {
-//     Proto *p = ci_func(L->ci)->l.p;
-//     int npc = pcRel(pc, p);
-//     int newline = getline(p, npc);
-//     /* call linehook when enter a new function, when jump back (loop),
-//        or when enter a new line */
-//     if (npc == 0 || pc <= oldpc || newline != getline(p, pcRel(oldpc, p)))
-//       luaD_callhook(L, LUA_HOOKLINE, newline);
-//   }
-//   return L->base;
-// }
-
 static void callTMres (lua_State *L, StkId res, const TValue *f,
                         const TValue *p1, const TValue *p2) {
   ptrdiff_t result = savestack(L, res);
@@ -374,30 +351,17 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 
 #define cpu_exceeded_grace_cycles 16
 
-void cpu_limit_exceeded(lua_State *L) {
-    if (!G(L)->cpu_exceeded) {
-        luaG_runerror(L, "cpu limit exceeded");
-    } else {
-        char cpu_backtrace[4096];
-        ptrdiff_t top = savestack(L, L->top);
-        ptrdiff_t ci_top = savestack(L, L->ci->top);
-        luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-        L->ci->top = L->top + LUA_MINSTACK;
-        lua_assert(L->ci->top <= L->stack_last);
-        lua_unlock(L);
-
-        lua_set_cycles(L, 0xFFFFFF);        
-        G(L)->cpu_exceeded(L);
-        lua_set_cycles(L, cpu_exceeded_grace_cycles);
-        
-        snprintf(cpu_backtrace, sizeof(cpu_backtrace), 
-                 "aborting execution: %s", lua_tostring(L, -1));
-         
-        lua_lock(L);
-        L->ci->top = restorestack(L, ci_top);
-        L->top = restorestack(L, top);
-        luaG_runerror(L, cpu_backtrace);
-    }
+static void cpu_limit_exceeded(lua_State *L) {
+    assert(G(L)->cpu_exceeded);
+    luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+    L->ci->top = L->top + LUA_MINSTACK;
+    lua_assert(L->ci->top <= L->stack_last);
+    lua_unlock(L);
+    lua_set_cycles(L, 0xFFFFFF);        
+    G(L)->cpu_exceeded(L);
+    lua_set_cycles(L, cpu_exceeded_grace_cycles);
+    lua_error(L);
+    abort();
 }
 
 int luaV_execute (lua_State *L) {
@@ -416,17 +380,10 @@ int luaV_execute (lua_State *L) {
   for (;;) {
     const Instruction i = *pc++;
     StkId ra;
-    if (--G(L)->cycles <= 0) 
-        cpu_limit_exceeded(L);
-    // if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
-    //     (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
-    //   traceexec(L, pc);
-    //   if (L->status == LUA_YIELD) {  /* did hook yield? */
-    //     L->savedpc = pc - 1;
-    //     return;
-    //   }
-    //   base = L->base;
-    // }
+    if (--G(L)->cycles <= 0) {
+        SAVEPC(L, pc);
+        cpu_limit_exceeded(L); // never returns
+    }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
     lua_assert(base == L->base && L->base == L->ci->base);

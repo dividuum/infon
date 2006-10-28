@@ -164,7 +164,7 @@ LUA_API int lua_get_cycles(lua_State *L) {
     lua_lock(L);
     cycles = G(L)->cycles;
     lua_unlock(L);
-    return cycles;
+    return cycles < 0 ? 0 : cycles;
 }
 
 /*

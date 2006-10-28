@@ -39,6 +39,8 @@ os              = nil
 package         = nil
 io              = nil
 load            = nil
+module          = nil
+loadstring      = nil
 
 collectgarbage()
 collectgarbage  = nil
@@ -337,7 +339,7 @@ function player_think(events)
         local event_type, id, other = unpack(event) 
         if event_type == CREATURE_SPAWNED then
             -- id = id der neuen creature, other = id des parents oder -1
-            parent = other ~= -1 and other or nil
+            local parent = other ~= -1 and other or nil
             local creature = {}
             setmetatable(creature, {
                 __index = function(self, what)
@@ -366,7 +368,7 @@ function player_think(events)
             creature:restart()
         elseif event_type == CREATURE_KILLED then
             -- id = id der getoeteten creature, other = id des killers oder -1
-            killer = other ~= -1 and other or nil
+            local killer = other ~= -1 and other or nil
             assert(creatures[id])
             if creatures[id].onKilled then 
                 local ok, msg = pcall(creatures[id].onKilled, creatures[id], killer)
