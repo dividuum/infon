@@ -222,7 +222,7 @@ static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
 
 // Erwartet Funktion sowie params Parameter auf dem Stack
 static int call_user_lua(player_t *player, int params) {
-    char errorbuf[1000];
+    char errorbuf[4096];
     lua_pushliteral(player->L, "traceback");    // func params* 'traceback'
     lua_rawget(player->L, LUA_REGISTRYINDEX);   // func params* traceback
     lua_insert(player->L, -2 - params);         // traceback func params*
@@ -821,6 +821,7 @@ void player_execute_client_lua(player_t *player, const char *code, size_t codele
             msg = "(error with no message)";
         player_writeto(player, msg, strlen(msg));
         player_writeto(player, "\r\n", 2); 
+        lua_pop(player->L, 1);
     }
 }
 
