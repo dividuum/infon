@@ -28,6 +28,7 @@
 #include "misc.h"
 #include "global.h"
 #include "sprite.h"
+#include "video.h"
 
 static SDL_Surface *screen;
 static Uint32       flags = SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_HWACCEL | SDL_RESIZABLE;
@@ -40,8 +41,6 @@ void video_init(int w, int h, int fs) {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) == -1)
     if (SDL_Init(0) == -1) 
         die("Couldn't initialize SDL: %s", SDL_GetError());
-
-    SDL_WM_SetCaption(GAME_NAME, "infon");
 
     const SDL_VideoInfo *vi = SDL_GetVideoInfo();
 
@@ -59,6 +58,7 @@ void video_init(int w, int h, int fs) {
     if (!screen)
         die("Couldn't set display mode: %s", SDL_GetError());
 
+    video_set_title(GAME_NAME);
     SDL_ShowCursor(1);
     //SDL_EnableUNICODE(1);
 
@@ -73,6 +73,10 @@ void video_init(int w, int h, int fs) {
     fread(&tiny_font,sizeof(tiny_font), 1, file);
     fclose(file);
     gfxPrimitivesSetFont(tiny_font, 5, 7);
+}
+
+void video_set_title(const char *title) {
+    SDL_WM_SetCaption(title, "infon");
 }
 
 void video_shutdown() {
@@ -112,12 +116,12 @@ int  video_height() {
     return screen->h;
 }
 
-void video_draw(int x, int y, sprite_t *sprite) {
+void video_draw(int x, int y, SDL_Surface *sprite) {
     //if (x < 0 || y < 0) return;
-    const int w = sprite->surface->w;
-    const int h = sprite->surface->h;
+    const int w = sprite->w;
+    const int h = sprite->h;
     SDL_Rect dstrect = {x, y, x + w, y + h};
-    SDL_BlitSurface(sprite->surface, NULL, screen, &dstrect);
+    SDL_BlitSurface(sprite, NULL, screen, &dstrect);
 }
 
 void video_rect(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {

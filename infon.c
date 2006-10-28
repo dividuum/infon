@@ -41,20 +41,6 @@ void sighandler(int sig) {
     running = 0;
 }
 
-void print_fps() {
-    static Uint32 frames = 0;
-    static Uint32 ticks  = 0;
-    frames++;
-    if(SDL_GetTicks() >= ticks + 1000) {
-        static int iteration = 0;
-        if (++iteration % 35 == 0) {
-            printf("%d fps\n", frames);
-        }
-        frames = 0;
-        ticks = SDL_GetTicks();
-    }
-}   
-
 int main(int argc, char *argv[]) {
     int width = 800, height = 600, fullscreen = 0;
     char *host = NULL;
@@ -158,8 +144,6 @@ int main(int argc, char *argv[]) {
         }
 
         game_time += delta;
-
-        print_fps();
 
         // IO Lesen/Schreiben
         client_tick();
