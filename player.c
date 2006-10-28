@@ -605,7 +605,7 @@ player_t *player_create(const char *pass) {
     lua_atcpu_exceeded(player->L, player_at_cpu_exceeded);
     lua_atpanic       (player->L, player_at_panic);
 
-    player_set_color(player, playerno);
+    player_set_color(player, rand() % 256);
     
     luaL_openlibs(player->L);
 

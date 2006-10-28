@@ -27,7 +27,7 @@
 #include "misc.h"
 #include "video.h"
 
-static sprite_t sprites[SPRITE_NUM] = {{0}};
+static SDL_Surface *sprites[SPRITE_NUM] = {0};
 static SDL_Surface *gfx = NULL ;
 
 static SDL_Surface *sprite_load_surface(const char *filename) {
@@ -61,31 +61,31 @@ static void sprite_load_background() {
     };
 
     for (int i = 0; i < SPRITE_NUM_TILES; i++) {
-        sprites[i].surface = video_new_surface(SPRITE_TILE_SIZE, SPRITE_TILE_SIZE);
+        sprites[i] = video_new_surface(SPRITE_TILE_SIZE, SPRITE_TILE_SIZE);
         SDL_Rect srcrect = {       tilepos[i][0] * 16, 
                              192 + tilepos[i][1] * 16, SPRITE_TILE_SIZE, SPRITE_TILE_SIZE };
-        SDL_BlitSurface(gfx, &srcrect, sprites[i].surface, NULL);
+        SDL_BlitSurface(gfx, &srcrect, sprites[i], NULL);
     }
 }
 
 static void sprite_load_food() {
     for (int f = 0; f < SPRITE_NUM_FOOD; f++) {
-        sprites[SPRITE_FOOD + f].surface = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
+        sprites[SPRITE_FOOD + f] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
                                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
         SDL_Rect srcrect = { f * 16, 256, 16, 16 };
-        SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_FOOD + f].surface, NULL);
+        SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_FOOD + f], NULL);
     }
 }
 
 static void sprite_load_thought() {
     for (int t = 0; t < SPRITE_NUM_THOUGHT; t++) {
         // Mit video_new_alpha geht wahrscheinlich das bitgefuddel bei 16 bit nicht mehr.
-        sprites[SPRITE_THOUGHT + t].surface = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
+        sprites[SPRITE_THOUGHT + t] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
                                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
         SDL_Rect srcrect = { 0, 48 + t * 16, 16, 16 };
-        SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_THOUGHT + t].surface, NULL);
+        SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_THOUGHT + t], NULL);
 
-        Uint32 *pixels = (Uint32*)sprites[SPRITE_THOUGHT + t].surface->pixels;
+        Uint32 *pixels = (Uint32*)sprites[SPRITE_THOUGHT + t]->pixels;
         for (int y = 0; y < 16; y++) {
             for (int x = 0; x < 16; x++) {
                 Uint32 pixel = pixels[y * 16 + x];
@@ -96,29 +96,25 @@ static void sprite_load_thought() {
 }
 
 static void sprite_load_images() {
-    sprites[SPRITE_CROWN].surface = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 64, 50,
-                                                         32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
+    sprites[SPRITE_CROWN]= SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 64, 50,
+                                                32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
     SDL_Rect crect = { 0, 350, 64, 50 };
-    SDL_BlitSurface(gfx, &crect, sprites[SPRITE_CROWN].surface, NULL);
+    SDL_BlitSurface(gfx, &crect, sprites[SPRITE_CROWN], NULL);
 
-    sprites[SPRITE_LOGO].surface = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 170, 80,
-                                                        32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
+    sprites[SPRITE_LOGO] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 170, 80,
+                                                32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
     SDL_Rect lrect = { 0, 410, 170, 80};
-    SDL_BlitSurface(gfx, &lrect, sprites[SPRITE_LOGO].surface, NULL);
+    SDL_BlitSurface(gfx, &lrect, sprites[SPRITE_LOGO], NULL);
 }
 
-sprite_t *sprite_get(int i) {
-    return &sprites[i];
+SDL_Surface *sprite_get(int i) {
+    return sprites[i];
 }
 
 int sprite_exists(int i) {
     if (i < 0 || i >= SPRITE_NUM) return 0;
-    if (!sprites[i].surface)      return 0;
+    if (!sprites[i])      return 0;
     return 1;
-}
-
-int sprite_num(sprite_t *sprite) {
-    return sprite - sprites;
 }
 
 void sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2, int g2, int b2) {
@@ -152,7 +148,7 @@ void sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2
             SDL_BlitSurface(over, NULL, done, NULL);
 
             for (int d = 0; d < CREATURE_DIRECTIONS; d++) {
-                SDL_Surface **target = &sprites[CREATURE_SPRITE(playerno, t, d, a)].surface;
+                SDL_Surface **target = &sprites[CREATURE_SPRITE(playerno, t, d, a)];
                 if (*target) SDL_FreeSurface(*target);
                 *target = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
                                                32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
@@ -177,8 +173,8 @@ void sprite_init() {
 
 void sprite_shutdown() {
     for (int i = 0; i < SPRITE_NUM; i++) {
-        if (sprites[i].surface)
-            SDL_FreeSurface(sprites[i].surface);
+        if (sprites[i])
+            SDL_FreeSurface(sprites[i]);
     }
     SDL_FreeSurface(gfx);
 }

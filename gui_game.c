@@ -27,6 +27,8 @@
 #include "gui_world.h"
 #include "gui_scroller.h"
 #include "gui_player.h"
+#include "global.h"
+#include "client.h"
 
 static char intermission [256] = {0};
 
@@ -36,15 +38,33 @@ void gui_game_intermission_from_network(packet_t *packet) {
 }
 
 void gui_game_draw() {
+    static Uint32 frames    = 0;
+    static int    last_net  = 0;
+    static Uint32 last_info = 0;
+    static int    stall     = 0;
     Uint32 now = SDL_GetTicks();
+
+    if (now >= last_info + 1000) {
+        char buf[128];
+        int  traffic = client_traffic();
+        snprintf(buf, sizeof(buf), GAME_NAME" - %d fps - %d byte/s", frames, traffic - last_net);
+        video_set_title(buf);
+        stall     = traffic > last_net ? 0 : stall + 1;
+        last_net  = traffic;
+        last_info = now;
+        frames    = 0;
+    }
+
+    if (stall > 2) 
+        video_write(4, 4, "connection stalled?");
 
     if (strlen(intermission) > 0) {
         int y = max(video_height() / 2 - 150, 20);
         video_rect(0, 0, video_width(), video_height() - 16, 0, 0, 0, 0);
         video_hline(0, video_width(), y + 20, 0x80, 0x80, 0x80, 0x80);
         video_write((video_width() - strlen(intermission) * 7) / 2, 
-                y, 
-                intermission);
+                    y, 
+                    intermission);
         gui_player_draw_scores(video_width() / 2, y + 30);
     } else {
         gui_world_draw();
@@ -59,6 +79,7 @@ void gui_game_draw() {
         video_draw(video_width() - 190, 20, sprite_get(SPRITE_LOGO));
 
     video_flip();
+    frames++;
 }
 
 void gui_game_init() {

@@ -79,16 +79,11 @@
                                                                (direction) * CREATURE_ANIMS + \
                                                                                      (anim))
 
-typedef struct sprite_s {
-    SDL_Surface *surface;
-} sprite_t;
+SDL_Surface *sprite_get(int i);
+int          sprite_exists(int i);
+void         sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2, int g2, int b2);
 
-sprite_t   *sprite_get(int i);
-int         sprite_exists(int i);
-int         sprite_num(sprite_t *sprite);
-void        sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2, int g2, int b2);
-
-void        sprite_init();
-void        sprite_shutdown();
+void         sprite_init();
+void         sprite_shutdown();
 
 #endif

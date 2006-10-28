@@ -42,8 +42,8 @@ static int           offset_x;
 static int           offset_y;
 
 typedef struct maptile_s {
-    sprite_t    *food;
-    sprite_t    *map;
+    SDL_Surface *food;
+    int          map;
 } maptile_t;
 
 static maptile_t *map;
@@ -53,6 +53,7 @@ static maptile_t *map;
 void gui_world_draw() {
     if (!initialized)
         return;
+    Uint32 time = SDL_GetTicks();
 
     int screen_w  = video_width(); 
     int screen_cx = screen_w / 2;
@@ -85,9 +86,14 @@ void gui_world_draw() {
 
     for (int y = y1; y < y2; y++) {
         for (int x = x1; x < x2; x++) {
-            video_draw(screenx, screeny, MAPTILE(x, y).map);
+            int floor = MAPTILE(x, y).map;
 
-            sprite_t *food_sprite = MAPTILE(x, y).food;
+            if (floor == SPRITE_WATER)
+                floor += ((time >> 8) + x + y) % SPRITE_NUM_WATER;
+
+            video_draw(screenx, screeny, sprite_get(floor));
+
+            SDL_Surface *food_sprite = MAPTILE(x, y).food;
             if (food_sprite) 
                 video_draw(screenx, screeny, food_sprite);
             
@@ -111,24 +117,24 @@ static int gui_world_settype(int x, int y, int type) {
     switch (type) {
         case TILE_SOLID:
             if (x == 0 || x == world_w - 1 || y == 0 || y == world_h - 1) {
-                MAPTILE(x, y).map = sprite_get(SPRITE_BORDER + rand() % SPRITE_NUM_BORDER);
+                MAPTILE(x, y).map = SPRITE_BORDER + rand() % SPRITE_NUM_BORDER;
             } else {
-                MAPTILE(x, y).map = sprite_get(SPRITE_SOLID  + rand() % SPRITE_NUM_SOLID);
+                MAPTILE(x, y).map = SPRITE_SOLID  + rand() % SPRITE_NUM_SOLID;
             };
             break;
         case TILE_PLAIN:
             if (x == koth_x && y == koth_y) {
-                MAPTILE(x, y).map = sprite_get(SPRITE_KOTH);
+                MAPTILE(x, y).map = SPRITE_KOTH;
             } else {
-                MAPTILE(x, y).map = sprite_get(SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN);
+                MAPTILE(x, y).map = SPRITE_PLAIN + rand() % SPRITE_NUM_PLAIN;
             }
             break;
         case TILE_WATER:
-            MAPTILE(x, y).map = sprite_get(SPRITE_WATER + rand() % SPRITE_NUM_WATER);
+            MAPTILE(x, y).map = SPRITE_WATER;
             break;
         default:
             // XXX: Unsupported...
-            MAPTILE(x, y).map = sprite_get(SPRITE_KOTH);
+            MAPTILE(x, y).map = SPRITE_KOTH;
             return 0;
     }
     return 1;

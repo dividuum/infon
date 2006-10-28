@@ -28,9 +28,10 @@
 #define X_TO_SCREENX(x) ((x) * SPRITE_TILE_SIZE / TILE_WIDTH)
 #define Y_TO_SCREENY(y) ((y) * SPRITE_TILE_SIZE / TILE_HEIGHT)
 
-void         video_draw(int x, int y, sprite_t *sprite);
+void         video_draw(int x, int y, SDL_Surface *sprite);
 void         video_fullscreen_toggle();
 void         video_flip();
+void         video_set_title(const char *title);
 
 int          video_width();
 int          video_height();

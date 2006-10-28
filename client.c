@@ -62,6 +62,7 @@ static struct evbuffer *out_buf;
 
 static int              is_file_source;
 static Uint32           next_demo_read = 0;
+static int              traffic = 0;
 
 // static int           demo_write_fd;
 
@@ -175,6 +176,8 @@ static void client_readable(int fd, short event, void *arg) {
         client_destroy("eof reached");
         return;
     }
+    
+    traffic += ret;
 
 restart:
     if (compression) {
@@ -275,6 +278,8 @@ void file_loop() {
             client_destroy(errbuf);
             return;
         }
+
+        traffic += ret;
         
         ret = read(clientfd, &packet.data, packet.len);
         if (ret != packet.len) {
@@ -282,6 +287,8 @@ void file_loop() {
             client_destroy(errbuf);
             return;
         }
+
+        traffic += ret;
         
         packet_rewind(&packet);
         client_handle_packet(&packet);
@@ -289,6 +296,10 @@ void file_loop() {
         if (!client_is_connected()) 
             return;
     }
+}
+
+int  client_traffic() {
+    return traffic;
 }
 
 void client_tick() {

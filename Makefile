@@ -14,7 +14,11 @@ ifdef EVENT_HOST
 	COMMON_CFLAGS += -DEVENT_HOST="\"$(EVENT_HOST)\""
 endif
 
-ifdef WINDOWS
+ifdef WINDOWS 
+	OPTIMIZE=1
+endif
+
+ifdef OPTIMIZE
 	COMMON_CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
 else
 	COMMON_CFLAGS += -ggdb
@@ -56,9 +60,11 @@ all: infond $(GUI_EXECUTABLE)
 dist:
 	$(MAKE) source-dist
 	$(MAKE) clean
-	WINDOWS=1 $(MAKE) win32-client-dist
+	WINDOWS=1  $(MAKE) win32-client-dist
 	$(MAKE) clean
-	$(MAKE) linux-client-dist linux-server-dist
+	OPTIMIZE=1 $(MAKE) linux-client-dist
+	$(MAKE) clean
+	$(MAKE) linux-server-dist
 
 source-dist: distclean
 	tar cvzh -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon

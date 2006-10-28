@@ -58,6 +58,7 @@ int yesno(const char *fmt, ...) {
     return MessageBoxA(GetActiveWindow(), buf, GAME_NAME, MB_ICONQUESTION | MB_YESNO) == IDYES;
 #else
     assert(0);
+    return 0;
 #endif
 }
 
