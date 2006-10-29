@@ -18,6 +18,10 @@
 
 */
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #include <sys/time.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -88,7 +92,11 @@ int main(int argc, char *argv[]) {
     srand(time(0));
     gettimeofday(&start, NULL);
 
+#ifdef WIN32
+    renderer_init_from_file("./sdl_gui.dll");
+#else
     renderer_init_from_file("./sdl_gui.so");
+#endif
 
     client_init(host, NULL);
     client_game_init();
@@ -103,10 +111,18 @@ int main(int argc, char *argv[]) {
         if (nowticks < lastticks || nowticks > lastticks + 1000) {
             // Timewarp?
             lastticks = nowticks;
+#ifdef WIN32
+            Sleep(2);
+#else
             usleep(5000);
+#endif
             continue;
         } else if (delta < 20) {
-            usleep(500);
+#ifdef WIN32
+            Sleep(2);
+#else
+            usleep(5000);
+#endif
             continue;
         }
         lastticks = nowticks;

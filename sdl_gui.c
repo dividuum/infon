@@ -511,6 +511,9 @@ renderer_api_t sdl_api = {
     .scroll_message      = sdl_scroll_message,
 };
 
+#ifdef WIN32
+__declspec(dllexport) 
+#endif 
 renderer_api_t *load(infon_api_t *api) {
     infon = api;
     printf("Renderer loaded\n");

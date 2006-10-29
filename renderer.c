@@ -18,7 +18,13 @@
 
 */
 
+#ifdef WIN32
+#include <windows.h>
+#include <winerror.h>
+#else
 #include <dlfcn.h>
+#endif
+
 #include <assert.h>
 
 #include "misc.h"
@@ -31,14 +37,18 @@
 #include "client_world.h"
 #include "common_player.h"
 
-static renderer_api_t *renderer = 0;
-static int             is_open  = 0;
-static int             shutdown = 0;
+static renderer_api_t *renderer        = 0;
+static int             is_open         = 0;
+static int             render_shutdown = 0;
 
+#ifdef WIN32
+static HINSTANCE       dlhandle;
+#else
 static void           *dlhandle;
+#endif
 
 static void renderer_set_shutdown() {
-    shutdown = 1;
+    render_shutdown = 1;
 }
 
 static infon_api_t     infon = {
@@ -68,21 +78,32 @@ void renderer_init_from_pointer(render_loader loader) {
 
 
 void renderer_init_from_file(const char *shared) {
-    dlhandle = dlopen(shared, RTLD_NOW);
+#ifdef WIN32
+    dlhandle = LoadLibrary(shared);
 
     if (!dlhandle) 
+        die("dlopen(\"%s\") failed: %d", shared, GetLastError());
+
+    render_loader loader = (render_loader)GetProcAddress(dlhandle, "load");
+
+    if (!loader) 
+        die("cannot find symbol 'load'");
+#else
+    dlhandle = dlopen(shared, RTLD_NOW);
+
+    if (!dlhandle)
         die("dlopen(\"%s\") failed: %s", shared, dlerror());
 
     render_loader loader = (render_loader)dlsym(dlhandle, "load");
 
-    if (!loader) 
+    if (!loader)
         die("cannot find symbol 'load'");
-
+#endif
     renderer_init_from_pointer(loader);
 }
 
 int renderer_open(int w, int h, int fs) {
-    shutdown = 0;
+    render_shutdown = 0;
     int ret = renderer->open(w, h, fs);
     if (ret) is_open = 1;
     return ret;
@@ -111,14 +132,19 @@ void renderer_scroll_message(const char *buf) {
 }
 
 int renderer_wants_shutdown() {
-    return shutdown;
+    return render_shutdown;
 }
 
 void renderer_shutdown() {
     if (is_open) 
         renderer_close();
         
+#ifdef WIN32
+    if (dlhandle)
+        FreeLibrary(dlhandle);
+#else
     if (dlhandle)
         dlclose(dlhandle);
+#endif
     renderer = NULL;
 }

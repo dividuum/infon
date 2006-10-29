@@ -43,13 +43,21 @@ LDFLAGS += -levent -lm -lz
 
 ifdef WINDOWS
 	MINGW=/home/dividuum/progs/mingw32/
-	GUI_LDFLAGS += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
+	GUI_LDFLAGS += $(MINGW)/lib/libevent.a $(MINGW)/lib/libz.a $(MINGW)/lib/libSDL_gfx.a   \
+				   -lmingw32 $(MINGW)/lib/libSDLmain.a \
+	               -lwsock32 -mwindows -Wl,-s
+	RES=infon.res				   
+	GUI_EXECUTABLE=infon.exe
+
+	SDL_RENDERER_LDFLAGS+= $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
 				   $(MINGW)/lib/libpng.a $(MINGW)/lib/libz.a     $(MINGW)/lib/libSDL_gfx.a   \
 				   $(MINGW)/lib/libSDL.a \
 				   -lmingw32 $(MINGW)/lib/libSDLmain.a \
 	               -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
-	RES=infon.res				   
-	GUI_EXECUTABLE=infon.exe
+	SDL_RENDERER =sdl_gui.dll
+	NULL_RENDERER=null_gui.dll
+
+	RENDERER=$(SDL_RENDERER)
 else
 	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lz -lm -ldl
 	GUI_EXECUTABLE=infon
@@ -112,7 +120,7 @@ $(LUADIR)/src/liblua.a:
 	$(MAKE) -C $(LUADIR) $(LUAPLAT)
 
 clean:
-	-rm -f *.o *.so infond infond-static infon infon.exe infon.res tags 
+	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags 
 
 distclean: clean
 	$(MAKE) -C $(LUADIR) clean
