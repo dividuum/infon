@@ -18,15 +18,34 @@
 
 */
 
-#ifndef GUI_GAME_H
-#define GUI_GAME_H
+#ifndef GUI_PLAYER_H
+#define GUI_PLAYER_H
+
+#include <string.h>
 
 #include "packet.h"
 
-void gui_game_intermission_from_network(packet_t *packet);
-void gui_game_draw();
+typedef struct client_player_s {
+    int           num;
+    int           used;
 
-void gui_game_init();
-void gui_game_shutdown();
+    char          name[16];
+    int           color;
+
+    int           score;
+    int           cpu_usage;
+} client_player_t;
+
+/* Renderer */
+const client_player_t *client_get_player(int num);
+const client_player_t *client_get_king();
+void                   client_each_player(void (*callback)(const client_player_t *player, void *opaque), void *opaque);
+
+/* Network */
+void        client_player_from_network(packet_t *packet);
+void        client_player_king_from_network(packet_t *packet);
+
+void        client_player_init();
+void        client_player_shutdown();
 
 #endif

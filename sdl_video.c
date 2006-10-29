@@ -27,8 +27,8 @@
 
 #include "misc.h"
 #include "global.h"
-#include "sprite.h"
-#include "video.h"
+#include "sdl_sprite.h"
+#include "sdl_video.h"
 
 static SDL_Surface *screen;
 static Uint32       flags = SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_HWACCEL | SDL_RESIZABLE;

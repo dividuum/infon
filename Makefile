@@ -51,11 +51,18 @@ ifdef WINDOWS
 	RES=infon.res				   
 	GUI_EXECUTABLE=infon.exe
 else
-	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lSDL -lSDL_image -lSGE -lSDL_gfx -lz -lm
+	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lz -lm -ldl
 	GUI_EXECUTABLE=infon
+
+	SDL_RENDERER_LDFLAGS =-lSDL -lSDL_image -lSGE -lSDL_gfx 
+	SDL_RENDERER=sdl_gui.so
+
+	NULL_RENDERER=null_gui.so
+
+	RENDERER=$(SDL_RENDERER)
 endif
 
-all: infond $(GUI_EXECUTABLE)
+all: infond $(GUI_EXECUTABLE) $(RENDERER)
 
 dist:
 	$(MAKE) source-dist
@@ -88,8 +95,15 @@ infond: infond.o server.o listener.o map.o path.o misc.o packet.o player.o world
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 
-$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o gui_game.o video.o sprite.o $(RES)
+$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o client_player.o client_world.o client_creature.o client_game.o renderer.o $(RES)
 	$(CC) $^ $(GUI_LDFLAGS) -o $@ 
+
+$(NULL_RENDERER): null_gui.o
+	$(CC) $^ -shared -o $@
+
+$(SDL_RENDERER): sdl_video.o sdl_sprite.o sdl_gui.o misc.o
+	$(CC) $^ $(SDL_RENDERER_LDFLAGS) -shared -o $@
+
 
 infon.res: infon.rc
 	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff
@@ -98,7 +112,7 @@ $(LUADIR)/src/liblua.a:
 	$(MAKE) -C $(LUADIR) $(LUAPLAT)
 
 clean:
-	-rm -f *.o infond infond-static infon infon.exe infon.res tags 
+	-rm -f *.o *.so infond infond-static infon infon.exe infon.res tags 
 
 distclean: clean
 	$(MAKE) -C $(LUADIR) clean

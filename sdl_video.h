@@ -18,12 +18,12 @@
 
 */
 
-#ifndef VIDEO_H
-#define VIDEO_H
+#ifndef SDL_VIDEO_H
+#define SDL_VIDEO_H
 
 #include <SDL.h>
 
-#include "sprite.h"
+#include "sdl_sprite.h"
 
 #define X_TO_SCREENX(x) ((x) * SPRITE_TILE_SIZE / TILE_WIDTH)
 #define Y_TO_SCREENY(y) ((y) * SPRITE_TILE_SIZE / TILE_HEIGHT)

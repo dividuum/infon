@@ -18,15 +18,37 @@
 
 */
 
-#ifndef GUI_SCROLLER_H
-#define GUI_SCROLLER_H
+#ifndef CLIENT_WORLD_H
+#define CLIENT_WORLD_H
 
-void gui_scroller_draw();
+#include "packet.h"
+#include "common_world.h"
+
+typedef struct maptile_s {
+    int       food;
+    maptype_e map;
+} maptile_t;
+
+typedef maptile_t *client_world_t;
+
+typedef struct world_info_s {
+    int width;
+    int height;
+
+    int koth_x;
+    int koth_y;
+} client_world_info_t;
+
+/* Renderer */
+
+const client_world_info_t *client_get_world_info();
+const client_world_t       client_get_world();
 
 /* Network */
-void gui_scroller_from_network(packet_t *packet);
+void        client_world_from_network(packet_t *packet);
+void        client_world_info_from_network(packet_t *packet);
 
-void gui_scroller_init();
-void gui_scroller_shutdown();
+void        client_world_init();
+void        client_world_shutdown();
 
 #endif

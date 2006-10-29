@@ -21,7 +21,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-void  client_tick();
+void  client_tick(int delta);
 int   client_is_connected();
 
 int   client_traffic();

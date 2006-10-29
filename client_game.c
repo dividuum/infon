@@ -18,25 +18,35 @@
 
 */
 
-#ifndef GUI_WORLD_H
-#define GUI_WORLD_H
+#include <stdio.h>
 
-#include "packet.h"
-#include "common_world.h"
+#include "misc.h"
+#include "client_game.h"
+#include "client_creature.h"
+#include "client_world.h"
+#include "client_player.h"
+#include "global.h"
+#include "client.h"
 
-void        gui_world_draw();
-void        gui_world_recenter();
-void        gui_world_center_change(int dx, int dy);
-void        gui_world_center_set(int x, int y);
+static char intermission [256] = {0};
 
-int         gui_world_x_offset();
-int         gui_world_y_offset();
+void client_game_intermission_from_network(packet_t *packet) {
+    snprintf(intermission, sizeof(intermission),
+             "%.*s", packet->len, packet->data);
+}
 
-/* Network */
-void        gui_world_from_network(packet_t *packet);
-void        gui_world_info_from_network(packet_t *packet);
+const char *client_get_intermission() {
+    return intermission;
+}
 
-void        gui_world_init();
-void        gui_world_shutdown();
+void client_game_init() {
+    client_world_init();
+    client_player_init();
+    client_creature_init();
+}
 
-#endif
+void client_game_shutdown() {
+    client_creature_shutdown();
+    client_player_shutdown();
+    client_world_shutdown();
+}
