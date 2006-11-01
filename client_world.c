@@ -33,12 +33,16 @@ static client_world_info_t  info;
 
 #define MAPTILE(x, y) (map[(y) * info.width + (x)])
 
-const client_world_info_t *client_get_world_info() {
+const client_world_info_t *client_world_get_info() {
     return initialized ? &info : NULL;
 }
 
-const client_world_t client_get_world() {
+const client_world_t client_world_get() {
     return initialized ? map : NULL;
+}
+
+const client_maptile_t *client_world_get_tile(int x, int y) {
+    return &MAPTILE(x, y);
 }
 
 void client_world_destroy() {
@@ -68,6 +72,7 @@ void client_world_from_network(packet_t *packet) {
         if (food >= 10)                     PROTOCOL_ERROR();
         MAPTILE(x, y).food = food;
     }
+    renderer_world_changed(x, y);
 }
 
 void client_world_info_from_network(packet_t *packet) {
@@ -88,18 +93,25 @@ void client_world_info_from_network(packet_t *packet) {
     if (info.koth_x >= info.width)         PROTOCOL_ERROR();
     if (info.koth_y >= info.height)        PROTOCOL_ERROR();
 
-    map  =  malloc(info.width * info.height * sizeof(maptile_t));
-    memset(map, 0, info.width * info.height * sizeof(maptile_t));
+    map  =  malloc(info.width * info.height * sizeof(client_maptile_t));
+
+    initialized = 1;
 
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
-            MAPTILE(x,y).map = TILE_SOLID;
+            MAPTILE(x,y).food = -1;
+            MAPTILE(x,y).map  = TILE_SOLID;
         }
     }
 
-    initialized = 1;
-    renderer_world_change();
+    renderer_world_info_changed(&info);
+
+    for (int x = 0; x < w; x++) {
+        for (int y = 0; y < h; y++) {
+            renderer_world_changed(x, y);
+        }
+    }
 }
 
 void client_world_init() {

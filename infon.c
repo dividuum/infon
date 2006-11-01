@@ -93,10 +93,14 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start, NULL);
 
 #ifdef WIN32
-    renderer_init_from_file("./sdl_gui.dll");
+    const char *gui = "./sdl_gui.dll";
 #else
-    renderer_init_from_file("./sdl_gui.so");
+    const char *gui = "./sdl_gui.so";
+    if (getenv("GUI"))
+        gui = getenv("GUI");
 #endif
+
+    renderer_init_from_file(gui);
 
     client_init(host, NULL);
     client_game_init();
@@ -135,11 +139,10 @@ int main(int argc, char *argv[]) {
         game_time += delta;
     }
 
-    renderer_close();
-    
     client_game_shutdown();
     client_shutdown();
 
+    renderer_close();
     renderer_shutdown();
     return EXIT_SUCCESS; 
 }

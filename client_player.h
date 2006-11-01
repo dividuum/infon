@@ -28,6 +28,7 @@
 typedef struct client_player_s {
     int           num;
     int           used;
+    void         *userdata;
 
     char          name[16];
     int           color;
@@ -37,9 +38,9 @@ typedef struct client_player_s {
 } client_player_t;
 
 /* Renderer */
-const client_player_t *client_get_player(int num);
-const client_player_t *client_get_king();
-void                   client_each_player(void (*callback)(const client_player_t *player, void *opaque), void *opaque);
+const client_player_t *client_player_get(int num);
+const client_player_t *client_player_get_king();
+void                   client_player_each(void (*callback)(const client_player_t *player, void *opaque), void *opaque);
 
 /* Network */
 void        client_player_from_network(packet_t *packet);

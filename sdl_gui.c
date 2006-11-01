@@ -326,7 +326,7 @@ static void draw_world() {
     int screeny = mapy1;
 
     for (int y = y1; y < y2; y++) {
-        maptile_t *tile = &world[y * info->width + x1];
+        client_maptile_t *tile = &world[y * info->width + x1];
         for (int x = x1; x < x2; x++) {
             int pos_rand = rand_table[(x ^ y) & 0xFF];
             int floor_sprite;
@@ -374,41 +374,43 @@ static void draw_world() {
         video_rect(0, mapy2, screen_w, screen_h, 30, 30, 30, 0);
 }
 
-static void sdl_world_change() {
+static void sdl_world_info_changed(const client_world_info_t *info) {
     recenter();
 }
 
-static void sdl_player_color_change(const client_player_t *player) {
-    int colors[16][3] = {
-        { 0xFF, 0x00, 0x00 },
-        { 0x00, 0xFF, 0x00 },
-        { 0x00, 0x00, 0xFF },
-        { 0xFF, 0xFF, 0x00 },
-        { 0x00, 0xFF, 0xFF },
-        { 0xFF, 0x00, 0xFF },
-        { 0xFF, 0xFF, 0xFF },
-        { 0x00, 0x00, 0x00 },
+static void sdl_player_changed(const client_player_t *player, int changed) {
+    if (changed & PLAYER_DIRTY_COLOR) {
+        int colors[16][3] = {
+            { 0xFF, 0x00, 0x00 },
+            { 0x00, 0xFF, 0x00 },
+            { 0x00, 0x00, 0xFF },
+            { 0xFF, 0xFF, 0x00 },
+            { 0x00, 0xFF, 0xFF },
+            { 0xFF, 0x00, 0xFF },
+            { 0xFF, 0xFF, 0xFF },
+            { 0x00, 0x00, 0x00 },
 
-        { 0xFF, 0x80, 0x80 },
-        { 0x80, 0xFF, 0x80 },
-        { 0x80, 0x80, 0xFF },
-        { 0xFF, 0xFF, 0x80 },
-        { 0x80, 0xFF, 0xFF },
-        { 0xFF, 0x80, 0xFF },
-        { 0x80, 0x80, 0x80 },
-        { 0x60, 0xA0, 0xFF },
-    };
+            { 0xFF, 0x80, 0x80 },
+            { 0x80, 0xFF, 0x80 },
+            { 0x80, 0x80, 0xFF },
+            { 0xFF, 0xFF, 0x80 },
+            { 0x80, 0xFF, 0xFF },
+            { 0xFF, 0x80, 0xFF },
+            { 0x80, 0x80, 0x80 },
+            { 0x60, 0xA0, 0xFF },
+        };
 
-    int hi = (player->color & 0xF0) >> 4;
-    int lo = (player->color & 0x0F);
+        int hi = (player->color & 0xF0) >> 4;
+        int lo = (player->color & 0x0F);
 
-    sprite_render_player_creatures(player->num,
-                                   colors[hi][0],
-                                   colors[hi][1],
-                                   colors[hi][2],
-                                   colors[lo][0],
-                                   colors[lo][1],
-                                   colors[lo][2]);
+        sprite_render_player_creatures(player->num,
+                                       colors[hi][0],
+                                       colors[hi][1],
+                                       colors[hi][2],
+                                       colors[lo][0],
+                                       colors[lo][1],
+                                       colors[lo][2]);
+    }
 }
 
 static void sdl_scroll_message(const char *msg) {
@@ -506,8 +508,14 @@ renderer_api_t sdl_api = {
     .open                = sdl_open,
     .close               = sdl_close,
     .tick                = sdl_tick,
-    .world_change        = sdl_world_change,
-    .player_color_change = sdl_player_color_change,
+    .world_info_changed  = sdl_world_info_changed,
+    .world_changed       = NULL,
+    .player_joined       = NULL,
+    .player_changed      = sdl_player_changed,
+    .player_left         = NULL,
+    .creature_spawned    = NULL,
+    .creature_changed    = NULL,
+    .creature_died       = NULL,
     .scroll_message      = sdl_scroll_message,
 };
 

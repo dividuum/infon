@@ -62,12 +62,19 @@ else
 	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lz -lm -ldl
 	GUI_EXECUTABLE=infon
 
+	NULL_RENDERER=null_gui.so
+
 	SDL_RENDERER_LDFLAGS =-lSDL -lSDL_image -lSGE -lSDL_gfx 
 	SDL_RENDERER=sdl_gui.so
 
-	NULL_RENDERER=null_gui.so
+	GL_RENDERER_LDFLAGS =-lSDL -lGL -lGLU
+	GL_RENDERER=gl_gui.so 
 
-	RENDERER=$(SDL_RENDERER)
+	LILITH_RENDERER_LDFLAGS =-lSDL -lGL -lGLU
+	LILITH_RENDERER=lilith_gui.so 
+	CPPFLAGS=$(CFLAGS)
+
+	RENDERER=$(LILITH_RENDERER) $(GL_RENDERER) $(SDL_RENDERER) $(NULL_RENDERER)
 endif
 
 all: infond $(GUI_EXECUTABLE) $(RENDERER)
@@ -112,6 +119,11 @@ $(NULL_RENDERER): null_gui.o
 $(SDL_RENDERER): sdl_video.o sdl_sprite.o sdl_gui.o misc.o
 	$(CC) $^ $(SDL_RENDERER_LDFLAGS) -shared -o $@
 
+$(GL_RENDERER): gl_video.o gl_gui.o gl_mdl.o misc.o
+	$(CC) $^ $(GL_RENDERER_LDFLAGS) -shared -o $@
+
+$(LILITH_RENDERER): lilith_gui.o misc.o lilith/lilith/liblilith.a
+	$(CC) $^ $(LILITH_RENDERER_LDFLAGS) -shared -o $@
 
 infon.res: infon.rc
 	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff

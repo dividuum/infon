@@ -25,19 +25,28 @@
 #include "client_player.h"
 #include "client_world.h"
 
-#define RENDERER_API_VERSION 1
+#define RENDERER_API_VERSION 2
 
 typedef struct {
-    int  version;
+    int   version;
 
-    int  (*open )(int w, int h, int fs);
-    void (*close)(void);
+    int   (*open )(int w, int h, int fs);
+    void  (*close)(void);
     
-    void (*tick)(int game_time, int delta);            
+    void  (*tick)(int game_time, int delta);            
 
-    void (*world_change)       ();
-    void (*player_color_change)(const client_player_t *player);
-    void (*scroll_message)     (const char *message);
+    void  (*world_info_changed)(const client_world_info_t *info);
+    void  (*world_changed   )(int x, int y);
+
+    void *(*player_joined   )(const client_player_t *player);
+    void  (*player_changed  )(const client_player_t *player,     int changed);
+    void  (*player_left     )(const client_player_t *player);
+
+    void *(*creature_spawned)(const client_creature_t *creature);
+    void  (*creature_changed)(const client_creature_t *creature, int changed);
+    void  (*creature_died   )(const client_creature_t *creature);
+
+    void  (*scroll_message  )(const char *message);
 } renderer_api_t;
 
 typedef struct {
@@ -52,6 +61,7 @@ typedef struct {
     const client_player_t*     (*get_king    )();
     const client_world_t       (*get_world   )();
     const client_world_info_t* (*get_world_info)();
+    const client_maptile_t   * (*get_world_tile)(int x, int y);
     const char *               (*get_intermission)();
 
     int                        (*get_traffic)();
@@ -71,8 +81,16 @@ void renderer_close();
 
 void renderer_tick(int game_time, int delta);
 
-void renderer_world_change();
-void renderer_player_color_change(const client_player_t *player);
+void renderer_world_info_changed(const client_world_info_t *info);
+void renderer_world_changed     (int x, int y);
+
+void renderer_player_joined     (client_player_t *player);
+void renderer_player_changed    (const client_player_t *player,     int changed);
+void renderer_player_left       (const client_player_t *player);
+void renderer_creature_spawned  (client_creature_t *creature);
+void renderer_creature_changed  (const client_creature_t *creature, int changed);
+void renderer_creature_died     (const client_creature_t *creature);
+
 void renderer_scroll_message(const char *buf);
 
 int  renderer_wants_shutdown();

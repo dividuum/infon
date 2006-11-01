@@ -55,14 +55,15 @@ static infon_api_t     infon = {
     .max_players        = MAXPLAYERS,
     .max_creatures      = MAXCREATURES,
     
-    .each_creature      = client_each_creature,
-    .each_player        = client_each_player,
+    .each_creature      = client_creature_each,
+    .each_player        = client_player_each,
 
-    .get_creature       = client_get_creature,
-    .get_player         = client_get_player,
-    .get_king           = client_get_king,
-    .get_world          = client_get_world,
-    .get_world_info     = client_get_world_info,
+    .get_creature       = client_creature_get,
+    .get_player         = client_player_get,
+    .get_king           = client_player_get_king,
+    .get_world          = client_world_get,
+    .get_world_info     = client_world_get_info,
+    .get_world_tile     = client_world_get_tile,
     .get_intermission   = client_get_intermission,
 
     .get_traffic        = client_traffic,
@@ -73,7 +74,11 @@ void renderer_init_from_pointer(render_loader loader) {
     renderer = loader(&infon);
 
     if (renderer->version != RENDERER_API_VERSION)
-        die("render is using api version %d, we provide %d", renderer->version, RENDERER_API_VERSION);
+        die("version mismatch between renderer and engine:\n"
+            "renderer provided api version %d\n"
+            "engine   required api version %d", 
+            renderer->version, 
+            RENDERER_API_VERSION);
 }
 
 
@@ -119,16 +124,49 @@ void renderer_tick(int game_time, int delta) {
     renderer->tick(game_time, delta);
 }
 
-void renderer_world_change() {
-    renderer->world_change();
+void renderer_world_info_changed(const client_world_info_t *info) {
+    if (renderer->world_info_changed)
+        renderer->world_info_changed(info);
 }
 
-void renderer_player_color_change(const client_player_t *player) {
-    renderer->player_color_change(player);
+void renderer_world_changed(int x, int y) {
+    if (renderer->world_changed)
+        renderer->world_changed(x, y);
+}
+
+void renderer_player_joined(client_player_t *player) {
+    if (renderer->player_joined) 
+        player->userdata = renderer->player_joined(player);
+}
+
+void renderer_player_changed(const client_player_t *player, int changed) {
+    if (renderer->player_changed) 
+        renderer->player_changed(player, changed);
+}
+
+void renderer_player_left(const client_player_t *player) {
+    if (renderer->player_left)
+        renderer->player_left(player);
+}
+
+void renderer_creature_spawned(client_creature_t *creature) {
+    if (renderer->creature_spawned)
+        creature->userdata = renderer->creature_spawned(creature);
+}
+
+void renderer_creature_changed(const client_creature_t *creature, int changed) {
+    if (renderer->creature_changed)
+        renderer->creature_changed(creature, changed);
+}
+
+void renderer_creature_died(const client_creature_t *creature) {
+    if (renderer->creature_died)
+        renderer->creature_died(creature);
 }
 
 void renderer_scroll_message(const char *buf) {
-    renderer->scroll_message(buf);
+    if (renderer->scroll_message)
+        renderer->scroll_message(buf);
 }
 
 int renderer_wants_shutdown() {

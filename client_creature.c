@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "renderer.h"
 #include "global.h"
 #include "client_creature.h"
 #include "common_player.h"
@@ -35,7 +36,7 @@ static client_creature_t creatures[MAXCREATURES];
 
 #define CREATURE_USED(creature) ((creature)->used)
 
-const client_creature_t *client_get_creature(int num) {
+const client_creature_t *client_creature_get(int num) {
     if (num < 0 || num >= MAXCREATURES)
         return NULL;
     const client_creature_t *creature = &creatures[num];
@@ -44,7 +45,7 @@ const client_creature_t *client_get_creature(int num) {
     return creature;
 }
 
-void client_each_creature(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque) {
+void client_creature_each(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque) {
     for (int n = 0; n < MAXCREATURES; n++) {
         const client_creature_t *creature = &creatures[n];
         if (!CREATURE_USED(creature))
@@ -87,6 +88,7 @@ static void client_creature_del_path(client_creature_t *creature) {
 }
         
 static void client_creature_kill(client_creature_t *creature) {
+    renderer_creature_died(creature);
     while (creature->path) 
         client_creature_del_path(creature);
     creature->used = 0;
@@ -188,7 +190,10 @@ void client_creature_from_network(packet_t *packet) {
             creature->last_x = x;
             creature->last_y = y;
             creature->num    = creatureno;
+            creature->x      = x * CREATURE_POS_RESOLUTION;
+            creature->y      = y * CREATURE_POS_RESOLUTION;
             creature->used   = 1;
+            renderer_creature_spawned(creature);
 
             // XXX: x, y checken?
             client_creature_add_path(creature,
@@ -261,6 +266,9 @@ void client_creature_from_network(packet_t *packet) {
         if (!packet_read08(packet, &speed))     PROTOCOL_ERROR();
         creature->speed = speed * CREATURE_SPEED_RESOLUTION;
     }
+
+    if (updatemask & ~CREATURE_DIRTY_ALIVE)
+        renderer_creature_changed(creature, updatemask & ~CREATURE_DIRTY_ALIVE);
 }
 
 void client_creature_init() {

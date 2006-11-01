@@ -36,6 +36,7 @@ struct client_pathnode_s {
 typedef struct client_creature_s {
     int             num;
     int             used;
+    void           *userdata;
 
     int             x;
     int             y;
@@ -61,8 +62,8 @@ typedef struct client_creature_s {
 } client_creature_t;
 
 /* Renderer */
-const client_creature_t *client_get_creature(int num);
-void                     client_each_creature(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque);
+const client_creature_t *client_creature_get(int num);
+void                     client_creature_each(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque);
 
 /* Movement */
 void        client_creature_move(int delta);

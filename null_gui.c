@@ -20,6 +20,8 @@
 
 #include <stdio.h>
 
+#include "client_world.h"
+#include "client_creature.h"
 #include "client_player.h"
 #include "renderer.h"
 
@@ -38,15 +40,41 @@ static void null_tick(int gt, int delta) {
 	printf("tick %d\n", delta);
 }
 
-static void null_world_change() {
-    printf("world change\n");
+void  null_world_info_changed(const client_world_info_t *info) {
+	printf("new world\n");
 }
 
-static void null_player_color_change(const client_player_t *player) {
-	printf("color\n");
+void  null_world_changed(int x, int y) {
+	printf("change at %d,%d\n", x, y);
 }
 
-static void null_scroll_message(const char *message) {
+void *null_player_joined(const client_player_t *player) {
+	printf("new player %d\n", player->num);
+	return NULL;
+}
+
+void  null_player_changed(const client_player_t *player, int changed) {
+	printf("player %d changed: %d\n", player->num, changed);
+}
+
+void  null_player_left(const client_player_t *player) {
+	printf("player %d left\n", player->num);
+}
+
+void *null_creature_spawned(const client_creature_t *creature) {
+	printf("creature spawned %d\n", creature->num);
+	return NULL;
+}
+
+void  null_creature_changed(const client_creature_t *creature, int changed) {
+	printf("creature %d changed: %d\n", creature->num, changed);
+}
+
+void  null_creature_died(const client_creature_t *creature) {
+	printf("creature %d died\n", creature->num);
+}
+
+void  null_scroll_message(const char *message) {
 	printf("scroll: %s\n", message);
 }
 
@@ -55,8 +83,14 @@ renderer_api_t null_api = {
     .open                = null_open,
     .close               = null_close,
     .tick                = null_tick,
-    .world_change        = null_world_change,
-    .player_color_change = null_player_color_change,
+    .world_info_changed  = null_world_info_changed,
+    .world_changed       = null_world_changed,
+    .player_joined       = null_player_joined,
+    .player_changed      = null_player_changed,
+    .player_left         = null_player_left,
+    .creature_spawned    = null_creature_spawned,
+    .creature_changed    = null_creature_changed,
+    .creature_died       = null_creature_died,
     .scroll_message      = null_scroll_message,
 };
 

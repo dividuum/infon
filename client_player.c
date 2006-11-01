@@ -35,7 +35,7 @@
 static client_player_t players[MAXPLAYERS];
 static client_player_t *king_player = NULL;
 
-const client_player_t *client_get_player(int num) {
+const client_player_t *client_player_get(int num) {
     if (num < 0 || num >= MAXPLAYERS)
         return NULL;
     const client_player_t *player = &players[num];
@@ -44,11 +44,11 @@ const client_player_t *client_get_player(int num) {
     return player;
 }
 
-const client_player_t *client_get_king() {
+const client_player_t *client_player_get_king() {
     return king_player;
 }
 
-void client_each_player(void (*callback)(const client_player_t *player, void *opaque), void *opaque) {
+void client_player_each(void (*callback)(const client_player_t *player, void *opaque), void *opaque) {
     for (int n = 0; n < MAXPLAYERS; n++) {
         const client_player_t *player = &players[n];
         if (!PLAYER_USED(player))
@@ -72,12 +72,14 @@ void client_player_from_network(packet_t *packet) {
         uint8_t alive;
         if (!packet_read08(packet, &alive))     PROTOCOL_ERROR();
         if (!alive) {
+            renderer_player_left(player);
             player->used = 0;
             return;
         } else {
             memset(player, 0, sizeof(client_player_t));
             player->used = 1;
             player->num  = playerno;
+            renderer_player_joined(player);
         }
     }
 
@@ -94,7 +96,6 @@ void client_player_from_network(packet_t *packet) {
         uint8_t col;
         if (!packet_read08(packet, &col))       PROTOCOL_ERROR();
         player->color = col;
-        renderer_player_color_change(player);
     }
     if (updatemask & PLAYER_DIRTY_CPU) {
         uint8_t cpu;
@@ -107,6 +108,9 @@ void client_player_from_network(packet_t *packet) {
         if (!packet_read16(packet, &score))     PROTOCOL_ERROR();
         player->score = score + PLAYER_KICK_SCORE;
     }
+
+    if (updatemask & ~PLAYER_DIRTY_ALIVE) 
+        renderer_player_changed(player, updatemask & ~PLAYER_DIRTY_ALIVE);
 }
 
 void client_player_king_from_network(packet_t *packet) {
@@ -126,4 +130,10 @@ void client_player_init() {
 }
 
 void client_player_shutdown() {
+    for (int n = 0; n < MAXPLAYERS; n++) {
+        const client_player_t *player = &players[n];
+        if (!PLAYER_USED(player))
+            continue;
+        renderer_player_left(player);        
+    }
 }
