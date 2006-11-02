@@ -386,6 +386,16 @@ int creature_conversion_food(const creature_t *creature, creature_type type) {
     return conversion_food_needed[creature->type][type];
 }
 
+int creature_can_convert(const creature_t *creature) {
+    if (creature_conversion_food(creature, creature->convert_type) == 0)
+        return 0;
+
+    if (!world_walkable(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y)))
+        return 0;
+
+    return 1;
+}
+
 void creature_do_convert(creature_t *creature, int delta) {
     int used_food = creature_conversion_speed(creature) * delta / 1000;
     const int needed_food = creature_conversion_food(creature, creature->convert_type) - 
@@ -432,7 +442,8 @@ int creature_set_type(creature_t *creature, creature_type type) {
     if (type < 0 || type >= CREATURE_TYPES)
         return 0;
 
-    creature->type = type;
+    creature->type         = type;
+    creature->convert_type = type;
     
     creature_set_health(creature, creature->health);
 
@@ -616,7 +627,7 @@ int creature_set_state(creature_t *creature, int newstate) {
             //    return 0;
             break;
         case CREATURE_CONVERT:
-            if (creature_conversion_food(creature, creature->convert_type) == 0)
+            if (!creature_can_convert(creature))
                 return 0;
             break;
         case CREATURE_SPAWN:
