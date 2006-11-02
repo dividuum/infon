@@ -37,7 +37,7 @@
 #include "common_player.h"
 #include "client_world.h"
 
-static infon_api_t *infon;
+static const infon_api_t *infon;
 
 static Uint32       real_time;
 static int          game_time;
@@ -503,7 +503,7 @@ static void sdl_close() {
     video_shutdown();
 }
 
-renderer_api_t sdl_api = {
+const renderer_api_t sdl_api = {
     .version             = RENDERER_API_VERSION,
     .open                = sdl_open,
     .close               = sdl_close,
@@ -522,7 +522,7 @@ renderer_api_t sdl_api = {
 #ifdef WIN32
 __declspec(dllexport) 
 #endif 
-renderer_api_t *load(infon_api_t *api) {
+const renderer_api_t *load(const infon_api_t *api) {
     infon = api;
     printf("Renderer loaded\n");
     return &sdl_api;

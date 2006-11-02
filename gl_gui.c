@@ -40,7 +40,7 @@
 
 #include "gl_mdl.h"
 
-static infon_api_t *infon;
+static const infon_api_t *infon;
 
 static Uint32       real_time;
 static int          game_time;
@@ -666,7 +666,7 @@ static void gl_close() {
     video_shutdown();
 }
 
-renderer_api_t gl_api = {
+const renderer_api_t gl_api = {
     .version             = RENDERER_API_VERSION,
     .open                = gl_open,
     .close               = gl_close,
@@ -685,7 +685,7 @@ renderer_api_t gl_api = {
 #ifdef WIN32
 __declspec(dllexport) 
 #endif 
-renderer_api_t *load(infon_api_t *api) {
+const renderer_api_t *load(const infon_api_t *api) {
     infon = api;
     printf("Renderer loaded\n");
     return &gl_api;

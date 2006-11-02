@@ -42,7 +42,7 @@ extern "C" {
 using namespace grinliz;
 using namespace lilith3d;
 
-static infon_api_t *infon;
+static const infon_api_t *infon;
 
 static SDL_Surface    *surface = 0; 
 static TextureManager *texman  = 0;
@@ -53,7 +53,7 @@ static Uint32          real_time;
 
 class LCreature : public Mob {
 public:
-    LCreature(const client_creature_t *creature) : m_rand(real_time) {
+    LCreature(const client_creature_t *creature) : m_rand(real_time), m_toggle(0) {
         MeshResManager *meshman  = MeshResManager::Instance();
         m_mesh = new AnimatedMesh(meshman->GetAnimatedRes("Marine"));
         m_lastdir = 0;
@@ -169,13 +169,12 @@ public:
         int hi = (player->color & 0xF0) >> 4;
         int lo = (player->color & 0x0F);
 
-        static int toggle = 0;
         lilith->GetGravParticles()->Create(m_mesh->Pos(), 
                                            velocity, 
-                                           colors[toggle ? hi : lo],
+                                           colors[m_toggle ? hi : lo],
                                            2,
                                            GravParticles::SMALL );
-        toggle ^= 1;
+        m_toggle ^= 1;
 
         switch (creature->state) {
             case CREATURE_CONVERT:
@@ -190,6 +189,7 @@ public:
 private:
     float         m_lastdir;
     Random        m_rand;
+    int           m_toggle;
     AnimatedMesh *m_mesh;
 };
 
@@ -381,7 +381,7 @@ extern "C" {
 #ifdef WIN32
     __declspec(dllexport) 
 #endif 
-    renderer_api_t *load(infon_api_t *api) {
+    const renderer_api_t *load(const infon_api_t *api) {
         infon = api;
         printf("Renderer loaded\n");
 

@@ -68,7 +68,7 @@ typedef struct {
     void                       (*shutdown)();
 } infon_api_t;
 
-typedef renderer_api_t *(*render_loader)(infon_api_t *);
+typedef const renderer_api_t *(*render_loader)(const infon_api_t *);
 
 /* infon seitige API */
 

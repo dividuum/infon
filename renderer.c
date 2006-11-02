@@ -37,7 +37,7 @@
 #include "client_world.h"
 #include "common_player.h"
 
-static renderer_api_t *renderer        = 0;
+static const renderer_api_t *renderer  = 0;
 static int             is_open         = 0;
 static int             render_shutdown = 0;
 
@@ -51,7 +51,7 @@ static void renderer_set_shutdown() {
     render_shutdown = 1;
 }
 
-static infon_api_t     infon = {
+static const infon_api_t infon = {
     .max_players        = MAXPLAYERS,
     .max_creatures      = MAXCREATURES,
     
