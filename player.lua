@@ -93,6 +93,16 @@ function Creature:eat()
     end
 end
 
+function Creature:feed(target)
+    if not self:set_target(target) then
+        return
+    end
+    self:begin_feeding()
+    while self:is_feeding() do
+        self:wait_for_next_round()
+    end
+end
+
 function Creature:attack(target) 
     if not self:set_target(target) then
         return
@@ -244,7 +254,7 @@ end
 function Creature:main_restarter() 
     while true do
         self:main()
-        coroutine.yield()
+        self:wait_for_next_round()
     end
 end
 
@@ -270,13 +280,6 @@ function Creature:wait_for_next_round()
         print("-----------------------------------------------------------")
         error("cannot continue")
     end
-    --[[
-    local ok, msg = xpcall(coroutine.yield, _TRACEBACK)
-    if not ok then 
-        print(msg)
-        error("wait_for_next_round cannot be called in interactive mode")
-    end
-    ]]--
 end
 
 ------------------------------------------------------------------------
@@ -308,7 +311,15 @@ end
 
 function info()
     for id, creature in pairs(creatures) do
-        print("creature " .. id .. ": " .. (creature.message or "-"))
+        print(creature .. ":")
+        print("------------------------------")
+        if creature.message then
+            print("current message: " .. creature.message)
+        end
+        if type(creature.thread) == 'thread' then
+            print(_TRACEBACK(creature.thread, "thread status  : " .. coroutine.status(creature.thread),1))
+        end
+        print()
     end
 end
 
@@ -348,8 +359,12 @@ function player_think(events)
                     end
                 end,
                 __tostring = function(self)
-                    local x, y = get_pos(self.id)
-                    return "<creature " .. self.id .." [" .. x .. "," .. y .."]>"
+                    local x, y  = get_pos(self.id)
+                    local states = { [0]="idle",   [1]="walk",    [2]="heal",  [3]="eat",
+                                     [4]="attack", [5]="convert", [6]="spawn", [7]="feed"}
+                    return "<creature " .. self.id .." [" .. x .. "," .. y .."] " .. 
+                            "type " .. get_type(self.id) ..", health " .. get_health(self.id) .. ", " ..
+                            "food " .. get_food(self.id) .. ", state " .. states[get_state(self.id)]  .. ">"
                 end,
                 __concat = function (op1, op2)
                     return tostring(op1) .. tostring(op2)
