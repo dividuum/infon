@@ -42,6 +42,7 @@ typedef struct creature_s {
     creature_type   convert_type;
     int             spawn_food;
     creature_state  state;
+    int             suicide;
 
     int             age_action_deltas;
     int             spawn_time;
@@ -76,6 +77,7 @@ int         creature_set_conversion_type(creature_t *creature, creature_type typ
 void        creature_set_message(creature_t *creature, const char *message);
 int         creature_set_food(creature_t *creature, int food);
 int         creature_set_type(creature_t *creature, creature_type type);
+int         creature_suicide(creature_t *creature);
 
 creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr);
 int         creature_max_health(const creature_t *creature);

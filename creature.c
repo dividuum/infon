@@ -712,6 +712,11 @@ void creature_moveall(int delta) {
         if (!CREATURE_USED(creature)) 
             continue;
 
+        if (creature->suicide) {
+            creature_kill(creature, creature);
+            continue;
+        }
+
         // Alterungsprozess
         creature->age_action_deltas += delta;
         while (creature->age_action_deltas >= 100) {
@@ -825,6 +830,11 @@ int creature_set_health(creature_t *creature, int health) {
     return 1;
 }
 
+int creature_suicide(creature_t *creature) {
+    creature->suicide = 1;
+    return 1;
+}
+
 void creature_set_message(creature_t *creature, const char *message) {
     if (strncmp(creature->message, message, sizeof(creature->message) - 1)) {
         snprintf(creature->message, sizeof(creature->message), "%s", message);
@@ -866,6 +876,7 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     creature->convert_type = type;
     creature->spawn_food   = 0;
     creature->state        = CREATURE_IDLE;
+    creature->suicide      = 0;
     creature->message[0]   = '\0';
     creature->spawn_time   = game_time;
 
