@@ -315,7 +315,7 @@ static int luaCreatureSuicide(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
     // lua_consumecycles(L, 100);
-    creature_set_health(creature, 0);
+    creature_suicide(creature);
     return 0;
 }
 
