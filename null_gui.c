@@ -78,7 +78,7 @@ static void  null_scroll_message(const char *message) {
 	printf("scroll: %s\n", message);
 }
 
-const renderer_api_t null_api = {
+const static renderer_api_t null_api = {
     .version             = RENDERER_API_VERSION,
     .open                = null_open,
     .close               = null_close,

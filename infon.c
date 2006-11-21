@@ -101,11 +101,11 @@ int main(int argc, char *argv[]) {
 #endif
 
     renderer_init_from_file(gui);
+    if (!renderer_open(width, height, fullscreen))
+        die("cannot open renderer. sorry");
 
     client_init(host, NULL);
     client_game_init();
-
-    renderer_open(width, height, fullscreen);
 
     int lastticks = get_tick();
     while (!signal_received && !renderer_wants_shutdown() && client_is_connected()) {

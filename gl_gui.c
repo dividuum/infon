@@ -666,7 +666,7 @@ static void gl_close() {
     video_shutdown();
 }
 
-const renderer_api_t gl_api = {
+static const renderer_api_t gl_api = {
     .version             = RENDERER_API_VERSION,
     .open                = gl_open,
     .close               = gl_close,

@@ -503,7 +503,7 @@ static void sdl_close() {
     video_shutdown();
 }
 
-const renderer_api_t sdl_api = {
+const static renderer_api_t sdl_api = {
     .version             = RENDERER_API_VERSION,
     .open                = sdl_open,
     .close               = sdl_close,
