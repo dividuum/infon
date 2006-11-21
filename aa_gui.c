@@ -109,8 +109,8 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
 static void null_tick(int gt, int delta) {
     const client_world_info_t *worldsize = infon->get_world_info();
     if (!worldsize) return;
-    const client_world_t world = infon->get_world();
-    char *p = bitmap;
+    const client_maptile_t *world = infon->get_world();
+    unsigned char *p = bitmap;
     int x;
     int y;
     p--;

@@ -98,7 +98,7 @@ typedef struct {
     /* returns a pointer to world_with * world_height world tile information or NULL
      * if there is no world. you can reuse the returned pointer until a new world
      * is created (as indicated by world_info_changed). */
-    const client_world_t       (*get_world   )();
+    const client_maptile_t   * (*get_world   )();
 
     /* returns information about the current world or NULL if there is no world. */
     const client_world_info_t* (*get_world_info)();

@@ -29,8 +29,6 @@ typedef struct maptile_s {
     maptype_e map;
 } client_maptile_t;
 
-typedef client_maptile_t *client_world_t;
-
 typedef struct world_info_s {
     int width;
     int height;
@@ -42,7 +40,7 @@ typedef struct world_info_s {
 /* Renderer */
 
 const client_world_info_t *client_world_get_info();
-const client_world_t       client_world_get();
+const client_maptile_t    *client_world_get();
 const client_maptile_t    *client_world_get_tile(int x, int y);
 
 /* Network */

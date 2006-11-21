@@ -39,8 +39,8 @@
 
 static const infon_api_t *infon;
 
-static Uint32       real_time;
-static int          game_time;
+static Uint32       render_real_time;
+static int          render_game_time;
 
 static int          center_x;
 static int          center_y;
@@ -104,7 +104,7 @@ static void draw_scroller() {
     static float  curspeed  = 0;
     int chars_per_screen = video_width() / 6 + 1;
 
-    float speed = ((float)real_time - last_time) * 
+    float speed = ((float)render_real_time - last_time) * 
                    (float)(EVBUFFER_LENGTH(scrollbuffer) - chars_per_screen - 3) / 200.0;
 
     if (curspeed < speed) curspeed += 0.1; //(speed - curspeed)/30.0;
@@ -112,7 +112,7 @@ static void draw_scroller() {
     if (curspeed < 0.1)   curspeed = 0;
 
     x        -= curspeed;
-    last_time = real_time;
+    last_time = render_real_time;
 
     while (x < -6) {
         evbuffer_drain(scrollbuffer, 1);
@@ -154,9 +154,9 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
     video_draw(x, y, sprite_get(CREATURE_SPRITE(creature->player,
                                                 creature->type,
                                                 creature->dir,
-                                                (real_time >> 7) % 2)));
+                                                (render_real_time >> 7) % 2)));
     
-    if (creature->smile_time + 1000 > game_time) {
+    if (creature->smile_time + 1000 > render_game_time) {
         video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + 8));
     } else {
         video_draw(x + 15, y - 10, sprite_get(SPRITE_THOUGHT + creature->state));
@@ -185,8 +185,8 @@ static void draw_player_row() {
     static int lastturn = 0;
     static int page     = 0;
 
-    if (real_time > lastturn + 5000) {
-        lastturn = real_time;
+    if (render_real_time > lastturn + 5000) {
+        lastturn = render_real_time;
         page++;
     }
 
@@ -229,7 +229,7 @@ static void draw_player_row() {
         // King in dieser Runde?
         if (player == infon->get_king()) {
             video_draw(player_displayed * 128 + 32,
-                       video_height() - 86 - abs(20.0 * sin(M_PI * (real_time % 550) / 550.0)),
+                       video_height() - 86 - abs(20.0 * sin(M_PI * (render_real_time % 550) / 550.0)),
                        sprite_get(SPRITE_CROWN));
         }
         
@@ -238,8 +238,8 @@ static void draw_player_row() {
                    video_height() - 32, 
                    sprite_get(CREATURE_SPRITE(player->num,
                                               0, 
-                                              (real_time /  64) % CREATURE_DIRECTIONS,
-                                              (real_time / 128) % 2)));
+                                              (render_real_time /  64) % CREATURE_DIRECTIONS,
+                                              (render_real_time / 128) % 2)));
         // CPU Auslastung Anzeigen
         const int cpu = 80 * player->cpu_usage / 100;
         video_rect(player_displayed * 128 + 16, 
@@ -278,8 +278,8 @@ static void draw_scores(int xcenter, int y) {
                    y + 14 * n,
                    sprite_get(CREATURE_SPRITE(player->num,
                                               0, 
-                                              (real_time / 60) % CREATURE_DIRECTIONS,
-                                              (real_time / 123) % 2)));
+                                              (render_real_time / 60) % CREATURE_DIRECTIONS,
+                                              (render_real_time / 123) % 2)));
         
         static char buf[40];
         snprintf(buf, sizeof(buf), "%2d.     %4d %s", n + 1, player->score, player->name);
@@ -294,7 +294,7 @@ static void draw_world() {
     const client_world_info_t *info = infon->get_world_info();
     if (!info) return;
 
-    client_world_t world = infon->get_world();
+    const client_maptile_t *world = infon->get_world();
 
     int screen_w  = video_width(); 
     int screen_cx = screen_w / 2;
@@ -326,7 +326,7 @@ static void draw_world() {
     int screeny = mapy1;
 
     for (int y = y1; y < y2; y++) {
-        client_maptile_t *tile = &world[y * info->width + x1];
+        const client_maptile_t *tile = &world[y * info->width + x1];
         for (int x = x1; x < x2; x++) {
             int pos_rand = rand_table[(x ^ y) & 0xFF];
             int floor_sprite;
@@ -346,7 +346,7 @@ static void draw_world() {
                     }
                     break;
                 case TILE_WATER:
-                    floor_sprite = SPRITE_WATER + ((real_time >> 8) + x + y) % SPRITE_NUM_WATER;
+                    floor_sprite = SPRITE_WATER + ((render_real_time >> 8) + x + y) % SPRITE_NUM_WATER;
                     break;
                 default:
                     assert(0);
@@ -429,8 +429,8 @@ static void sdl_tick(int gt, int delta) {
     static Uint32 last_info = 0;
     static int    stall     = 0;
 
-    real_time = SDL_GetTicks();
-    game_time = gt;
+    render_real_time = SDL_GetTicks();
+    render_game_time = gt;
 
     handle_events();
 
@@ -453,18 +453,18 @@ static void sdl_tick(int gt, int delta) {
     draw_scroller();
 
     // Bitte drinlassen. Danke
-    if (real_time / 1000 % 60 < 5) 
+    if (render_real_time / 1000 % 60 < 5) 
         video_draw(video_width() - 190, 20, sprite_get(SPRITE_LOGO));
 
     // Informationen
-    if (real_time >= last_info + 1000) {
+    if (render_real_time >= last_info + 1000) {
         char buf[128];
         int traffic = infon->get_traffic();
         snprintf(buf, sizeof(buf), GAME_NAME" - %d fps - %d byte/s", frames, traffic - last_net);
         video_set_title(buf);
         stall     = traffic > last_net ? 0 : stall + 1;
         last_net  = traffic;
-        last_info = real_time;
+        last_info = render_real_time;
         frames    = 0;
     }
 

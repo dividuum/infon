@@ -70,11 +70,14 @@ else
 	GL_RENDERER_LDFLAGS =-lSDL -lGL -lGLU
 	GL_RENDERER=gl_gui.so 
 
-	LILITH_RENDERER_LDFLAGS =-lSDL -lGL -lGLU
-	LILITH_RENDERER=lilith_gui.so 
-	CPPFLAGS=$(CFLAGS)
+	AA_RENDERER_LDFLAGS =-laa
+	AA_RENDERER=aa_gui.so
 
-	RENDERER=$(LILITH_RENDERER) $(GL_RENDERER) $(SDL_RENDERER) $(NULL_RENDERER)
+	LILITH_RENDERER_LDFLAGS =-lSDL -lGL -lGLU -lstdc++
+	LILITH_RENDERER=lilith_gui.so 
+	CPPFLAGS=$(CFLAGS) -fPIC
+
+	RENDERER=$(SDL_RENDERER) $(NULL_RENDERER) $(AA_RENDERER) $(LILITH_RENDERER) $(GL_RENDERER) 
 endif
 
 all: infond $(GUI_EXECUTABLE) $(RENDERER)
@@ -115,6 +118,9 @@ $(GUI_EXECUTABLE): infon.o client.o packet.o misc.o client_player.o client_world
 
 $(NULL_RENDERER): null_gui.o
 	$(CC) $^ -shared -o $@
+
+$(AA_RENDERER): aa_gui.o
+	$(CC) $^ $(AA_RENDERER_LDFLAGS)  -shared -o $@
 
 $(SDL_RENDERER): sdl_video.o sdl_sprite.o sdl_gui.o misc.o
 	$(CC) $^ $(SDL_RENDERER_LDFLAGS) -shared -o $@

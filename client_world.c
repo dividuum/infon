@@ -28,7 +28,7 @@
 #include "misc.h"
 
 static int                  initialized;
-static client_world_t       map;
+static client_maptile_t    *map;
 static client_world_info_t  info;
 
 #define MAPTILE(x, y) (map[(y) * info.width + (x)])
@@ -37,7 +37,7 @@ const client_world_info_t *client_world_get_info() {
     return initialized ? &info : NULL;
 }
 
-const client_world_t client_world_get() {
+const client_maptile_t *client_world_get() {
     return initialized ? map : NULL;
 }
 

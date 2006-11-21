@@ -48,7 +48,7 @@ typedef struct {
     uint8_t  offset;
 } packet_t 
 #ifndef WIN32
-__attribute__((packed))
+//__attribute__((packed))
 #endif
 ;
 #pragma pack (pop)

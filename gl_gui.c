@@ -42,8 +42,7 @@
 
 static const infon_api_t *infon;
 
-static Uint32       real_time;
-static int          game_time;
+static Uint32 real_time;
 
 typedef struct {
     float x;
@@ -400,9 +399,9 @@ static void world_draw() {
     const client_world_info_t *info = infon->get_world_info();
     if (!info) return;
 
-    client_world_t world = infon->get_world();
+    const client_maptile_t *world = infon->get_world();
     for (int y = 0; y < info->height; y++) {
-        client_maptile_t *tile = &world[y * info->width];
+        const client_maptile_t *tile = &world[y * info->width];
         for (int x = 0; x < info->width; x++) {
             glPushMatrix();
                 glTranslatef(TILE_X1(x), TILE_Y1(y), 0.0);
@@ -621,7 +620,6 @@ static void handle_events() {
 
 static void gl_tick(int gt, int delta) {
     real_time = SDL_GetTicks();
-    game_time = gt;
 
     handle_events();
 
