@@ -74,7 +74,8 @@ void player_score(player_t *player, int scoredelta, const char *reason) {
         lua_pop(L, 1);
     }
 
-    printf("stat: %10d %3d '%10s' %5d: %s\n", game_time, player_num(player), player->name, player->score, reason);
+    fprintf(stderr, "stat: %10d %3d '%10s' %5d: %s\n", 
+            game_time, player_num(player), player->name, player->score, reason);
 }
 
 void player_init_events(player_t *player) {
@@ -188,7 +189,7 @@ void player_on_created(player_t *player) {
 }
 
 static int player_at_panic(lua_State *L) {
-    printf("Aeiik! LUA panic. Cannot continue. Please file a bug report\n");
+    fprintf(stderr, "Aeiik! LUA panic. Cannot continue. Please file a bug report\n");
     abort();
     return 0; // never reached
 }

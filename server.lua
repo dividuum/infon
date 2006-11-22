@@ -149,7 +149,7 @@ function Client:shell()
     if self.authorized then 
         ok = true
     else
-        if debugpass == "" then
+        if not debugpass or debugpass == "" then
             self:writeln("password must be set in config.lua")
             return
         end
@@ -328,13 +328,12 @@ end
 
 function ServerMain()
     scroller_add("Welcome to " .. GAME_NAME .. "!")
-    scroller_add(join_info)
                         
     local info_time = game_info()
     while true do
         if game_info() > info_time + 10000 then
            info_time = game_info() 
-           if join_info ~= "" then
+           if join_info and join_info ~= "" then
                scroller_add(join_info)
            end
         end

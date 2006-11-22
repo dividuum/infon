@@ -144,11 +144,24 @@ void game_one_round() {
     player_round_start();
 
     // Demo Aufnahme starten
-    static char demoname[128];
-    snprintf(demoname, sizeof(demoname), "infond-%08X.demo", (int)time(0));
-    client_t *demowriter = server_start_demo_writer(demoname);
-    if (!demowriter)
-        fprintf(stderr, "couldn't start demo file\n");
+    client_t *demowriter = NULL;
+
+    lua_pushliteral(L, "onNewGameDemoStart");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 1, 0) != 0) {
+        fprintf(stderr, "error calling onNewGameDemoStart: %s\n", lua_tostring(L, -1));
+    } else {
+        char *demoname = lua_tostring(L, -1);
+        if (demoname) {
+            demowriter = server_start_demo_writer(demoname);
+            if (demowriter) {
+                fprintf(stderr, "started recording demo %s\n", demoname);
+            } else {
+                fprintf(stderr, "couldn't start demo file %s\n", demoname);
+            }
+        } 
+    }
+    lua_pop(L, 1);
 
     while (!game_exit && !should_end_round) {
         int tick  = get_tick();

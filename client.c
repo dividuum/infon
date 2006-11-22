@@ -128,8 +128,8 @@ static void client_handle_packet(packet_t *packet) {
             gui_creature_from_network(packet);
             break;
         case PACKET_QUIT_MSG:
-            printf("server wants us to disconnect: %.*s\n",
-                   packet->len, packet->data);
+            fprintf(stderr, "server wants us to disconnect: %.*s\n",
+                    packet->len, packet->data);
             client_destroy("done");
             break;
         case PACKET_KOTH_UPDATE:
@@ -160,7 +160,7 @@ static void client_handle_packet(packet_t *packet) {
             client_handshake_from_network(packet);
             break;
         default:
-            printf("packet->type %d unknown\n", packet->type);
+            fprintf(stderr, "packet->type %d unknown\n", packet->type);
             break;
     }
 }
@@ -416,7 +416,7 @@ void client_init(char *source, char *demo_save_name) {
 
 void client_destroy(const char *reason) {
     assert(clientfd != -1);
-    printf("datasource destroyed: %s\n", reason);
+    fprintf(stderr, "datasource destroyed: %s\n", reason);
 
     evbuffer_free(in_buf);
     evbuffer_free(out_buf);
