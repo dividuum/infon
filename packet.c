@@ -41,7 +41,7 @@ void packet_init(packet_t *packet, int type) {
 
 int packet_read08(packet_t *packet, uint8_t *data) {
     if (packet->len - packet->offset < 1) {
-        printf("reading beyond end\n");
+        fprintf(stderr, "reading beyond end\n");
         return 0;
     }
     *data = packet->data[packet->offset];
@@ -62,7 +62,7 @@ int packet_read16(packet_t *packet, uint16_t *data) {
 
 int packet_read32(packet_t *packet, uint32_t *data) {
     if (packet->len - packet->offset < 4) {
-        printf("reading beyond end\n");
+        fprintf(stderr, "reading beyond end\n");
         return 0;
     }
     *data = ntohl(*(uint32_t*)&packet->data[packet->offset]);
@@ -72,7 +72,7 @@ int packet_read32(packet_t *packet, uint32_t *data) {
 
 int packet_readXX(packet_t *packet, void *data, int len) {
     if (packet->len - packet->offset < len) {
-        printf("reading beyond end\n");
+        fprintf(stderr, "reading beyond end\n");
         return 0;
     }
     memcpy(data, &packet->data[packet->offset], len);
@@ -82,7 +82,7 @@ int packet_readXX(packet_t *packet, void *data, int len) {
 
 int packet_write08(packet_t *packet, uint8_t data) {
     if (sizeof(packet->data) - packet->offset <= 1) {
-        printf("packet too full\n");
+        fprintf(stderr, "packet too full\n");
         return 0;
     }
     *((uint8_t*)&packet->data[packet->offset]) = data;
@@ -101,7 +101,7 @@ int packet_write16(packet_t *packet, uint16_t data) {
 
 int packet_write32(packet_t *packet, uint32_t data) {
     if (sizeof(packet->data) - packet->offset <= 4) {
-        printf("packet too full\n");
+        fprintf(stderr, "packet too full\n");
         return 0;
     }
     *((uint32_t*)&packet->data[packet->offset]) = htonl(data);
@@ -111,7 +111,7 @@ int packet_write32(packet_t *packet, uint32_t data) {
 
 int packet_writeXX(packet_t *packet, const void *data, int len) {
     if (sizeof(packet->data) - packet->offset <= len) {
-        printf("packet too full\n");
+        fprintf(stderr, "packet too full\n");
         return 0;
     }
     memcpy(&packet->data[packet->offset], data, len);

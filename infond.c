@@ -23,6 +23,10 @@
 #include <sys/resource.h>
 #endif
 
+#ifdef DAEMONIZING
+#include "daemonize.h"
+#endif
+
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -65,11 +69,16 @@ int main(int argc, char *argv[]) {
     L = luaL_newstate();
 
     luaL_openlibs(L);
-    luaL_dofile(L, "infond.lua");
+    if (luaL_dofile(L, "infond.lua")) 
+        die("cannot read 'infond.lua'");
 
     game_init();
     server_init();
     player_init();
+
+#ifdef DAEMONIZING
+    daemonize(argc, argv);
+#endif
 
     while (!game_exit) {
         game_one_round();

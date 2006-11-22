@@ -79,7 +79,7 @@ int listener_init() {
     lua_rawget(L, LUA_GLOBALSINDEX);
     
     if (!lua_isnumber(L, -1)) {
-        fprintf(stdout, "listenport nicht definiert\n");
+        fprintf(stderr, "listenport not defined\n");
         lua_pop(L, 1);
         goto error;
     }
@@ -88,7 +88,7 @@ int listener_init() {
     lua_rawget(L, LUA_GLOBALSINDEX);
 
     if (!lua_isstring(L, -1)) {
-        fprintf(stdout, "listaddr nicht definiert\n");
+        fprintf(stderr, "listaddr not defined\n");
         lua_pop(L, 2);
         goto error;
     }

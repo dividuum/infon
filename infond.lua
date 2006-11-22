@@ -234,6 +234,20 @@ function server_tick()
 end
 
 -----------------------------------------------------------
+-- Game C Callbacks
+-----------------------------------------------------------
+
+function onNewGameDemoStart()
+    if type(demo) == "string" then
+        return string.format("%s-%08X.demo", demo, os.time());
+    elseif type(demo) == "function" then
+        return demo()
+    else
+        return nil
+    end
+end
+
+-----------------------------------------------------------
 -- World Funktionen
 -----------------------------------------------------------
 
