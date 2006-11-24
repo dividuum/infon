@@ -143,7 +143,7 @@ function Client:killmenu()
         self:kill()
     end
 end
- 
+
 function Client:shell()
     local ok = false
     if self.authorized then 
@@ -220,9 +220,8 @@ function Client:menu_footer()
 end
 
 function Client:mainmenu()
-    local prompt = "> "
     while true do 
-        self:write(prompt)
+        self:write(self.prompt)
         local input = self:readln()
 
         if input == "q" then
@@ -232,7 +231,7 @@ function Client:mainmenu()
             self:showscores() 
         elseif input == "prompt" then
             self:write("new prompt: ")
-            prompt = self:readln()
+            self.prompt = self:readln()
         elseif input == "shell" then
             self:shell()
         elseif input == "" then
@@ -254,6 +253,13 @@ function Client:mainmenu()
                 self:execute("info()")
             elseif input == "k" then
                 self:killmenu()
+            elseif input == "lio" then
+                self:write("limit interactive output to local connection? [Y/n] ")
+                self.local_output = self:readln() ~= "n"
+            elseif input == "lbo" then
+                self:write("limit botcode output to this connection? [y/N] ")
+                local bot_output_client = self:readln() == "y" and self.fd or nil
+                player_set_output_client(self:get_player(), bot_output_client)
             elseif input == "?" then
                 self:menu_header()
                 self:writeln("n - ame")

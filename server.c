@@ -339,7 +339,7 @@ void server_destroy(client_t *client, const char *reason) {
     client->in_buf  = NULL;
     client->out_buf = NULL;
 
-    if (client->player)
+    if (client->player) 
         player_detach_client(client, client->player);
 
     assert(client->next == NULL);
@@ -387,7 +387,7 @@ static void client_turn_into_gui_client(client_t *client) {
     initial_update(client);
 }
 
-static client_t *client_get_checked_lua(lua_State *L, int idx) {
+client_t *client_get_checked_lua(lua_State *L, int idx) {
     int clientno = luaL_checklong(L, idx);
     if (clientno < 0 || clientno >= MAXCLIENTS) 
         luaL_error(L, "client number %d out of range", clientno);
@@ -434,11 +434,12 @@ static int luaClientIsGuiClient(lua_State *L) {
 static int luaClientExecute(lua_State *L) {
     size_t codelen; const char *code = luaL_checklstring(L, 2, &codelen);
     client_t *client = client_get_checked_lua(L, 1);
+    int client_local_output = lua_toboolean(L, 3);
     if (!client->player) 
         luaL_error(L, "client %d has no player", client_num(client));
     char buf[128];
     snprintf(buf, sizeof(buf), "input from client %d", client_num(client));
-    player_execute_client_lua(client->player, code, codelen, buf);
+    player_execute_client_lua(client_local_output ? client : NULL, client->player, code, codelen, buf);
     return 0;
 }
 

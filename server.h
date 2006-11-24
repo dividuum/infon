@@ -34,6 +34,7 @@
 #include <zlib.h>
 
 #include "packet.h"
+#include "global.h"
 
 #define MAXCLIENTS 1024
 
@@ -68,6 +69,8 @@ client_t *server_accept(int fd, struct sockaddr_in *peer);
 void server_writeto(client_t *client, const void *data, size_t size);
 void server_writeto_all_gui_clients(const void *data, size_t size);
 void server_destroy(client_t *client, const char *reason);
+
+client_t *client_get_checked_lua(lua_State *L, int idx);
 
 void server_send_packet(packet_t *packet, client_t *client);
 

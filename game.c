@@ -151,7 +151,7 @@ void game_one_round() {
     if (lua_pcall(L, 0, 1, 0) != 0) {
         fprintf(stderr, "error calling onNewGameDemoStart: %s\n", lua_tostring(L, -1));
     } else {
-        char *demoname = lua_tostring(L, -1);
+        const char *demoname = lua_tostring(L, -1);
         if (demoname) {
             demowriter = server_start_demo_writer(demoname);
             if (demowriter) {

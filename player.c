@@ -38,7 +38,8 @@
 #define PLAYER_USED(player) (!!((player)->L))
 
 static player_t players[MAXPLAYERS];
-static player_t *king_player = NULL;
+static player_t *king_player   = NULL;
+static client_t *output_client = NULL;
 
 void player_score(player_t *player, int scoredelta, const char *reason) {
     char buf[1024];
@@ -714,7 +715,8 @@ void player_writeto(player_t *player, const void *data, size_t size) {
             
     client_t *client = player->clients;
     do {
-        server_writeto(client, data, size);
+        if (!output_client || output_client == client)
+            server_writeto(client, data, size);
         client = client->next;
     } while (client != player->clients);
 }
@@ -785,6 +787,9 @@ int player_detach_client(client_t *client, player_t *player) {
     if (client->player != player) 
         return 0;
 
+    if (player->bot_output_client == client)
+        player->bot_output_client = NULL;
+
     player->num_clients--;
     assert(player->num_clients >= 0);
 
@@ -811,7 +816,10 @@ int player_detach_client(client_t *client, player_t *player) {
     return 1;
 }
 
-void player_execute_client_lua(player_t *player, const char *code, size_t codelen, const char *where) {
+void player_execute_client_lua(client_t *result_client, player_t *player, const char *code, size_t codelen, const char *where) {
+    // switch output to specified client (if given)
+    output_client = result_client;
+
     int error = luaL_loadbuffer(player->L, code, codelen, where);
 
     if (!error) {
@@ -824,6 +832,9 @@ void player_execute_client_lua(player_t *player, const char *code, size_t codele
         player_writeto(player, "\r\n", 2); 
         lua_pop(player->L, 1);
     }
+
+    // switch back to player-based output
+    output_client = NULL;
 }
 
 void player_think() {
@@ -875,7 +886,9 @@ void player_think() {
         lua_rawget(player->L, LUA_GLOBALSINDEX);         
         lua_pushliteral(player->L, "events");
         lua_rawget(player->L, LUA_REGISTRYINDEX);
+        output_client = player->bot_output_client;
         call_user_lua(player, 1);
+        output_client = NULL;
 
         // Events Strukur neu initialisieren
         player_init_events(player);
@@ -1072,6 +1085,29 @@ static int luaCreatureSpawn(lua_State *L) {
     return 1;
 }
 
+static int luaPlayerSetOutputClient(lua_State *L) {
+    int success = 1;
+    player_t *player = player_get_checked_lua(L, 1);
+    if (lua_isnil(L, 2)) {
+        player->bot_output_client = NULL;
+    } else {
+        client_t *output = client_get_checked_lua(L, 2);
+        
+        client_t *client = player->clients;
+        do {
+            if (client == output) {
+                player->bot_output_client = output;
+                goto out;
+            }
+            client = client->next;
+        } while (client != player->clients);
+        success = 0;
+    }
+out:
+    lua_pushboolean(L, success);
+    return 1;
+}
+
 void player_init() {
     memset(players, 0, sizeof(players));
 
@@ -1090,6 +1126,7 @@ void player_init() {
     lua_register(L, "player_change_score",          luaPlayerChangeScore);
     lua_register(L, "player_get_used_mem",          luaPlayerGetUsedMem);
     lua_register(L, "player_get_used_cpu",          luaPlayerGetCPUUsage);
+    lua_register(L, "player_set_output_client",     luaPlayerSetOutputClient);
 
     lua_register(L, "creature_spawn",               luaCreatureSpawn);
     lua_register(L, "creature_get_pos",             luaCreatureGetPos);
