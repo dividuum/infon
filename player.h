@@ -39,6 +39,8 @@ typedef struct player_s {
     int           num_clients;
     client_t     *clients;
 
+    client_t     *bot_output_client;
+
     int           score;
     int           koth_time;
     int           last_koth_time;
@@ -77,7 +79,7 @@ void        player_on_creature_spawned(player_t *player,  struct creature_s *cre
 void        player_on_creature_killed(player_t *player, struct creature_s *victim, struct creature_s *killer);
 void        player_on_creature_attacked(player_t *player, struct creature_s *victim, struct creature_s *attacker);
 
-void        player_execute_client_lua(player_t *player, const char *code, size_t codelen, const char *where);
+void        player_execute_client_lua(client_t *result_client, player_t *player, const char *code, size_t codelen, const char *where);
 
 void        player_writeto(player_t *player, const void *data, size_t size);
 

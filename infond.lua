@@ -57,7 +57,9 @@ function Client:readln()
 end
 
 function Client:on_new_client(addr) 
-    self.addr = addr
+    self.addr         = addr
+    self.local_output = true
+    self.prompt       = "> "
     print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
     self.thread = coroutine.create(self.handler)
@@ -154,7 +156,7 @@ function Client:kill()
 end
 
 function Client:execute(code)
-    client_execute(self.fd, code)
+    client_execute(self.fd, code, self.local_output)
 end
 
 function Client:writeln(line)
