@@ -185,7 +185,7 @@ restart:
         strm.next_in   = EVBUFFER_DATA(in_buf);
         strm.avail_in  = EVBUFFER_LENGTH(in_buf);
         do {
-            strm.next_out  = buf;
+            strm.next_out  = (unsigned char*)buf;
             strm.avail_out = sizeof(buf);
 
             int ret = inflate(&strm, Z_SYNC_FLUSH);

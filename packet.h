@@ -24,7 +24,11 @@
 #include <stdint.h>
 
 #pragma pack (push, 1)
-typedef struct {
+typedef struct 
+#ifndef WIN32
+__attribute__((packed))
+#endif
+{
 #define PACKET_HEADER_SIZE       2
 // Wire Data    
     uint8_t  len;
@@ -47,9 +51,6 @@ typedef struct {
 // Mgmt Data    
     uint8_t  offset;
 } packet_t 
-#ifndef WIN32
-__attribute__((packed))
-#endif
 ;
 #pragma pack (pop)
 
