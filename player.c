@@ -676,7 +676,8 @@ player_t *player_create(const char *pass) {
     lua_set_cycles(player->L, player->max_cycles);
     player_init_events(player);
 
-    luaL_dofile(player->L, "player.lua");
+    if (luaL_dofile(player->L, "player.lua"))
+        die("cannot read 'player.lua'");
     
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 

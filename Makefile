@@ -5,7 +5,7 @@ REVISION = $(shell svnversion . || echo 'exported')
 # EVENT_NAME = Computer Night 2006
 # EVENT_HOST = 172.30.100.1
 
-COMMON_CFLAGS  = -std=gnu99 -Wall -DREVISION="\"$(REVISION)\"" -I$(LUADIR)/src/ # -DCHEATS
+COMMON_CFLAGS  = -pedantic -std=gnu99 -Wall -DREVISION="\"$(REVISION)\"" -I$(LUADIR)/src/ # -DCHEATS
 
 ifdef EVENT_NAME
 	COMMON_CFLAGS += -DEVENT_NAME="\"$(EVENT_NAME)\""

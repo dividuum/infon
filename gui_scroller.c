@@ -76,9 +76,9 @@ void gui_scroller_draw() {
     video_rect(0, video_height() - 16, video_width(), video_height(), 0, 0, 0, 0);
 
     assert(chars_per_screen < EVBUFFER_LENGTH(scrollbuffer));
-    char *end = &EVBUFFER_DATA(scrollbuffer)[chars_per_screen];
+    unsigned char *end = &EVBUFFER_DATA(scrollbuffer)[chars_per_screen];
     char saved = *end; *end = '\0';
-    video_write(x, video_height() - 15, EVBUFFER_DATA(scrollbuffer));
+    video_write(x, video_height() - 15, (char*)EVBUFFER_DATA(scrollbuffer));
     *end = saved;
 }
 

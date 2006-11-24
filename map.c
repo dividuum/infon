@@ -172,6 +172,7 @@ void area_destroy(area_t *area) {
     free(area);
 }
 
+/*
 void area_get_info(area_t *area) {
     printf("     area %p, %d,%d - %d,%d\n",
            area, area->x1, area->y1, area->x2, area->y2);
@@ -194,6 +195,7 @@ void area_get_info(area_t *area) {
         side = side->next;
     } while (side != f);
 }
+*/
 
 int area_count_portals(const area_t *area) {
     const portalside_t *tmp = area->portals;
@@ -692,11 +694,13 @@ int map_dig(map_t *map, int x, int y) {
     return 1;
 }
 
+/*
 void map_get_info(map_t *map, int x, int y) {
     tile_t *tile = MAP_TILE(map, x, y);
     printf("tile %p, region=%d\n", tile, tile->region);
     area_get_info(tile->area);
 }
+*/
 
 int map_get_region(map_t *map, int x, int y) {
     return MAP_TILE(map, x, y)->region;

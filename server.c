@@ -211,7 +211,7 @@ static void server_writable(int fd, short event, void *arg) {
         client->strm.next_in  = NULL;
         client->strm.avail_in = 0;
         do {
-            client->strm.next_out  = buf;
+            client->strm.next_out  = (unsigned char*)buf;
             client->strm.avail_out = sizeof(buf);
             if (deflate(&client->strm, Z_SYNC_FLUSH) != Z_OK) {
                 fprintf(stderr, "urgh. deflate (Z_SYNC_FLUSH) didn't return Z_OK");
@@ -264,7 +264,7 @@ void server_writeto(client_t *client, const void *data, size_t size) {
         client->strm.next_in  = (void*)data; // not const?
         client->strm.avail_in = size;
         while (client->strm.avail_in > 0) {
-            client->strm.next_out  = buf;
+            client->strm.next_out  = (unsigned char*)buf;
             client->strm.avail_out = sizeof(buf);
             int ret = deflate(&client->strm, 0);
             if (ret != Z_OK) {
