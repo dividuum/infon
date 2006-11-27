@@ -23,7 +23,8 @@ end
 class InfonDemo
     attr_reader :players, :world, :creatures, :time, :world_w, :world_h, :koth_x, :koth_y
     def initialize(file)
-        @file = StringIO.new(File.read(file))
+        #@file = StringIO.new(File.read(file))
+        @file = File.open(file, "rb")
         class << @file
             alias_method  :orig_read, :read 
             attr_accessor :traffic
@@ -51,8 +52,8 @@ class InfonDemo
             end
 
             def read16
-                ret  = read8
-                ret |= read8 << 7 if ret & 0x80 != 0 
+                ret = read8
+                ret = ret & 0x7F | read8 << 7 if ret & 0x80 != 0 
                 ret
             end
 
@@ -196,22 +197,15 @@ end
 
 infon = InfonDemo.new(ARGV[0])
 while infon.tick 
-    print "%2d:%02d " % [infon.time / 1000 / 60, infon.time / 1000 % 60]
-    puts "%d %d" % [infon.players.size, infon.creatures.size]
-=begin
-    10.times do |i|
-        #if player = infon.players[i]
-        #    print "%4d " % player.score
-        #else
-        #    print "  -  "
-        #end
+    #print "%2d:%02d " % [infon.time / 1000 / 60, infon.time / 1000 % 60]
+    #puts "%d %d" % [infon.players.size, infon.creatures.size]
+    20.times do |i|
         if creature = infon.creatures[i]
-            print "%d %5d,%5d " % [creature.state, creature.x, creature.y]
+            print "%d %d " % [creature.x, creature.y]
         else
-            print "              "
+            print "0 0 "
         end
     end
     puts
-=end
 end
 
