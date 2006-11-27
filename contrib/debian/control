@@ -1,0 +1,40 @@
+Source: infon
+Section: games
+Priority: extra
+Maintainer: Joachim Breitner <nomeata@debian.org>
+Build-Depends: debhelper (>= 5), libevent-dev, zlib1g-dev, libreadline5-dev, libsdl1.2-dev, libsdl-gfx1.2-dev, libsdl-sge-dev
+Standards-Version: 3.7.2
+XS-Vcs-Svn: http://infon.dividuum.de/svn/infon/trunk/contrib/debian
+
+Package: infon-server
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Program bugs to compete for food and survival - Server
+ Infon is a game which simulates the live of simple bugs who eat,
+ propagate, eat each other and evolve. The players can not control
+ the bugs directly but write their “intelligence” in the simple
+ script language lua and upload it to the game using a plain telnet
+ connection. The code can then be modified even while the game
+ is running.
+ .
+ This package contains the infon server which hosts the game. To
+ upload code to it, you only need a telnet client. To be able to
+ view the game, see the infon-viewer package.
+ .
+ Homepage: http://infon.dividuum.de/
+
+Package: infon-viewer
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ssft, zenity | kdebase
+Description: Program bugs to compete for food and survival - GUI
+ Infon is a game which simulates the live of simple bugs who eat,
+ propagate, eat each other and evolve. The players can not control
+ the bugs directly but write their “intelligence” in the simple
+ script language lua and upload it to the game using a plain telnet
+ connection. The code can then be modified even while the game
+ is running.
+ .
+ This package contains the graphical client to view the game
+ in progress. To host a game, see the infon-server package.
+ .
+ Homepage: http://infon.dividuum.de/

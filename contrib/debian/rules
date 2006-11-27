@@ -1,0 +1,121 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+#
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+include /usr/share/dpatch/dpatch.make
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+
+
+CFLAGS = -Wall -g
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O0
+else
+	CFLAGS += -O2
+endif
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+	# Add here commands to configure the package.
+
+	touch configure-stamp
+
+
+addfiles_in:
+	cp debian/addfiles/* .
+	chmod +x infon-wrapper
+
+addfiles_out:
+	for file in debian/addfiles/*; do rm -f $$(basename $$file); done
+
+#Architecture 
+build: patch addfiles_in build-arch build-indep
+
+build-arch: build-arch-stamp
+build-arch-stamp: configure-stamp 
+
+	# Add here commands to compile the arch part of the package.
+	PREFIX=/usr/share/infon-viewer/ CFLAGS=-DDAEMONIZING $(MAKE) 
+	touch $@
+
+build-indep: build-indep-stamp
+build-indep-stamp: configure-stamp 
+
+	# Add here commands to compile the indep part of the package.
+	#$(MAKE) doc
+	touch $@
+
+clean: clean-patched addfiles_out unpatch
+
+clean-patched:
+	dh_testdir
+	dh_testroot
+	rm -f build-arch-stamp build-indep-stamp
+
+	# Add here commands to clean up after the build process.
+	-$(MAKE) clean
+	-$(MAKE) -C lua-5.1.1 clean
+
+	dh_clean 
+
+install: install-indep install-arch
+install-indep:
+	dh_testdir
+	dh_testroot
+	dh_clean -k -i 
+	dh_installdirs -i
+
+	dh_install -i
+
+install-arch:
+	dh_testdir
+	dh_testroot
+	dh_clean -k -s 
+	dh_installdirs -s
+
+	#(MAKE) DESTDIR=$(CURDIR)/debian/infon install
+	
+	ln -s ../../../etc/infond/config.lua debian/infon-server/usr/share/infon-server/config.lua
+	ln -s ../../../etc/infond/rules debian/infon-server/usr/share/infon-server/rules
+
+	dh_install -s
+
+# Must not depend on anything. This is to be called by
+# binary-arch/binary-indep
+# in another 'make' thread.
+binary-common:
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs 
+	dh_installdocs
+#	dh_installexamples
+	dh_installmenu
+	dh_installinit
+	dh_installman
+	dh_link
+	dh_strip
+	dh_compress 
+	dh_fixperms
+	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+# Build architecture independant packages using the common target.
+binary-indep: build-indep install-indep
+	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+
+# Build architecture dependant packages using the common target.
+binary-arch: build-arch install-arch
+	$(MAKE) -f debian/rules DH_OPTIONS=-s binary-common
+
+#binary: binary-arch binary-indep
+binary: binary-arch
+.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch configure

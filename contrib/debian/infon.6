@@ -1,0 +1,50 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH INFON 6 "November 21, 2006"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+infon \- Program bugs to compete for food and survival
+.SH SYNOPSIS
+.B infon
+.RI server[:port]
+.SH DESCRIPTION
+This manual page documents briefly the
+.B infon
+command.
+.PP
+\fBinfonx\fP is the graphical viewers for the infon game.
+Infon is a game which simulates the live of simple bugs who eat,
+propagate, eat each other and evolve. The players can not control
+the bugs directly but write their "intelligence" in the simple
+script language lua and upload it to the game using a plain telnet
+connection. The code can then be modified even while the game
+is running.
+
+You have to specify the hostname of the server to connect to on the 
+command line.
+
+.SH OPTIONS
+.TP
+.B server[:port]
+The server (and port) to connect to.
+.SH SEE ALSO
+.BR infond (8)
+
+.SH AUTHOR
+infon was written by Florian Wesch <fw@dividuum.de>
+.PP
+This manual page was written by Joachim Breitner <nomeata@debian.org>,
+for the Debian project (but may be used by others).

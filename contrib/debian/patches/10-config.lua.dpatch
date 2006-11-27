@@ -1,0 +1,37 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 10-config.lua.dpatch by Joachim Breitner <nomeata@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad infon-0~r99~/config.lua infon-0~r99/config.lua
+--- infon-0~r99~/config.lua	2006-11-24 20:44:54.000000000 +0000
++++ infon-0~r99/config.lua	2006-11-27 13:49:51.160650500 +0000
+@@ -1,12 +1,16 @@
+ -- ip and port to bind listen socket
+-listenaddr = "0.0.0.0"
++
++listenaddr = "127.0.0.1"
++-- uncomment the following line to enable other players
++-- -- to connect over the network
++-- -- listenaddr = "0.0.0.0"
+ listenport = 1234
+ 
+ -- password for the 'shell' command. disabled if empty or missing.
+ debugpass  = "" 
+ 
+ -- message displayed every 10 seconds
+-join_info  = "this message can be changed in config.lua"
++join_info  = "this message can be changed in /etc/infond/config.lua"
+ 
+ -- maps to rotate
+ maps       = {"foo", "gpn", "water", "cn"}
+@@ -16,6 +20,7 @@
+ 
+ -- filename prefix for demo files. disabled if unset.
+ -- demo       = "infond"
++demo       = nil
+ 
+ -- time limit for each map
+ time_limit = nil 

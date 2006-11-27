@@ -1,0 +1,2 @@
+?package(infon-viewer):needs="X11" section="Games/Simulation"\
+  title="Infon viewer" command="/usr/share/infon-viewer/infon-wrapper"
