@@ -1,0 +1,57 @@
+#! /bin/sh
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/bin/infond
+DAEMON_OPTS=-d
+NAME=infond
+DESC=infond
+
+test -x $DAEMON || exit 0
+
+# Include infon defaults if available
+if [ -f /etc/default/infon-server ] ; then
+	. /etc/default/infon-server
+fi
+
+test "$START_INFOND" = "1" || exit 0
+
+set -e
+
+case "$1" in
+  start)
+	echo -n "Starting $DESC: "
+	start-stop-daemon --start --pidfile /var/run/$NAME.pid	\
+		--chdir /usr/share/infon-server/		\
+		--exec $DAEMON -- $DAEMON_OPTS
+	echo "$NAME."
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	start-stop-daemon --stop --quiet --oknodo --pidfile /var/run/$NAME.pid \
+		--exec $DAEMON 
+	echo "$NAME."
+	;;
+  force-reload)
+	start-stop-daemon --stop --test --quiet --pidfile \
+		/var/run/$NAME.pid --exec $DAEMON \
+	&& $0 restart \
+	|| exit 0
+	;;
+  restart)
+    echo -n "Restarting $DESC: "
+	start-stop-daemon --stop --quiet --pidfile \
+		/var/run/$NAME.pid --exec $DAEMON
+	sleep 1
+	start-stop-daemon --start --pidfile /var/run/$NAME.pid	\
+		--chdir /usr/share/infon-server/		\
+		--exec $DAEMON -- $DAEMON_OPTS
+	echo "$NAME."
+	;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

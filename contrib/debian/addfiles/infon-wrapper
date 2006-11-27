@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. /usr/bin/ssft.sh
+
+[ -n "$SSFT_FRONTEND" ] || SSFT_FRONTEND="$( ssft_choose_frontend )"
+
+SSFT_DEFAULT="infon.dividuum.de:1234"
+
+if ssft_read_string "Infon" "Connect to server:"
+then
+  infon $SSFT_RESULT
+else
+  exit 1
+fi

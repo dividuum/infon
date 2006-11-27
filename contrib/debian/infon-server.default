@@ -1,0 +1,5 @@
+# If you want the infon server to run, switch this to 1.
+# You might also want to enable access from your network
+# by editing /etc/infond/config.lua
+START_INFOND=0
+

@@ -1,0 +1,16 @@
+infon (0~r99-1) experimental; urgency=low
+
+  * New upstream version
+  * Added XS-Vcs-Svn header
+  * Sponsored by AITI-KACE, Accra, Ghana
+
+ -- Joachim Breitner <nomeata@debian.org>  Mon, 27 Nov 2006 13:29:51 +0000
+
+infon (0~r89-1) experimental; urgency=low
+
+  * Initial release 
+  * Upload to experimental as per release manager’s wish
+  * Sponsored by AITI-KACE, Accra, Ghana
+
+ -- Joachim Breitner <nomeata@debian.org>  Tue, 21 Nov 2006 09:26:56 +0000
+
