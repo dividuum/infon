@@ -72,31 +72,13 @@ client_t *server_accept(int fd, struct sockaddr_in *peer) {
     client_t *client = &clients[fd];
 
     if (peer) {
-        sprintf(address, "%s:%d", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+        sprintf(address, "ip:%s:%d", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
     } else if (fd == STDIN_FILENO) {
-        sprintf(address, "local console");
+        sprintf(address, "special:console");
     } else {
-        sprintf(address, "demo dumper");
+        sprintf(address, "special:demodumper");
         client->is_demo_dumper = 1;
     }
-
-    lua_pushliteral(L, "on_new_client");/* funcname */
-    lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
-    lua_pushstring(L, address);         /* addr     */
-
-    if (lua_pcall(L, 1, 1, 0) != 0) {
-        fprintf(stderr, "error calling on_new_client: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-        return NULL;
-    }
-
-    if (!lua_toboolean(L, -1)) {
-        fprintf(stderr, "rejected client %s\n", address);
-        lua_pop(L, 1);
-        return NULL;
-    }
-
-    lua_pop(L, 1);
 
     /* Non Blocking setzen */
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
@@ -104,8 +86,27 @@ client_t *server_accept(int fd, struct sockaddr_in *peer) {
         return NULL;
     }
 
+    lua_pushliteral(L, "on_new_client");/* funcname */
+    lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
+    lua_pushstring(L, address);         /* addr     */
+
+    if (lua_pcall(L, 1, 2, 0) != 0) {
+        fprintf(stderr, "error calling on_new_client: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return NULL;
+    }
+
+    if (!lua_toboolean(L, -2)) {
+        size_t len; const char *msg = lua_tolstring(L, -1, &len);
+        write(fd, msg, len);
+        lua_pop(L, 2);
+        return NULL;
+    }
+
+    lua_pop(L, 2);
+
     if (peer) { 
-        /* TCP_NODELAY setzen. Dadurch werden Daten frühestmöglich versendet */
+        /* TCP_NODELAY setzen. Dadurch werden Daten fruehestmoeglich versendet */
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) < 0) {
             fprintf(stderr, "cannot enable TCP_NODELAY: %s\n", strerror(errno));
             return NULL;
