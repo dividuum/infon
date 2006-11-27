@@ -29,8 +29,8 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
         end
 
         def read16
-            ret  = read8
-            ret |= read8 << 7 if ret & 0x80 != 0 
+            ret = read8
+            ret = ret & 0x7F | read8 << 7 if ret & 0x80 != 0 
             ret
         end
 
