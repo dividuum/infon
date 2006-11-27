@@ -1,0 +1,26 @@
+Source: infon-devel
+Section: games
+Priority: extra
+Maintainer: Joachim Breitner <nomeata@debian.org>
+Build-Depends: debhelper (>= 5.0.38), python-all-dev (>= 2.3.5-11), python-central (>= 0.5.6)
+XS-Python-Version: all
+Standards-Version: 3.7.2
+
+Package: infon-devel
+Architecture: all
+Depends: ${python:Depends}
+XB-Python-Version: ${python:Versions}
+Description: Develop bots for the infon game
+ Infon is a game which simulates the live of simple bugs who eat,
+ propagate, eat each other and evolve. The players can not control
+ the bugs directly but write their “intelligence” in the simple
+ script language lua and upload it to the game using a plain telnet
+ connection. The code can then be modified even while the game
+ is running.
+ .
+ This package contains a graphical lua editor with integration into
+ the infon server and allows easy uploading of the code. It also
+ marks the currently executed line of code.
+ .
+ Homepage: http://infon.dividuum.de/
+

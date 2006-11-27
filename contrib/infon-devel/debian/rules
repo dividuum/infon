@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+
+build:
+
+clean:
+	dh_testdir
+	dh_clean 
+	rm -f *.pyc
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k 
+	dh_installdirs
+
+	install -m 0755 $(CURDIR)/infon-devel.py $(CURDIR)/debian/infon-devel/usr/bin/infon-devel
+	sed -i -e 's!^PREFIX.*$$!PREFIX = "/usr/share/infon-devel/"!' $(CURDIR)/debian/infon-devel/usr/bin/infon-devel
+	install -m 0644 $(CURDIR)/connview.py	\
+	                $(CURDIR)/infonconn.py	\
+	                $(CURDIR)/marker.png	\
+			$(CURDIR)/debian/infon-devel/usr/share/infon-devel
+
+
+binary-indep: build install
+
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs 
+	dh_installdocs
+#	dh_installman 
+	dh_compress
+	dh_fixperms
+	dh_pycentral
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install
