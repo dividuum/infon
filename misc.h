@@ -36,6 +36,9 @@ int yesno(const char *fmt, ...);
 #define max(a,b) ((a)>(b)?(a):(b))
 #endif
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x)  STRINGIFY(x)
+
 #define save_lua_stack(L, diff)         \
     lua_State *check_L = L;             \
     int lua_stack = lua_gettop(check_L) - diff;\

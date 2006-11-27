@@ -63,8 +63,6 @@ typedef struct client_s {
     struct client_s *prev_gui;
 } client_t;
 
-client_t clients[MAXCLIENTS];
-
 client_t *server_accept(int fd, struct sockaddr_in *peer);
 void server_writeto(client_t *client, const void *data, size_t size);
 void server_writeto_all_gui_clients(const void *data, size_t size);

@@ -18,25 +18,35 @@
 
 */
 
-#ifndef GUI_WORLD_H
-#define GUI_WORLD_H
+#ifndef GUI_PLAYER_H
+#define GUI_PLAYER_H
+
+#include <string.h>
 
 #include "packet.h"
-#include "common_world.h"
 
-void        gui_world_draw();
-void        gui_world_recenter();
-void        gui_world_center_change(int dx, int dy);
-void        gui_world_center_set(int x, int y);
+typedef struct client_player_s {
+    int           num;
+    int           used;
+    void         *userdata;
 
-int         gui_world_x_offset();
-int         gui_world_y_offset();
+    char          name[16];
+    int           color;
+
+    int           score;
+    int           cpu_usage;
+} client_player_t;
+
+/* Renderer */
+const client_player_t *client_player_get(int num);
+const client_player_t *client_player_get_king();
+void                   client_player_each(void (*callback)(const client_player_t *player, void *opaque), void *opaque);
 
 /* Network */
-void        gui_world_from_network(packet_t *packet);
-void        gui_world_info_from_network(packet_t *packet);
+void        client_player_from_network(packet_t *packet);
+void        client_player_king_from_network(packet_t *packet);
 
-void        gui_world_init();
-void        gui_world_shutdown();
+void        client_player_init();
+void        client_player_shutdown();
 
 #endif

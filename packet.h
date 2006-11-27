@@ -50,8 +50,7 @@ __attribute__((packed))
     uint8_t  data[256];
 // Mgmt Data    
     uint8_t  offset;
-} packet_t 
-;
+} packet_t;
 #pragma pack (pop)
 
 #define PROTOCOL_ERROR()                                        \

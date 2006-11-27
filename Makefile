@@ -43,19 +43,45 @@ LDFLAGS += -levent -lm -lz
 
 ifdef WINDOWS
 	MINGW=/home/dividuum/progs/mingw32/
-	GUI_LDFLAGS += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
+	GUI_LDFLAGS += $(MINGW)/lib/libevent.a $(MINGW)/lib/libz.a $(MINGW)/lib/libSDL_gfx.a   \
+				   -lmingw32 $(MINGW)/lib/libSDLmain.a \
+	               -lwsock32 -mwindows -Wl,-s
+	RES=infon.res				   
+	GUI_EXECUTABLE=infon.exe
+
+	SDL_RENDERER_LDFLAGS+= $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
 				   $(MINGW)/lib/libpng.a $(MINGW)/lib/libz.a     $(MINGW)/lib/libSDL_gfx.a   \
 				   $(MINGW)/lib/libSDL.a \
 				   -lmingw32 $(MINGW)/lib/libSDLmain.a \
 	               -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
-	RES=infon.res				   
-	GUI_EXECUTABLE=infon.exe
+	SDL_RENDERER =sdl_gui.dll
+	NULL_RENDERER=null_gui.dll
+
+	RENDERER=$(SDL_RENDERER)
 else
-	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lSDL -lSDL_image -lSGE -lSDL_gfx -lz -lm
+	GUI_LDFLAGS = -L$(SDLDIR)/lib -levent -lz -lm -ldl
 	GUI_EXECUTABLE=infon
+
+	NULL_RENDERER=null_gui.so
+
+	SDL_RENDERER_LDFLAGS =-lSDL -lSDL_image -lSGE -lSDL_gfx 
+	SDL_RENDERER=sdl_gui.so
+
+	GL_RENDERER_LDFLAGS =-lSDL -lGL -lGLU
+	GL_RENDERER=gl_gui.so 
+
+	AA_RENDERER_LDFLAGS =-laa
+	AA_RENDERER=aa_gui.so
+
+	LILITH_RENDERER_LDFLAGS =-lSDL -lGL -lGLU -lstdc++
+	LILITH_RENDERER=lilith_gui.so 
+	CPPFLAGS=$(CFLAGS) -fPIC
+
+	RENDERER=$(SDL_RENDERER) $(NULL_RENDERER) 
+	# $(AA_RENDERER) $(LILITH_RENDERER) $(GL_RENDERER) 
 endif
 
-all: infond $(GUI_EXECUTABLE)
+all: infond $(GUI_EXECUTABLE) $(RENDERER)
 
 dist:
 	$(MAKE) source-dist
@@ -69,15 +95,15 @@ dist:
 source-dist: distclean
 	tar cvzh -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
 
-win32-client-dist: $(GUI_EXECUTABLE)
-	/opt/xmingw/bin/i386-mingw32msvc-strip $(GUI_EXECUTABLE)
+win32-client-dist: $(GUI_EXECUTABLE) $(SDL_RENDERER)
+	/opt/xmingw/bin/i386-mingw32msvc-strip $^
 	upx -9 --all-methods $(GUI_EXECUTABLE)
-	zip infon-win32-r$(REVISION).zip README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png example.demo
+	zip infon-win32-r$(REVISION).zip README $^ gfx/*.fnt gfx/*.png example.demo
 
-linux-client-dist: $(GUI_EXECUTABLE)
-	strip $(GUI_EXECUTABLE)
+linux-client-dist: $(GUI_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER)
+	strip $^
 	# upx $(GUI_EXECUTABLE)
-	tar cfvz infon-linux-i386-r$(REVISION).tgz README $(GUI_EXECUTABLE) gfx/*.fnt gfx/*.png
+	tar cfvz infon-linux-i386-r$(REVISION).tgz README $^ gfx/*.fnt gfx/*.png
 
 linux-server-dist: infond
 	# strip infond infond-static
@@ -88,8 +114,23 @@ infond: infond.o server.o listener.o map.o path.o misc.o packet.o player.o world
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 
-$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o gui_player.o gui_world.o gui_creature.o gui_scroller.o gui_game.o video.o sprite.o $(RES)
+$(GUI_EXECUTABLE): infon.o client.o packet.o misc.o client_player.o client_world.o client_creature.o client_game.o renderer.o $(RES)
 	$(CC) $^ $(GUI_LDFLAGS) -o $@ 
+
+$(NULL_RENDERER): null_gui.o
+	$(CC) $^ -shared -o $@
+
+$(AA_RENDERER): aa_gui.o
+	$(CC) $^ $(AA_RENDERER_LDFLAGS)  -shared -o $@
+
+$(SDL_RENDERER): sdl_video.o sdl_sprite.o sdl_gui.o misc.o
+	$(CC) $^ $(SDL_RENDERER_LDFLAGS) -shared -o $@
+
+$(GL_RENDERER): gl_video.o gl_gui.o gl_mdl.o misc.o
+	$(CC) $^ $(GL_RENDERER_LDFLAGS) -shared -o $@
+
+$(LILITH_RENDERER): lilith_gui.o misc.o lilith/lilith/liblilith.a
+	$(CC) $^ $(LILITH_RENDERER_LDFLAGS) -shared -o $@
 
 infon.res: infon.rc
 	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff
@@ -98,7 +139,7 @@ $(LUADIR)/src/liblua.a:
 	$(MAKE) -C $(LUADIR) $(LUAPLAT)
 
 clean:
-	-rm -f *.o infond infond-static infon infon.exe infon.res tags 
+	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags 
 
 distclean: clean
 	$(MAKE) -C $(LUADIR) clean

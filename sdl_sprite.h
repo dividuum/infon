@@ -18,8 +18,8 @@
 
 */
 
-#ifndef SPRITE_H
-#define SPRITE_H
+#ifndef SDL_SPRITE_H
+#define SDL_SPRITE_H
 
 #include <SDL.h>
 
