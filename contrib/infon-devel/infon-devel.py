@@ -17,6 +17,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program; if not, write to the Free Software
 
+PREFIX = './'
 
 import pygtk
 pygtk.require('2.0')
@@ -25,6 +26,11 @@ import gobject
 import gtksourceview
 
 import os
+import sys
+
+if not PREFIX in sys.path:
+    sys.path.insert(0, PREFIX)
+
 
 import connview
 import infonconn
@@ -350,7 +356,7 @@ class InfonDevel:
         self.bugview.props.auto_indent = True
         #self.bugview.props.insert_spaces_instead_of_tabs = True
 
-        icon = gtk.gdk.pixbuf_new_from_file('marker.png')
+        icon = gtk.gdk.pixbuf_new_from_file(PREFIX + 'marker.png')
         self.bugview.set_marker_pixbuf("bt",icon)
 
     def setup_connview(self):
