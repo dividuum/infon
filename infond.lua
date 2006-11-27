@@ -49,6 +49,15 @@ function Client.create(fd, addr)
 end
 
 function Client.check_accept(addr) 
+    for _, item in ipairs(acl) do
+        if string.match(addr, item.pattern) then
+            if item.deny then
+                return false, "refusing connection " .. addr .. ": " .. item.deny .. "\r\n"
+            else
+                return true
+            end
+        end
+    end
     return true
 end
 

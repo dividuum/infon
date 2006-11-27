@@ -153,6 +153,10 @@ function Client:shell()
             self:writeln("password must be set in config.lua")
             return
         end
+        if not self:check_repeat("last_shell", 3000) then
+            self:writeln("you're too fast. please wait.")
+            return
+        end
         self:write("password: ")
         ok = self:readln() == debugpass 
     end
@@ -323,10 +327,6 @@ function Client:handler()
     self:writeln("              ~~`---'             /               |")
     self:writeln("                               ,-'              _/'")
     self:writeln("")
-    -- self:writeln("-------------------------------------------------------------")
-    -- self:centerln("this version is now based on lua 5.1.1")
-    -- self:centerln("See http://lua-users.org/wiki/MigratingToFiveOne")
-    -- self:writeln("-------------------------------------------------------------")
     self:writeln("enter '?' for help")
     self:mainmenu()
 end

@@ -482,7 +482,7 @@ static int luaCreatureSetState(lua_State *L) {
             lua_pushboolean(L, creature_set_state(creature, state));
             break;
         default:
-            luaL_error(L, "invalid state %d", luaL_checklong(L, 2));
+            luaL_error(L, "invalid state %d", state);
             break;
     }
     return 1;
