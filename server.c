@@ -50,6 +50,7 @@
 #define CLIENT_USED(client) ((client)->in_buf)
 
 static client_t *guiclients = NULL;
+static client_t  clients[MAXCLIENTS];
 
 static void server_readable(int fd, short event, void *arg);
 static void server_writable(int fd, short event, void *arg);

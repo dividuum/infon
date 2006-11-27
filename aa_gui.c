@@ -20,14 +20,9 @@
 
 #define SCALE 4
 
-#include "client_world.h"
-#include "client_creature.h"
-#include "client_player.h"
 #include "renderer.h"
 
 #include "aalib.h"
-
-static const infon_api_t *infon;
 
 static aa_context        *context;
 static unsigned char     *bitmap;
@@ -68,7 +63,7 @@ __AA_CONST static int pal[] =
   63, 63, 49, 63, 63, 50, 63, 63, 51, 63, 63, 52, 63, 63, 52, 63, 63, 53, 63, 63, 54, 63, 63, 55,
   63, 63, 56, 63, 63, 57, 63, 63, 58, 63, 63, 59, 63, 63, 60, 63, 63, 61, 63, 63, 62, 63, 63, 63};
 
-static int null_open(int w, int h, int fs) {
+static int aarenderer_open(int w, int h, int fs) {
     int   argc = 1;
     char *argv[] = { "foo", NULL };
     int i;
@@ -87,10 +82,10 @@ static int null_open(int w, int h, int fs) {
     for (i = 0; i < 256; i++)
         aa_setpalette(palette, i, pal[i * 3] * 4, pal[i * 3 + 1] * 4, pal[i * 3 + 2] * 4);
     aa_hidecursor(context);
-	return 1;
+    return 1;
 }
 
-static void null_close() {
+static void aarenderer_close() {
     aa_close(context);
 }
 
@@ -106,7 +101,7 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
     bitmap[y * aa_imgwidth(context) + x] = 0xFF;
 }
 
-static void null_tick(int gt, int delta) {
+static void aarenderer_tick(int gt, int delta) {
     const client_world_info_t *worldsize = infon->get_world_info();
     if (!worldsize) return;
     const client_maptile_t *world = infon->get_world();
@@ -143,14 +138,11 @@ static void null_tick(int gt, int delta) {
     aa_flush(context);
 }
 
-const static renderer_api_t null_api = {
+const static renderer_api_t aa_api = {
     .version             = RENDERER_API_VERSION,
-    .open                = null_open,
-    .close               = null_close,
-    .tick                = null_tick,
+    .open                = aarenderer_open,
+    .close               = aarenderer_close,
+    .tick                = aarenderer_tick,
 };
 
-const renderer_api_t *load(const infon_api_t *api) {
-	infon = api;
-    return &null_api;
-}
+RENDERER_EXPORT(aa_api);

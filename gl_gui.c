@@ -30,17 +30,10 @@
 #include <assert.h>
 #include <math.h>
 
-#include "global.h"
-#include "map.h"
-#include "misc.h"
 #include "renderer.h"
+
 #include "gl_video.h"
-#include "common_player.h"
-#include "client_world.h"
-
 #include "gl_mdl.h"
-
-static const infon_api_t *infon;
 
 static Uint32 real_time;
 
@@ -680,11 +673,4 @@ static const renderer_api_t gl_api = {
     .scroll_message      = NULL,
 };
 
-#ifdef WIN32
-__declspec(dllexport) 
-#endif 
-const renderer_api_t *load(const infon_api_t *api) {
-    infon = api;
-    printf("Renderer loaded\n");
-    return &gl_api;
-}
+RENDERER_EXPORT(gl_api);

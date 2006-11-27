@@ -29,15 +29,13 @@
 #include <assert.h>
 #include <math.h>
 
+#include "renderer.h"
+
 #include "global.h"
 #include "map.h"
 #include "misc.h"
-#include "renderer.h"
 #include "sdl_video.h"
 #include "common_player.h"
-#include "client_world.h"
-
-static const infon_api_t *infon;
 
 static Uint32       render_real_time;
 static int          render_game_time;
@@ -460,7 +458,7 @@ static void sdl_tick(int gt, int delta) {
     if (render_real_time >= last_info + 1000) {
         char buf[128];
         int traffic = infon->get_traffic();
-        snprintf(buf, sizeof(buf), GAME_NAME" - %d fps - %d byte/s", frames, traffic - last_net);
+        snprintf(buf, sizeof(buf), "%s - %d fps - %d byte/s", infon->version, frames, traffic - last_net);
         video_set_title(buf);
         stall     = traffic > last_net ? 0 : stall + 1;
         last_net  = traffic;
@@ -519,11 +517,4 @@ const static renderer_api_t sdl_api = {
     .scroll_message      = sdl_scroll_message,
 };
 
-#ifdef WIN32
-__declspec(dllexport) 
-#endif 
-const renderer_api_t *load(const infon_api_t *api) {
-    infon = api;
-    printf("Renderer loaded\n");
-    return &sdl_api;
-}
+RENDERER_EXPORT(sdl_api);

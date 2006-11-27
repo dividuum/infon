@@ -20,62 +20,57 @@
 
 #include <stdio.h>
 
-#include "client_world.h"
-#include "client_creature.h"
-#include "client_player.h"
 #include "renderer.h"
 
-static const infon_api_t *infon;
-
 static int null_open(int w, int h, int fs) {
-	printf("open\n");
-	return 1;
+    printf("open\n");
+    return 1;
 }
 
 static void null_close() {
-	printf("close\n");
+    printf("close\n");
 }
 
 static void null_tick(int gt, int delta) {
-	printf("tick %d\n", delta);
+    printf("tick %d\n", delta);
 }
 
 static void  null_world_info_changed(const client_world_info_t *info) {
-	printf("new world\n");
+    printf("new world\n");
 }
 
 static void  null_world_changed(int x, int y) {
-	printf("change at %d,%d\n", x, y);
+    printf("change at %d,%d\n", x, y);
 }
 
 static void *null_player_joined(const client_player_t *player) {
-	printf("new player %d\n", player->num);
-	return NULL;
+    printf("new player %d\n", player->num);
+    return NULL;
 }
 
 static void  null_player_changed(const client_player_t *player, int changed) {
-	printf("player %d changed: %d\n", player->num, changed);
+    printf("player %d changed: %d\n", player->num, changed);
 }
 
 static void  null_player_left(const client_player_t *player) {
-	printf("player %d left\n", player->num);
+    printf("player %d left\n", player->num);
 }
 
 static void *null_creature_spawned(const client_creature_t *creature) {
-	printf("creature spawned %d\n", creature->num);
-	return NULL;
+    printf("creature spawned %d\n", creature->num);
+    return NULL;
 }
 
 static void  null_creature_changed(const client_creature_t *creature, int changed) {
-	printf("creature %d changed: %d\n", creature->num, changed);
+    printf("creature %d changed: %d\n", creature->num, changed);
 }
 
 static void  null_creature_died(const client_creature_t *creature) {
-	printf("creature %d died\n", creature->num);
+    printf("creature %d died\n", creature->num);
 }
 
 static void  null_scroll_message(const char *message) {
-	printf("scroll: %s\n", message);
+    printf("scroll: %s\n", message);
 }
 
 const static renderer_api_t null_api = {
@@ -94,8 +89,4 @@ const static renderer_api_t null_api = {
     .scroll_message      = null_scroll_message,
 };
 
-const renderer_api_t *load(const infon_api_t *api) {
-	infon = api;
-    printf("null renderer loaded\n");
-    return &null_api;
-}
+RENDERER_EXPORT(null_api);

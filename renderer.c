@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include "misc.h"
+#include "global.h"
 #include "renderer.h"
 
 #include "client.h"
@@ -51,7 +52,9 @@ static void renderer_set_shutdown() {
     render_shutdown = 1;
 }
 
-static const infon_api_t infon = {
+static const infon_api_t infon_api = {
+    .version            = GAME_NAME,
+
     .max_players        = MAXPLAYERS,
     .max_creatures      = MAXCREATURES,
     
@@ -71,7 +74,7 @@ static const infon_api_t infon = {
 };
 
 void renderer_init_from_pointer(render_loader loader) {
-    renderer = loader(&infon);
+    renderer = loader(&infon_api);
 
     if (renderer->version != RENDERER_API_VERSION)
         die("version mismatch between renderer and engine:\n"
@@ -87,22 +90,22 @@ void renderer_init_from_file(const char *shared) {
     dlhandle = LoadLibrary(shared);
 
     if (!dlhandle) 
-        die("dlopen(\"%s\") failed: %d", shared, GetLastError());
+        die("opening renderer failed: dlopen(\"%s\") failed: %d", shared, GetLastError());
 
-    render_loader loader = (render_loader)GetProcAddress(dlhandle, "load");
+    render_loader loader = (render_loader)GetProcAddress(dlhandle, TOSTRING(RENDERER_SYM));
 
     if (!loader) 
-        die("cannot find symbol 'load'");
+        die("cannot find symbol '" TOSTRING(RENDERER_SYM) "' in renderer %s", shared);
 #else
     dlhandle = dlopen(shared, RTLD_NOW);
 
     if (!dlhandle)
-        die("dlopen(\"%s\") failed: %s", shared, dlerror());
+        die("opening renderer failed: dlopen(\"%s\") failed: %s", shared, dlerror());
 
-    render_loader loader = (render_loader)dlsym(dlhandle, "load");
+    render_loader loader = (render_loader)dlsym(dlhandle, TOSTRING(RENDERER_SYM));
 
     if (!loader)
-        die("cannot find symbol 'load'");
+        die("cannot find symbol '" TOSTRING(RENDERER_SYM) "' in renderer %s", shared);
 #endif
     renderer_init_from_pointer(loader);
 }

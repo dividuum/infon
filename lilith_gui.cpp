@@ -30,19 +30,10 @@
 #include <assert.h>
 #include <math.h>
 
-extern "C" {
-#include "global.h"
-#include "map.h"
-#include "misc.h"
 #include "renderer.h"
-#include "common_player.h"
-#include "client_world.h"
-}
 
 using namespace grinliz;
 using namespace lilith3d;
-
-static const infon_api_t *infon;
 
 static SDL_Surface    *surface = 0; 
 static TextureManager *texman  = 0;
@@ -374,27 +365,21 @@ static void lilith_close() {
     delete texman;
     SDL_Quit();
 }
+    
+static const renderer_api_t lilith_api = {
+    RENDERER_API_VERSION,
+    lilith_open,
+    lilith_close,
+    lilith_tick,
+    lilith_world_info_changed,
+    lilith_world_changed,
+    NULL,
+    NULL,
+    NULL,
+    lilith_creature_spawned,
+    lilith_creature_changed,
+    lilith_creature_died,
+    NULL
+};
 
-extern "C" {
-    renderer_api_t lilith_api = {0};
-
-#ifdef WIN32
-    __declspec(dllexport) 
-#endif 
-    const renderer_api_t *load(const infon_api_t *api) {
-        infon = api;
-        printf("Renderer loaded\n");
-
-        lilith_api.version             = RENDERER_API_VERSION;
-        lilith_api.open                = lilith_open;
-        lilith_api.close               = lilith_close;
-        lilith_api.tick                = lilith_tick;
-        lilith_api.world_info_changed  = lilith_world_info_changed;
-        lilith_api.world_changed       = lilith_world_changed;
-        lilith_api.creature_spawned    = lilith_creature_spawned;
-        lilith_api.creature_changed    = lilith_creature_changed;
-        lilith_api.creature_died       = lilith_creature_died;
-
-        return &lilith_api;
-    }
-}
+RENDERER_EXPORT(lilith_api);

@@ -21,11 +21,15 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "client_creature.h"
 #include "client_player.h"
 #include "client_world.h"
 
-#define RENDERER_API_VERSION 2
+#define RENDERER_API_VERSION 3
 
 typedef struct {
     /* the renderer version number. set this to RENDERER_API_VERSION. */
@@ -43,7 +47,7 @@ typedef struct {
      * to previous frame in milliseconds */
     void  (*tick)(int game_time, int delta);            
 
-    /* called if the world changes it's size (at startup or on level change). */ 
+    /* called if the world changes its size (at startup or on level change). */ 
     void  (*world_info_changed)(const client_world_info_t *info);
 
     /* called for every world_tile that changed (from being solid) */
@@ -74,16 +78,19 @@ typedef struct {
 } renderer_api_t;
 
 typedef struct {
+    /* infon version string */
+    const char *version;
+    
     /* maximum number of players. */
     int  max_players;
 
     /* maximum number of creatures. */
     int  max_creatures;
 
-    /* calles function 'callback' for each creature in the game. opaque is passed to the callback function. */
+    /* calls function 'callback' for each creature in the game. opaque is passed to the callback function. */
     void (*each_creature)(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque);
 
-    /* calles function 'callback' for each player in the game. opaque is passed to the callback function. */
+    /* calls function 'callback' for each player in the game. opaque is passed to the callback function. */
     void (*each_player  )(void (*callback)(const client_player_t   *player,   void *opaque), void *opaque);
 
     /* returns information on creature num or NULL if creature does not exist. */
@@ -121,6 +128,34 @@ typedef struct {
 /* the function called after loading the renderer. it receives the infon api and must
  * return the renderer api. */
 typedef const renderer_api_t *(*render_loader)(const infon_api_t *);
+
+/* api provided by infon */
+extern const  infon_api_t    *infon;
+
+#ifdef WIN32
+#define RENDERER_EXPORT_SPEC __declspec(dllexport)
+#else
+#define RENDERER_EXPORT_SPEC
+#endif
+
+#ifdef __cplusplus
+#define RENDERER_EXTERN_SPEC extern "C"
+#else 
+#define RENDERER_EXTERN_SPEC 
+#endif
+
+#define RENDERER_SYM renderer_load
+
+#define RENDERER_EXPORT(renderer)                                   \
+    const infon_api_t *infon;                                       \
+    RENDERER_EXPORT_SPEC RENDERER_EXTERN_SPEC                       \
+    const renderer_api_t *RENDERER_SYM (const infon_api_t *api) {   \
+        infon = api; return &(renderer);                            \
+    }                                                       
+
+#ifdef __cplusplus
+}
+#endif
 
 /* infon seitige API */
 

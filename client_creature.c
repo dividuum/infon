@@ -135,9 +135,9 @@ again:
         if (dw >  16) dw -= 32;
 
         if (dw < -1) {
-            creature->dir += 2;
+            creature->dir += dw < -5 ? 2 : 1;
         } else if (dw > 1) {
-            creature->dir -= 2; 
+            creature->dir -= dw >  5 ? 2 : 1; 
         } else {
             creature->dir = winkel_to_waypoint;
         }
