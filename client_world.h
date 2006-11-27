@@ -18,15 +18,36 @@
 
 */
 
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef CLIENT_WORLD_H
+#define CLIENT_WORLD_H
 
-void  client_tick(int delta);
-int   client_is_connected();
+#include "packet.h"
+#include "common_world.h"
 
-int   client_traffic();
+typedef struct maptile_s {
+    int       food;
+    maptype_e map;
+} client_maptile_t;
 
-void  client_init(char *source, char *demo_save_name);
-void  client_shutdown();
+typedef struct world_info_s {
+    int width;
+    int height;
+
+    int koth_x;
+    int koth_y;
+} client_world_info_t;
+
+/* Renderer */
+
+const client_world_info_t *client_world_get_info();
+const client_maptile_t    *client_world_get();
+const client_maptile_t    *client_world_get_tile(int x, int y);
+
+/* Network */
+void        client_world_from_network(packet_t *packet);
+void        client_world_info_from_network(packet_t *packet);
+
+void        client_world_init();
+void        client_world_shutdown();
 
 #endif

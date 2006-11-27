@@ -18,15 +18,18 @@
 
 */
 
-#ifndef GUI_GAME_H
-#define GUI_GAME_H
+#ifndef CLIENT_GAME_H
+#define CLIENT_GAME_H
 
 #include "packet.h"
 
-void gui_game_intermission_from_network(packet_t *packet);
-void gui_game_draw();
+/* Renderer */
+const char *client_get_intermission();
 
-void gui_game_init();
-void gui_game_shutdown();
+/* Network */   
+void client_game_intermission_from_network(packet_t *packet);
+
+void client_game_init();
+void client_game_shutdown();
 
 #endif

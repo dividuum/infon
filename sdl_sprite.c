@@ -23,9 +23,9 @@
 #include <SDL_image.h>
 #include <sge.h>
 
-#include "sprite.h"
 #include "misc.h"
-#include "video.h"
+#include "sdl_sprite.h"
+#include "sdl_video.h"
 
 static SDL_Surface *sprites[SPRITE_NUM] = {0};
 static SDL_Surface *gfx = NULL ;

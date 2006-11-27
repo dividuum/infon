@@ -18,23 +18,25 @@
 
 */
 
-#ifndef GUI_CREATURE_H
-#define GUI_CREATURE_H
+#ifndef CLIENT_CREATURE_H
+#define CLIENT_CREATURE_H
 
 #include "common_creature.h"
 #include "packet.h"
 
-typedef struct gui_pathnode_s gui_pathnode_t;
+typedef struct client_pathnode_s client_pathnode_t;
 
-struct gui_pathnode_s {
-    int             x;
-    int             y;
-    int             beam;
-    gui_pathnode_t *next;
+struct client_pathnode_s {
+    int                x;
+    int                y;
+    int                beam;
+    client_pathnode_t *next;
 };
 
-typedef struct gui_creature_s {
+typedef struct client_creature_s {
+    int             num;
     int             used;
+    void           *userdata;
 
     int             x;
     int             y;
@@ -48,25 +50,29 @@ typedef struct gui_creature_s {
     int             target;
     creature_state  state;
 
-    gui_pathnode_t *path;
-    gui_pathnode_t *last;
-    int             pathlen;
+    client_pathnode_t *path;
+    client_pathnode_t *last;
+    int                pathlen;
 
     int             last_x;
     int             last_y;
 
     char            message[9];
     int             smile_time;
-} gui_creature_t;
+} client_creature_t;
 
-void        gui_creature_draw();
-void        gui_creature_move(int delta);
+/* Renderer */
+const client_creature_t *client_creature_get(int num);
+void                     client_creature_each(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque);
+
+/* Movement */
+void        client_creature_move(int delta);
 
 /* Network */
-void        gui_creature_from_network(packet_t *packet);
-void        gui_creature_smile_from_network(packet_t *packet);
+void        client_creature_from_network(packet_t *packet);
+void        client_creature_smile_from_network(packet_t *packet);
 
-void        gui_creature_init();
-void        gui_creature_shutdown();
+void        client_creature_init();
+void        client_creature_shutdown();
 
 #endif

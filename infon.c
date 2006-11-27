@@ -18,6 +18,11 @@
 
 */
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
+#include <sys/time.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,19 +31,22 @@
 
 #include "global.h"
 #include "client.h"
-#include "video.h"
-#include "sprite.h"
 #include "misc.h"
-#include "gui_game.h"
-#include "gui_world.h"
-#include "gui_creature.h"
+#include "renderer.h"
+#include "client_game.h"
 
-int game_time   = 0;
+int        game_time       = 0;
+static int signal_received = 0;
+static struct timeval start;
 
-static int running = 1;
+static int get_tick() {
+    static struct timeval now;
+    gettimeofday(&now , NULL);
+    return (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
+}
 
 void sighandler(int sig) {
-    running = 0;
+    signal_received = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -82,82 +90,59 @@ int main(int argc, char *argv[]) {
 #endif
 
     srand(time(0));
+    gettimeofday(&start, NULL);
+
+#ifdef WIN32
+    const char *gui = "sdl_gui.dll";
+#else
+    const char *gui = "./sdl_gui.so";
+    if (getenv("GUI"))
+        gui = getenv("GUI");
+#endif
+
+    renderer_init_from_file(gui);
+    if (!renderer_open(width, height, fullscreen))
+        die("cannot open renderer. sorry");
 
     client_init(host, NULL);
+    client_game_init();
 
-    video_init(width, height, fullscreen);
-    sprite_init();
-
-    gui_game_init();
-
-    Uint32 lastticks = SDL_GetTicks();
-    while (running && client_is_connected()) {
-        Uint32 nowticks = SDL_GetTicks();
-        Uint32 delta = nowticks - lastticks;
+    int lastticks = get_tick();
+    while (!signal_received && !renderer_wants_shutdown() && client_is_connected()) {
+        int nowticks = get_tick();
+        int delta = nowticks - lastticks;
 
         if (nowticks < lastticks || nowticks > lastticks + 1000) {
             // Timewarp?
             lastticks = nowticks;
-            SDL_Delay(5);
+#ifdef WIN32
+            Sleep(2);
+#else
+            usleep(5000);
+#endif
             continue;
         } else if (delta < 20) {
-            SDL_Delay(5);
+#ifdef WIN32
+            Sleep(2);
+#else
+            usleep(5000);
+#endif
             continue;
         }
-
         lastticks = nowticks;
 
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_KEYDOWN:
-                    switch (event.key.keysym.sym) {
-                        case SDLK_RETURN:
-                            if (event.key.keysym.mod & KMOD_ALT)
-                                video_fullscreen_toggle();
-                            break;
-                        case SDLK_1: video_resize( 640,  480); break;
-                        case SDLK_2: video_resize( 800,  600); break;
-                        case SDLK_3: video_resize(1024,  768); break;
-                        case SDLK_4: video_resize(1280, 1024); break;
-                        case SDLK_5: video_resize(1600, 1200); break;
-                        case SDLK_c:
-                            gui_world_recenter();
-                            break;
-                        case SDLK_ESCAPE:
-                            running = 0;
-                            break;
-                        default: ;
-                    }
-                    break;
-               case SDL_MOUSEMOTION: 
-                    if (event.motion.state & 1)
-                        gui_world_center_change(-event.motion.xrel, -event.motion.yrel);
-                    break;
-               case SDL_VIDEORESIZE:
-                    video_resize(event.resize.w, event.resize.h);
-                    break;
-               case SDL_QUIT:
-                    running = 0;
-                    break;
-            }
-        }
+        // IO Lesen/Schreiben
+        client_tick(delta);
+        client_creature_move(delta);
+        renderer_tick(game_time, delta);
 
         game_time += delta;
-
-        // IO Lesen/Schreiben
-        client_tick();
-
-        gui_creature_move(delta);
-
-        gui_game_draw();
     }
-    
-    gui_game_shutdown();
 
-    sprite_shutdown();
-    video_shutdown();
+    client_game_shutdown();
     client_shutdown();
 
+    renderer_close();
+    renderer_shutdown();
     return EXIT_SUCCESS; 
 }

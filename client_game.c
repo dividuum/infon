@@ -18,32 +18,35 @@
 
 */
 
-#ifndef GUI_PLAYER_H
-#define GUI_PLAYER_H
+#include <stdio.h>
 
-#include <string.h>
+#include "misc.h"
+#include "client_game.h"
+#include "client_creature.h"
+#include "client_world.h"
+#include "client_player.h"
+#include "global.h"
+#include "client.h"
 
-#include "packet.h"
+static char intermission [256] = {0};
 
-typedef struct gui_player_s {
-    int           used;
-    char          name[16];
-    int           color;
+void client_game_intermission_from_network(packet_t *packet) {
+    snprintf(intermission, sizeof(intermission),
+             "%.*s", packet->len, packet->data);
+}
 
-    int           score;
-    int           cpu_usage;
+const char *client_get_intermission() {
+    return intermission;
+}
 
-    unsigned char dirtymask;
-} gui_player_t;
+void client_game_init() {
+    client_world_init();
+    client_player_init();
+    client_creature_init();
+}
 
-void        gui_player_draw();
-void        gui_player_draw_scores(int xcenter, int y);
-
-/* Network */
-void        gui_player_from_network(packet_t *packet);
-void        gui_player_king_from_network(packet_t *packet);
-
-void        gui_player_init();
-void        gui_player_shutdown();
-
-#endif
+void client_game_shutdown() {
+    client_creature_shutdown();
+    client_player_shutdown();
+    client_world_shutdown();
+}

@@ -39,7 +39,6 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <SDL.h>
 #include <event.h>
 #include <zlib.h>
 
@@ -47,11 +46,11 @@
 #include "global.h"
 #include "client.h"
 #include "misc.h"
-#include "gui_player.h"
-#include "gui_world.h"
-#include "gui_scroller.h"
-#include "gui_creature.h"
-#include "gui_game.h"
+#include "renderer.h"
+#include "client_player.h"
+#include "client_world.h"
+#include "client_creature.h"
+#include "client_game.h"
 
 static int              clientfd;
 static struct event     rd_event;
@@ -61,8 +60,8 @@ static struct evbuffer *packet_buf;
 static struct evbuffer *out_buf;
 
 static int              is_file_source;
-static Uint32           next_demo_read = 0;
-static int              traffic = 0;
+static int              next_packet_countdown = 0;
+static int              traffic               = 0;
 
 // static int           demo_write_fd;
 
@@ -93,7 +92,14 @@ static void client_round_info_from_network(packet_t *packet) {
     if (!packet_read08(packet, &delta)) 
         PROTOCOL_ERROR();
 
-    next_demo_read = SDL_GetTicks() + delta;
+    next_packet_countdown += delta;
+}
+
+static void client_scroller_from_network(packet_t *packet) {
+    char buf[257];
+    memcpy(buf, &packet->data, packet->len);
+    buf[packet->len] = '\0';
+    renderer_scroll_message(buf);
 }
 
 static void client_start_compression() {
@@ -116,16 +122,16 @@ static void client_start_compression() {
 static void client_handle_packet(packet_t *packet) {
     switch (packet->type) {
         case PACKET_PLAYER_UPDATE:  
-            gui_player_from_network(packet);
+            client_player_from_network(packet);
             break;
         case PACKET_WORLD_UPDATE:  
-            gui_world_from_network(packet);
+            client_world_from_network(packet);
             break;
         case PACKET_SCROLLER_MSG:   
-            gui_scroller_from_network(packet);
+            client_scroller_from_network(packet);
             break;
         case PACKET_CREATURE_UPDATE: 
-            gui_creature_from_network(packet);
+            client_creature_from_network(packet);
             break;
         case PACKET_QUIT_MSG:
             fprintf(stderr, "server wants us to disconnect: %.*s\n",
@@ -133,13 +139,13 @@ static void client_handle_packet(packet_t *packet) {
             client_destroy("done");
             break;
         case PACKET_KOTH_UPDATE:
-            gui_player_king_from_network(packet);
+            client_player_king_from_network(packet);
             break;
         case PACKET_WORLD_INFO:
-            gui_world_info_from_network(packet);
+            client_world_info_from_network(packet);
             break;
         case PACKET_CREATURE_SMILE:
-            gui_creature_smile_from_network(packet);
+            client_creature_smile_from_network(packet);
             break;
         case PACKET_GAME_INFO:
             break;
@@ -147,7 +153,7 @@ static void client_handle_packet(packet_t *packet) {
             client_round_info_from_network(packet);
             break;
         case PACKET_INTERMISSION:
-            gui_game_intermission_from_network(packet);
+            client_game_intermission_from_network(packet);
             break;
         case PACKET_WELCOME_MSG:    
             if (!is_file_source)
@@ -267,11 +273,12 @@ int  client_is_connected() {
     return clientfd != -1;
 }
 
-void file_loop() {
+void file_loop(int delta) {
     static packet_t packet;
     static char errbuf[128];
     int ret;
-    while (SDL_GetTicks() >= next_demo_read) {
+    next_packet_countdown -= delta;
+    while (next_packet_countdown <= 0) {
         ret = read(clientfd, &packet, PACKET_HEADER_SIZE);
         if (ret != PACKET_HEADER_SIZE) {
             snprintf(errbuf, sizeof(errbuf), "eof, reading header: want %d, got %d", PACKET_HEADER_SIZE, ret);
@@ -302,9 +309,9 @@ int  client_traffic() {
     return traffic;
 }
 
-void client_tick() {
+void client_tick(int delta) {
     if (is_file_source) {
-        file_loop();
+        file_loop(delta);
     } else {
         event_loop(EVLOOP_NONBLOCK);
     }

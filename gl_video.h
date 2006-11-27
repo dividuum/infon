@@ -18,15 +18,19 @@
 
 */
 
-#ifndef GUI_SCROLLER_H
-#define GUI_SCROLLER_H
+#ifndef GL_VIDEO_H
+#define GL_VIDEO_H
 
-void gui_scroller_draw();
+void         video_fullscreen_toggle();
+void         video_flip();
+void         video_set_title(const char *title);
 
-/* Network */
-void gui_scroller_from_network(packet_t *packet);
+int          video_width();
+int          video_height();
 
-void gui_scroller_init();
-void gui_scroller_shutdown();
+void         video_resize(int w, int h);
+
+void         video_init(int w, int h, int fs);
+void         video_shutdown();
 
 #endif
