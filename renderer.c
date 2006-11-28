@@ -18,15 +18,20 @@
 
 */
 
+#ifdef EXTERNAL_RENDERER
 #ifdef WIN32
 #include <windows.h>
 #include <winerror.h>
+static HINSTANCE dlhandle;
 #else
 #include <dlfcn.h>
+static void     *dlhandle;
+#endif
 #endif
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "misc.h"
 #include "global.h"
@@ -42,12 +47,6 @@
 static const renderer_api_t *renderer  = 0;
 static int             is_open         = 0;
 static int             render_shutdown = 0;
-
-#ifdef WIN32
-static HINSTANCE       dlhandle;
-#else
-static void           *dlhandle;
-#endif
 
 static void renderer_set_shutdown() {
     render_shutdown = 1;
@@ -74,41 +73,131 @@ static const infon_api_t infon_api = {
     .shutdown           = renderer_set_shutdown,
 };
 
-void renderer_init_from_pointer(render_loader loader) {
+int renderer_init_from_pointer(render_loader loader) {
     renderer = loader(&infon_api);
 
-    if (renderer->version != RENDERER_API_VERSION)
-        die("version mismatch between renderer and engine:\n"
-            "renderer provided api version %d\n"
-            "engine   required api version %d", 
-            renderer->version, 
-            RENDERER_API_VERSION);
+    if (renderer->version == RENDERER_API_VERSION) 
+        return 1;
+
+    fprintf(stderr, "version mismatch between renderer and engine: renderer api %d <> engine api %d\n", 
+                    renderer->version, RENDERER_API_VERSION);
+    return 0;
 }
 
-void renderer_init_from_file(const char *shared) {
+#ifdef EXTERNAL_RENDERER
+
+void renderer_close_file() {
+#ifdef WIN32
+    if (dlhandle)
+        FreeLibrary(dlhandle);
+    dlhandle = 0;
+#else
+    if (dlhandle)
+        dlclose(dlhandle);
+    dlhandle = NULL;
+#endif
+}
+
+int renderer_open_file(const char *shared) {
+    fprintf(stderr, "opening renderer %s\n * ", shared);
 #ifdef WIN32
     dlhandle = LoadLibrary(shared);
 
-    if (!dlhandle) 
-        die("opening renderer failed: dlopen(\"%s\") failed: %d", shared, GetLastError());
+    if (!dlhandle) {
+        fprintf(stderr, "LoadLibrary failed: %d\n", GetLastError());
+        goto failed;
+    }
 
     render_loader loader = (render_loader)GetProcAddress(dlhandle, TOSTRING(RENDERER_SYM));
-
-    if (!loader) 
-        die("cannot find symbol '" TOSTRING(RENDERER_SYM) "' in renderer %s", shared);
 #else
-    fprintf(stderr, "loading renderer %s\n", shared);
     dlhandle = dlopen(shared, RTLD_NOW);
 
-    if (!dlhandle)
-        die("opening renderer failed: dlopen(\"%s\") failed: %s", shared, dlerror());
+    if (!dlhandle) {
+        fprintf(stderr, "dlopen failed: %s\n", dlerror());
+        goto failed;
+    }
 
     render_loader loader = (render_loader)dlsym(dlhandle, TOSTRING(RENDERER_SYM));
-
-    if (!loader)
-        die("cannot find symbol '" TOSTRING(RENDERER_SYM) "' in renderer %s", shared);
 #endif
-    renderer_init_from_pointer(loader);
+    if (!loader) {
+        fprintf(stderr, "cannot find symbol '" TOSTRING(RENDERER_SYM) "'\n");
+        goto failed;
+    }
+
+    if (!renderer_init_from_pointer(loader)) 
+        goto failed;
+
+    fprintf(stderr, "ok (renderer struct @ %p)\n", (void*)renderer);
+    return 1;
+
+failed:
+    renderer_close_file();
+    return 0;
+}
+
+int renderer_search_and_load(const char *name) {
+    char buf[PATH_MAX];
+    
+#ifdef WIN32
+    const char *ext = "dll";
+#else
+    const char *ext = "so";
+#endif
+    
+#define renderer_try(fmt, ...)                          \
+    do {                                                \
+        snprintf(buf, sizeof(buf), fmt, __VA_ARGS__);   \
+        if (renderer_open_file(buf)) return 1;          \
+    } while (0)
+
+    renderer_try("%s", name);
+
+#ifdef WIN32
+    renderer_try(".\\%s.%s", name, ext);
+
+    if (getenv("USERPROFILE")) 
+        renderer_try("%s\\infon\\%s.%s", getenv("USERPROFILE"), name, ext);
+#else
+    renderer_try("./%s.%s",  name, ext);
+    
+    if (getenv("INFON_PATH")) 
+        renderer_try("%s/%s.%s", getenv("INFON_PATH"), name, ext);
+    
+    if (getenv("HOME"))        
+        renderer_try("%s/.infon/%s.%s", getenv("HOME"), name, ext);
+#endif
+    
+#ifdef RENDERER_PATH
+    renderer_try("%s/%s.%s", RENDERER_PATH, name, ext);
+#endif
+    return 0;
+}
+
+#endif
+
+void renderer_init(const char *name) {
+#ifdef EXTERNAL_RENDERER
+    if (renderer_search_and_load(name))
+        return;
+
+    if (strcmp(name, "sdl_gui")) {
+        fprintf(stderr, "could not load renderer '%s'. falling back to 'sdl_gui'\n", name);
+        if (renderer_search_and_load("sdl_gui"))
+            return;
+    }
+#else
+    fprintf(stderr, "this build cannot load external renderers\n");
+#endif
+
+#ifdef BUILTIN_RENDERER
+    fprintf(stderr, "using builtin renderer %s\n", TOSTRING(BUILTIN_RENDERER));
+    assert(renderer_init_from_pointer(RENDERER_SYM));
+    return;
+#else
+    fprintf(stderr, "this build contains no builtin renderer\n");
+#endif
+
+    die("could not open any renderer.");
 }
 
 int renderer_open(int w, int h, int fs) {
@@ -180,13 +269,8 @@ int renderer_wants_shutdown() {
 void renderer_shutdown() {
     if (is_open) 
         renderer_close();
-        
-#ifdef WIN32
-    if (dlhandle)
-        FreeLibrary(dlhandle);
-#else
-    if (dlhandle)
-        dlclose(dlhandle);
+#ifdef EXTERNAL_RENDERER
+    renderer_close_file();
 #endif
     renderer = NULL;
 }
