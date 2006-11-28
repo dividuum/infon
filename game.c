@@ -94,6 +94,39 @@ static int luaGameIntermission(lua_State *L) {
     return 0;
 }
 
+static int luaHexDecode(lua_State *L) {
+    size_t left; const char *ptr = luaL_checklstring(L, 1, &left);
+    luaL_Buffer out;
+    luaL_buffinit(L, &out);
+    int    hi   = 1;
+    char   cur;
+    while (left > 0) {
+        int val = -1;
+        switch (*ptr) {
+            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+                val = *ptr - '0'; 
+                break;
+            case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                val = *ptr - 'a' + 10; 
+                break;
+            case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                val = *ptr - 'A' + 10; 
+                break;
+        }
+        ptr++; left--;
+        if (val < 0)
+            continue;
+        if (hi) {
+            cur = val << 4;
+        } else {
+            luaL_addchar(&out, cur | val);
+        }
+        hi ^= 1;
+    }
+    luaL_pushresult(&out);
+    return 1;
+}
+
 void game_init() {
     lua_pushliteral(L, "rules_init");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -109,6 +142,8 @@ void game_init() {
     lua_register(L, "set_intermission", luaGameIntermission);
 
     lua_register(L, "scroller_add",     luaScrollerAdd);
+    
+    lua_register(L, "hex_decode",       luaHexDecode);
 
     lua_pushnumber(L, MAXPLAYERS);
     lua_setglobal(L, "MAXPLAYERS");

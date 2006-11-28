@@ -434,14 +434,13 @@ static int luaClientIsGuiClient(lua_State *L) {
 }
 
 static int luaClientExecute(lua_State *L) {
-    size_t codelen; const char *code = luaL_checklstring(L, 2, &codelen);
     client_t *client = client_get_checked_lua(L, 1);
+    size_t codelen; const char *code = luaL_checklstring(L, 2, &codelen);
     int client_local_output = lua_toboolean(L, 3);
+    const char *name = luaL_checkstring(L, 4);
     if (!client->player) 
         luaL_error(L, "client %d has no player", client_num(client));
-    char buf[128];
-    snprintf(buf, sizeof(buf), "input from client %d", client_num(client));
-    player_execute_client_lua(client_local_output ? client : NULL, client->player, code, codelen, buf);
+    player_execute_client_lua(client_local_output ? client : NULL, client->player, code, codelen, name);
     return 0;
 }
 
