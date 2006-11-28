@@ -113,18 +113,20 @@ end
  
 function Client:luamenu() 
     while true do 
-        self:write("lua> ")
+        local paste = self:nextpaste()
+        self:write("lua(" .. paste .. ")> ")
         local line = self:readln()
         if line == "" then 
             break
         else
-            self:execute(line)
+            self:execute(line, self:pastename(paste))
         end
     end
 end
 
 function Client:batchmenu()
-    self:writeln("enter your lua code. '.' ends input")
+    local paste = self:nextpaste()
+    self:writeln("enter your lua code for paste " .. paste .. ". '.' ends input.")
     local code = ""
     while true do 
         local input = self:readln()
@@ -133,8 +135,31 @@ function Client:batchmenu()
         else
             code = code .. input .. "\n"
         end
+        if code:len() > 262144 then
+            self:writeln("your code is too large.")
+            return
+        end
     end
-    self:execute(code)
+    self:execute(code, self:pastename(paste))
+end
+
+function Client:hexbatchmenu()
+    local paste = self:nextpaste()
+    self:writeln("enter your hex-encoded lua code for paste " .. paste .. ". '.' ends input")
+    local code = ""
+    while true do 
+        local input = self:readln()
+        if input == "." then
+            break
+        else
+            code = code .. input
+        end
+        if code:len() > 262144 then
+            self:writeln("your code is too large.")
+            return
+        end
+    end
+    self:execute(hex_decode(code), self:pastename(paste))
 end
 
 function Client:killmenu() 
@@ -249,12 +274,14 @@ function Client:mainmenu()
                 self:colormenu() 
             elseif input == "b" then
                 self:batchmenu() 
+            elseif input == "bb" then
+                self:hexbatchmenu() 
             elseif input == "n" then
                 self:namemenu() 
             elseif input == "r" then
-                self:execute("restart()")
+                self:execute("restart()", "restart")
             elseif input == "i" then
-                self:execute("info()")
+                self:execute("info()",    "info")
             elseif input == "k" then
                 self:killmenu()
             elseif input == "lio" then

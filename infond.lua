@@ -65,6 +65,17 @@ function Client:readln()
     return coroutine.yield(self.thread)
 end
 
+paste = 0
+
+function Client:nextpaste()
+    paste = paste + 1
+    return paste
+end
+
+function Client:pastename(num) 
+    return "paste " .. num .. " from client " .. self.fd
+end
+
 function Client:on_new_client(addr) 
     self.addr         = addr
     self.local_output = true
@@ -164,8 +175,8 @@ function Client:kill()
     end
 end
 
-function Client:execute(code)
-    client_execute(self.fd, code, self.local_output)
+function Client:execute(code, name)
+    client_execute(self.fd, code, self.local_output, name)
 end
 
 function Client:writeln(line)
