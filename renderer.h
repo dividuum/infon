@@ -141,10 +141,13 @@ extern const  infon_api_t    *infon;
 #ifdef __cplusplus
 #define RENDERER_EXTERN_SPEC extern "C"
 #else 
-#define RENDERER_EXTERN_SPEC 
+#define RENDERER_EXTERN_SPEC extern
 #endif
 
 #define RENDERER_SYM renderer_load
+
+    RENDERER_EXPORT_SPEC RENDERER_EXTERN_SPEC 
+    const renderer_api_t *RENDERER_SYM (const infon_api_t *api);
 
 #define RENDERER_EXPORT(renderer)                                   \
     const infon_api_t *infon;                                       \
@@ -159,8 +162,7 @@ extern const  infon_api_t    *infon;
 
 /* infon seitige API */
 
-void renderer_init_from_pointer(render_loader loader);
-void renderer_init_from_file(const char *shared);
+void renderer_init(const char *name);
 void renderer_shutdown();
 
 int  renderer_open(int w, int h, int fs);

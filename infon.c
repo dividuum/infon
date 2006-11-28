@@ -92,15 +92,11 @@ int main(int argc, char *argv[]) {
     srand(time(0));
     gettimeofday(&start, NULL);
 
-#ifdef WIN32
-    const char *gui = "sdl_gui.dll";
-#else
-    const char *gui = "./sdl_gui.so";
+    const char *gui = "sdl_gui";
     if (getenv("GUI"))
         gui = getenv("GUI");
-#endif
 
-    renderer_init_from_file(gui);
+    renderer_init(gui);
     if (!renderer_open(width, height, fullscreen))
         die("cannot open renderer. sorry");
 
