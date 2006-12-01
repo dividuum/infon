@@ -18,17 +18,6 @@
 
 */
 
-#ifdef EXTERNAL_RENDERER
-#ifdef WIN32
-#include <windows.h>
-#include <winerror.h>
-static HINSTANCE dlhandle;
-#else
-#include <dlfcn.h>
-static void     *dlhandle;
-#endif
-#endif
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +32,21 @@ static void     *dlhandle;
 #include "client_creature.h"
 #include "client_world.h"
 #include "common_player.h"
+
+#if defined(NO_EXTERNAL_RENDERER) && !defined(BUILTIN_RENDERER) 
+#error "this build can neither load external renderers nor contains an internal renderer."
+#endif
+
+#ifndef NO_EXTERNAL_RENDERER
+#ifdef WIN32
+#include <windows.h>
+#include <winerror.h>
+static HINSTANCE dlhandle;
+#else
+#include <dlfcn.h>
+static void     *dlhandle;
+#endif
+#endif
 
 static const renderer_api_t *renderer  = 0;
 static int             is_open         = 0;
@@ -84,7 +88,7 @@ int renderer_init_from_pointer(render_loader loader) {
     return 0;
 }
 
-#ifdef EXTERNAL_RENDERER
+#ifndef NO_EXTERNAL_RENDERER
 
 void renderer_close_file() {
 #ifdef WIN32
@@ -99,7 +103,7 @@ void renderer_close_file() {
 }
 
 int renderer_open_file(const char *shared) {
-    fprintf(stderr, "opening renderer %s\n * ", shared);
+    fprintf(stderr, "loading renderer plugin '%s'\n * ", shared);
 #ifdef WIN32
     dlhandle = LoadLibrary(shared);
 
@@ -176,15 +180,15 @@ int renderer_search_and_load(const char *name) {
 #endif
 
 void renderer_init(const char *name) {
-#ifdef EXTERNAL_RENDERER
-    if (renderer_search_and_load(name))
+#ifndef NO_EXTERNAL_RENDERER
+    if (name && renderer_search_and_load(name))
         return;
 
-    if (strcmp(name, "sdl_gui")) {
-        fprintf(stderr, "could not load renderer '%s'. falling back to 'sdl_gui'\n", name);
-        if (renderer_search_and_load("sdl_gui"))
-            return;
-    }
+#ifdef DEFAULT_RENDERER
+    fprintf(stderr, "trying default renderer '%s'\n", TOSTRING(DEFAULT_RENDERER));
+    if (renderer_search_and_load(TOSTRING(DEFAULT_RENDERER)))
+        return;
+#endif
 #else
     fprintf(stderr, "this build cannot load external renderers\n");
 #endif
@@ -269,7 +273,7 @@ int renderer_wants_shutdown() {
 void renderer_shutdown() {
     if (is_open) 
         renderer_close();
-#ifdef EXTERNAL_RENDERER
+#ifndef NO_EXTERNAL_RENDERER
     renderer_close_file();
 #endif
     renderer = NULL;

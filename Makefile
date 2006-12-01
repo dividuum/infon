@@ -1,6 +1,9 @@
 PREFIX  ?= ./
 LUADIR   = lua-5.1.1
-REVISION = $(shell svnversion . || echo 'exported')
+
+ifndef REVISION
+REVISION := $(shell svnversion . || echo 'exported')
+endif
 
 # EVENT_NAME = Computer Night 2006
 # EVENT_HOST = 172.30.100.1
@@ -32,7 +35,7 @@ ifdef WINDOWS
 	WINDRES  = /opt/xmingw/bin/i386-mingw32msvc-windres
 	LUAPLAT  = mingw
 else
-	SDLDIR   = $(shell sdl-config --prefix)
+	SDLDIR  := $(shell sdl-config --prefix)
 	CFLAGS  += $(COMMON_CFLAGS)
 	LUAPLAT  = debug #linux
 	LDFLAGS += -ldl
@@ -75,6 +78,7 @@ else
 
 	LILITH_RENDERER_LDFLAGS =-lSDL -lGL -lGLU -lstdc++
 	LILITH_RENDERER=lilith_gui.so 
+
 	CPPFLAGS=$(CFLAGS) -fPIC
 
 	RENDERER=$(SDL_RENDERER) $(NULL_RENDERER) 
@@ -137,6 +141,12 @@ infon.res: infon.rc
 
 $(LUADIR)/src/liblua.a:
 	$(MAKE) -C $(LUADIR) $(LUAPLAT)
+
+%.o:%.c
+	$(CC) $(CFLAGS) $^ -c -o $@
+
+%.o:%.cpp
+	$(CPP) $(CPPFLAGS) $^ -c -o $@
 
 clean:
 	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags 

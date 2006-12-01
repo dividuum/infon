@@ -29,3 +29,6 @@ acl        = {{ pattern = "^ip:127\.0\..*"             },
               { pattern = "^special:.*"                }, 
               { pattern = ".*"                         },
               { pattern = ".*", deny = "access denied" }}
+
+-- show banner?              
+-- no_banner = true              

@@ -194,13 +194,20 @@ function Client:shell()
             if code == "" then 
                 break
             end
-            local ok, msg = xpcall(loadstring(code), debug.traceback)
+            local ok, msg = xpcall(loadstring(code, "shell"), debug.traceback)
             if not ok then 
                 self:writeln(msg)
             end
         end
     else
-        self:writeln("go away!")
+        self.failed_shell = self.failed_shell + 1
+        if     self.failed_shell  > 5 then 
+            self:kick_ban("you tried to hack the shell. banning 5 minutes", 5 * 60)
+        elseif self.failed_shell == 5 then
+            self:writeln("don't try again or you will be banned!")
+        else
+            self:writeln("go away!")
+        end
     end
 end
 
@@ -209,6 +216,7 @@ function Client:showscores()
     for n = 0, MAXPLAYERS - 1 do 
         if player_exists(n) then
             table.insert(players, {
+                num         = n,
                 name        = player_get_name(n),
                 score       = player_score(n),
                 creatures   = player_num_creatures(n),
@@ -221,18 +229,20 @@ function Client:showscores()
     table.sort(players, function (a,b) 
         return a.score > b.score
     end)
-    self:writeln("Scores | Creatures | Time |     Mem | CPU | Name")
-    self:writeln("-------+-----------+------+---------+-----+-------------")
+    self:writeln("Scores | Creatures | Time |     Mem | CPU | No | Name")
+    self:writeln("-------+-----------+------+---------+-----+----+-------------")
     for i,player in ipairs(players) do 
-        self:writeln(string.format("%6d | %9d | %4dm| %7d | %3d%%| %s",
+        self:writeln(string.format("%s%5d | %9d | %4dm| %7d | %3d%%| %2d | %s",
+                                   self:get_player() == player.num and "*" or " ",
                                    player.score,
                                    player.creatures,
                                    player.age,
                                    player.mem,
                                    player.cpu,
+                                   player.num,
                                    player.name))
     end
-    self:writeln("-------+-----------+------+---------+-----+-------------")
+    self:writeln("-------+-----------+------+---------+-----+----+-------------")
 end
 
 function Client:menu_header()
@@ -243,8 +253,6 @@ function Client:menu_header()
 end
 
 function Client:menu_footer()
-    self:writeln("s - how scores")
-    self:writeln("q - uit")
     self:writeln("-------------------------------------------------")
 end
 
@@ -282,6 +290,8 @@ function Client:mainmenu()
                 self:execute("restart()", "restart")
             elseif input == "i" then
                 self:execute("info()",    "info")
+            elseif input:match("^[0-9]$") then
+                self:execute("onInput" .. input .. "()", "calling onInput" .. input)
             elseif input == "k" then
                 self:killmenu()
             elseif input == "lio" then
@@ -291,6 +301,9 @@ function Client:mainmenu()
                 self:write("limit botcode output to this connection? [y/N] ")
                 local bot_output_client = self:readln() == "y" and self.fd or nil
                 player_set_output_client(self:get_player(), bot_output_client)
+            elseif input == "fwd" then
+                self:write("forward unknown commands to onCommand function? [y/N] ")
+                self.forward_unknown = self:readln() == "y"
             elseif input == "?" then
                 self:menu_header()
                 self:writeln("n - ame")
@@ -301,9 +314,22 @@ function Client:mainmenu()
                 self:writeln("r - estart all your creatures")
                 self:writeln("i - nformation on your creatures")
                 self:writeln("k - ill me")
+                self:writeln("s - how scores")
+                self:writeln("q - uit                    use '??' for more help")
                 self:menu_footer()
+            elseif input == "??" then
+                self:menu_header()
+                self:writeln("lbo    - limit bot output")
+                self:writeln("lio    - limit interactive output")
+                self:writeln("fwd    - set unknown command forward")
+                self:writeln("prompt - change prompt")
+                self:writeln("bb     - hex batch (load precompiled code)")
+                self:writeln("0 - 9  - execute onInputX()")
+                self:menu_footer()
+            elseif self.forward_unknown then
+                self:execute("onCommand(" .. string.format("%q", input) .. ")", "onCommand")
             else
-                self:writeln("huh? use '?' for help")
+                self:writeln("huh? use '?' for help, or '??' for even more help.")
             end
         else
             if     input == "j" then
@@ -311,6 +337,8 @@ function Client:mainmenu()
             elseif input == "?" then
                 self:menu_header()
                 self:writeln("j - oin game")
+                self:writeln("s - how scores")
+                self:writeln("q - uit")
                 self:menu_footer()
             else
                 self:writeln("huh? use '?' for help")
@@ -340,20 +368,22 @@ function Client:handler()
     self:centerln("Welcome to " .. GAME_NAME)
     self:writeln("")
     --                  von http://www.asciiworld.com/animals_birds.html
-    self:writeln("                     .___             `.")
-    self:writeln("        ___              `~\\           |               \\")
-    self:writeln("      o~   `.               |         /'                |")
-    self:writeln("    .----._ `|             ,'       /'              _./'")
-    self:writeln("    `o     `\\|___       __,|----'~~~~T-----,__  _,'~")
-    self:writeln("          /~~o   `~>-/|~ '   ' ,   '      '   ~~\\_")
-    self:writeln("         |_      <~   |   ' ,   ' '   '  ' , '     \\")
-    self:writeln("           `-...-'~\./' '     '     '   '   '  , '  >")
-    self:writeln("                     `-, __'  ,  '  '  , ' ,   '_,'-'")
-    self:writeln("                       /'   `~~~~~~~|`--------~~\\")
-    self:writeln("                     /'            ,'            `.")
-    self:writeln("              ~~`---'             /               |")
-    self:writeln("                               ,-'              _/'")
-    self:writeln("")
+    if not no_banner then
+        self:writeln("                     .___             `.")
+        self:writeln("        ___              `~\\           |               \\")
+        self:writeln("      o~   `.               |         /'                |")
+        self:writeln("    .----._ `|             ,'       /'              _./'")
+        self:writeln("    `o     `\\|___       __,|----'~~~~T-----,__  _,'~")
+        self:writeln("          /~~o   `~>-/|~ '   ' ,   '      '   ~~\\_")
+        self:writeln("         |_      <~   |   ' ,   ' '   '  ' , '     \\")
+        self:writeln("           `-...-'~\./' '     '     '   '   '  , '  >")
+        self:writeln("                     `-, __'  ,  '  '  , ' ,   '_,'-'")
+        self:writeln("                       /'   `~~~~~~~|`--------~~\\")
+        self:writeln("                     /'            ,'            `.")
+        self:writeln("              ~~`---'             /               |")
+        self:writeln("                               ,-'              _/'")
+        self:writeln("")
+    end
     self:writeln("enter '?' for help")
     self:mainmenu()
 end

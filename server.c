@@ -51,6 +51,7 @@
 
 static client_t *guiclients = NULL;
 static client_t  clients[MAXCLIENTS];
+static client_t *output_client = NULL;
 
 static void server_readable(int fd, short event, void *arg);
 static void server_writable(int fd, short event, void *arg);
@@ -182,11 +183,13 @@ static void server_readable(int fd, short event, void *arg) {
             lua_pushstring(L, line);
             free(line);
                 
+            output_client = client;
             if (lua_pcall(L, 2, 0, 0) != 0) {
                 fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
                 server_writeto(client, lua_tostring(L, -1), lua_strlen(L, -1));
                 lua_pop(L, 1);
             }
+            output_client = NULL;
 
             // Kill Me Flag waehrend Aufruf von on_client_input 
             // gesetzt? Direkt rausschmeissen!
@@ -422,14 +425,12 @@ static int luaClientDetachFromPlayer(lua_State *L) {
 }
 
 static int luaClientMakeGuiClient(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, 1);
-    client_turn_into_gui_client(client);
+    client_turn_into_gui_client(client_get_checked_lua(L, 1));
     return 0;
 }
 
 static int luaClientIsGuiClient(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, 1);
-    lua_pushboolean(L, client->is_gui_client);
+    lua_pushboolean(L, client_get_checked_lua(L, 1)->is_gui_client);
     return 1;
 }
 
@@ -463,6 +464,33 @@ static int luaClientDisconnect(lua_State *L) {
     client->kill_me = strdup(reason);
     return 0;
 }
+
+static int luaClientPrint(lua_State *L) {
+    // No output client set? => Discard
+    if (!output_client || !CLIENT_USED(output_client)) 
+        return 0;
+
+    int n=lua_gettop(L);
+    int i;
+    for (i=1; i<=n; i++) {
+        if (i>1) server_writeto(output_client, "\t", 1);
+        if (lua_isstring(L,i))
+            server_writeto(output_client, lua_tostring(L,i), lua_strlen(L, i));
+        else if (lua_isnil(L,i))
+            server_writeto(output_client, "nil", 3);
+        else if (lua_isboolean(L,i))
+            lua_toboolean(L,i) ? server_writeto(output_client, "true",  4): 
+                                 server_writeto(output_client, "false", 5);
+        else {
+            char buffer[128];
+            snprintf(buffer, sizeof(buffer), "%s:%p",lua_typename(L,lua_type(L,i)),lua_topointer(L,i));
+            server_writeto(output_client, buffer, strlen(buffer));
+        }
+    }
+    server_writeto(output_client, "\r\n", 2);
+    return 0;
+}
+
 
 void server_tick() {
     lua_set_cycles(L, 0xFFFFFF);
@@ -510,9 +538,13 @@ void server_init() {
     lua_register(L, "client_is_gui_client",     luaClientIsGuiClient);
     lua_register(L, "client_player_number",     luaClientPlayerNumber);
     lua_register(L, "client_disconnect",        luaClientDisconnect);
+    lua_register(L, "client_print",             luaClientPrint);
+    lua_register(L, "cprint",                   luaClientPrint);
 
     // XXX: HACK: stdin client starten
+#ifdef CONSOLE_CLIENT    
     server_accept(STDIN_FILENO, NULL); 
+#endif
 }
 
 client_t *server_start_demo_writer(const char *demoname) {

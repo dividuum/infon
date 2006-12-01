@@ -49,10 +49,12 @@ function Client.create(fd, addr)
 end
 
 function Client.check_accept(addr) 
-    for _, item in ipairs(acl) do
-        if string.match(addr, item.pattern) then
-            if item.deny then
-                return false, "refusing connection " .. addr .. ": " .. item.deny .. "\r\n"
+    for n, rule in ipairs(acl) do
+        if rule.time and rule.time < os.time() then
+            table.remove(acl, n)
+        elseif string.match(addr, rule.pattern) then
+            if rule.deny then
+                return false, "refusing connection " .. addr .. ": " .. rule.deny .. "\r\n"
             else
                 return true
             end
@@ -76,10 +78,23 @@ function Client:pastename(num)
     return "paste " .. num .. " from client " .. self.fd
 end
 
+function Client:kick_ban(reason, time)
+    local addr = self.addr:match("^([^:]+:[^:]+:?)")
+    local time = time and os.time() + time or nil
+    table.insert(acl, 1, {
+        pattern = "^" .. addr .. ".*$",
+        deny    = reason,
+        time    = time
+    })
+    self:disconnect(reason)
+end
+
 function Client:on_new_client(addr) 
-    self.addr         = addr
-    self.local_output = true
-    self.prompt       = "> "
+    self.addr            = addr
+    self.local_output    = true
+    self.prompt          = "> "
+    self.failed_shell    = 0
+    self.forward_unknown = false
     print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
     self.thread = coroutine.create(self.handler)
@@ -239,6 +254,7 @@ function on_client_accepted(fd, addr)
     Client.create(fd, addr)
 end
 
+
 function on_client_input(fd, line)
     clients[fd]:on_input(line)
 end
@@ -322,30 +338,18 @@ end
 -- Praktisches?
 -----------------------------------------------------------
 
-function p(x) 
-    if type(x) == "table" then
-        print("+--- Table: " .. tostring(x))
-        for key, val in pairs(x) do
-            print("| " .. tostring(key) .. " " .. tostring(val))
-        end
-        print("+-----------------------")
-    else
-        print(type(x) .. " - " .. tostring(x))
-    end
-end
-
 function isnumber(var)
     return tostring(tonumber(var)) == var
 end
 
-function clientlist(adminfd)
-    table.foreach(clients, function (fd, obj)
-                               client_write(adminfd, fd .. " - " .. obj.addr .. "\r\n")
-                           end)
+function kick(fd, msg)
+    msg = msg or "kicked"
+    clients[fd]:disconnect(msg)
 end
 
-function kick(fd, msg)
-    clients[fd]:disconnect(msg)
+function kickban(fd, msg)
+    msg = msg or "kickbanned"
+    clients[fd]:kick_ban(msg)
 end
 
 function killall()
@@ -365,9 +369,34 @@ function reset()
 end
 
 function kickall()
-    table.foreach(clients, function (fd, obj)
-                               clients[fd]:disconnect("kicked")
-                           end)
+    table.foreach(clients, function (fd, client)
+        clients[fd]:disconnect("kicked")
+    end)
+end
+
+function p(x) 
+    if type(x) == "table" then
+        cprint("+--- Table: " .. tostring(x))
+        for key, val in pairs(x) do
+            cprint("| " .. tostring(key) .. " " .. tostring(val))
+        end
+        cprint("+-----------------------")
+    else
+        cprint(type(x) .. " - " .. tostring(x))
+    end
+end
+
+function clientlist()
+    table.foreach(clients, function (fd, client)
+        cprint(string.format("%4d - %s", fd, client.addr))
+    end)
+end
+
+
+function acllist()
+    for n, rule in ipairs(acl) do
+        cprint(string.format("%2d: %-30s - %9d - %s", n, rule.pattern, rule.time and rule.time - os.time() or -1, rule.deny or "accept"))
+    end
 end
 
 -----------------------------------------------------------
