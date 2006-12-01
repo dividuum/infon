@@ -124,7 +124,7 @@ function Client:on_input(line)
 end
 
 function Client:disconnect(reason)
-    if self.fd ~= 0 then
+    if not string.match(self.addr, "^special:") then 
         client_disconnect(self.fd, reason)
     end
 end
