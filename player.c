@@ -196,10 +196,11 @@ static int player_at_panic(lua_State *L) {
 }
 
 static int player_at_cpu_exceeded(lua_State *L) {
+    lua_pushliteral(L, "cpu limit exceeded at ");
     lua_pushliteral(L, "traceback");
     lua_rawget(L, LUA_REGISTRYINDEX);
-    lua_pushliteral(L, "cpu limit exceeded");
-    lua_call(L, 1, 1);
+    lua_call(L, 0, 1);
+    lua_concat(L, 2);
     return 1;
 }
 
@@ -223,8 +224,7 @@ static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 // Erwartet Funktion sowie params Parameter auf dem Stack
-static int call_user_lua(player_t *player, int params) {
-    char errorbuf[4096];
+static int call_user_lua(const char *where, player_t *player, int params) {
     lua_pushliteral(player->L, "traceback");    // func params* 'traceback'
     lua_rawget(player->L, LUA_REGISTRYINDEX);   // func params* traceback
     lua_insert(player->L, -2 - params);         // traceback func params*
@@ -235,26 +235,30 @@ static int call_user_lua(player_t *player, int params) {
     int ret = lua_pcall(player->L, params, 0, -2 - params);
     player->mem_enforce = 0;
 
-    switch (ret) {
-        case LUA_ERRRUN:
-            snprintf(errorbuf, sizeof(errorbuf), "runtime error: %s\r\n", lua_tostring(player->L, -1));
-            player_writeto(player, errorbuf, strlen(errorbuf));
-            lua_pop(player->L, 2);
-            return 0;
-        case LUA_ERRMEM:
-            snprintf(errorbuf, sizeof(errorbuf), "mem error: %s\r\n", lua_tostring(player->L, -1));
-            player_writeto(player, errorbuf, strlen(errorbuf));
-            lua_pop(player->L, 2);
-            return 0;
-        case LUA_ERRERR:
-            snprintf(errorbuf, sizeof(errorbuf), "error calling errorhandler (_TRACEBACK)\r\n");
-            player_writeto(player, errorbuf, strlen(errorbuf));
-            lua_pop(player->L, 2);
-            return 0;
-        default: 
-            lua_pop(player->L, 1);
-            return 1;
+    // Ausfuehrung geklappt. Aufraeumen & raus.
+    if (ret == 0) {
+        lua_pop(player->L, 1);
+        return 1;
     }
+
+    // Fehler bei der Ausfuehrung. Fehlermeldung holen
+    const char *errmsg = lua_tostring(player->L, -1);
+    if (!errmsg) 
+        errmsg = "unknown error";
+
+    const char *why;
+    switch (ret) {
+        case LUA_ERRRUN: why = "runtime";        break; 
+        case LUA_ERRMEM: why = "memory";         break;
+        case LUA_ERRERR: why = "error handling"; break;
+        default:         why = "unknown";        break;
+    }
+
+    char errorbuf[4096];
+    snprintf(errorbuf, sizeof(errorbuf), "%s error %s: %s\r\n", why, where, errmsg);
+    player_writeto(player, errorbuf, strlen(errorbuf));
+    lua_pop(player->L, 2);
+    return 0;
 }
 
 static int player_get_cpu_usage(player_t *player) {
@@ -620,7 +624,6 @@ player_t *player_create(const char *pass) {
     lua_register_player(player, "set_state",            luaCreatureSetState);
     lua_register_player(player, "set_target",           luaCreatureSetTarget);
     lua_register_player(player, "set_convert",          luaCreatureSetConvert);
-    lua_register_player(player, "nearest_enemy",        luaCreatureGetNearestEnemy);
     lua_register_player(player, "get_nearest_enemy",    luaCreatureGetNearestEnemy);
     lua_register_player(player, "get_type",             luaCreatureGetType);
     lua_register_player(player, "get_food",             luaCreatureGetFood);
@@ -824,7 +827,7 @@ void player_execute_client_lua(client_t *result_client, player_t *player, const 
     int error = luaL_loadbuffer(player->L, code, codelen, where);
 
     if (!error) {
-        call_user_lua(player, 0);
+        call_user_lua("during interactive execution", player, 0);
     } else {
         const char *msg = lua_tostring(player->L, -1);
         if (!msg) 
@@ -888,7 +891,7 @@ void player_think() {
         lua_pushliteral(player->L, "events");
         lua_rawget(player->L, LUA_REGISTRYINDEX);
         output_client = player->bot_output_client;
-        call_user_lua(player, 1);
+        call_user_lua("calling player_think", player, 1);
         output_client = NULL;
 
         // Events Strukur neu initialisieren

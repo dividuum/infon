@@ -32,7 +32,7 @@ extern int game_exit;
 #ifdef EVENT_NAME
 #define GAME_NAME "Infon Battle Arena (" EVENT_NAME " Edition)"
 #else
-#define GAME_NAME "Infon Battle Arena r" REVISION
+#define GAME_NAME "Infon Battle Arena " REVISION
 #endif
 
 // Pfadsuche, bei der mehrere beieinanderliegende
@@ -46,5 +46,15 @@ extern int game_exit;
 
 // Netzwerk Protokoll
 #define PROTOCOL_VERSION 6
+
+// open stdin (console) client
+#define CONSOLE_CLIENT
+
+// warn if no coredumps possible
+// #define WARN_COREDUMP
+
+#ifndef DEFAULT_RENDERER
+#define DEFAULT_RENDERER sdl_gui
+#endif
 
 #endif

@@ -54,7 +54,7 @@ void sighandler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-#ifdef __linux__ 
+#if defined(__linux__) && defined(WARN_COREDUMP)
     struct rlimit rlim;
     getrlimit(RLIMIT_CORE, &rlim);
     if (rlim.rlim_cur == 0) 

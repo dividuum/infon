@@ -144,6 +144,7 @@ LUA_API lua_CFunction lua_atcpu_exceeded(lua_State *L, lua_CFunction cpuf) {
 LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_State *L1;
   lua_lock(L);
+  G(L)->cycles -= 1000;
   luaC_checkGC(L);
   L1 = luaE_newthread(L);
   setthvalue(L, L->top, L1);
@@ -905,6 +906,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   ZIO z;
   int status;
   lua_lock(L);
+  G(L)->cycles -= 10000;
   if (!chunkname) chunkname = "?";
   luaZ_init(L, &z, reader, data);
   status = luaD_protectedparser(L, &z, chunkname);

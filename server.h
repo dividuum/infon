@@ -41,8 +41,8 @@
 #define SEND_BROADCAST NULL
 
 typedef struct client_s {
-    struct event rd_event;
-    struct event wr_event;
+    struct event     rd_event;
+    struct event     wr_event;
     struct evbuffer *in_buf;
     struct evbuffer *out_buf;
 

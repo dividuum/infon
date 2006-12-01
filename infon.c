@@ -92,11 +92,7 @@ int main(int argc, char *argv[]) {
     srand(time(0));
     gettimeofday(&start, NULL);
 
-    const char *gui = "sdl_gui";
-    if (getenv("GUI"))
-        gui = getenv("GUI");
-
-    renderer_init(gui);
+    renderer_init(getenv("GUI"));
     if (!renderer_open(width, height, fullscreen))
         die("cannot open renderer. sorry");
 

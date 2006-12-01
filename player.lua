@@ -22,28 +22,40 @@
 -- Unsicheres Zeugs weg
 ------------------------------------------------------------------------
 
+-- save traceback function
 _TRACEBACK = debug.traceback
 
+-- save in registry for usage within 'out of cycles' handler
 save_in_registry('traceback', debug.traceback)
 save_in_registry = nil
 
-dofile          = nil
-getfenv         = nil
-setfenv         = nil
-loadfile        = nil
-_VERSION        = nil
-newproxy        = nil
-debug           = nil
-gcinfo          = nil
-os              = nil
-package         = nil
-io              = nil
-load            = nil
-module          = nil
-loadstring      = nil
+dofile          = nil   -- would allow file loading
+loadfile        = nil   -- no file loading
+_VERSION        = nil   -- who cares
+newproxy        = nil   -- huh?
+debug           = nil   -- no debugging function
+gcinfo          = nil   -- no access to the garbage collector
+os              = nil   -- no os access
+package         = nil   -- package support is not needed
+io              = nil   -- disable io
+load            = nil   -- no file loading
+module          = nil   -- module support not needed
+
+-- limit strings accepted by loadstring to 16k
+do
+    local orig_loadstring = loadstring
+    local check_code_size = string.len
+    loadstring = function(code, name)
+        if check_code_size(code) > 16384 then
+            error("code too large")
+        else
+            return orig_loadstring(code, name)
+        end
+    end
+end
 
 collectgarbage()
-collectgarbage  = nil
+collectgarbage  = nil   -- no access to the garbage collector
 
 ------------------------------------------------------------------------
 -- Creature Klasse
@@ -317,7 +329,9 @@ function info()
             print("current message: " .. creature.message)
         end
         if type(creature.thread) == 'thread' then
-            print(_TRACEBACK(creature.thread, "thread status  : " .. coroutine.status(creature.thread),1))
+            print(_TRACEBACK(creature.thread, 
+                             "thread status  : " .. coroutine.status(creature.thread), 
+                             coroutine.status(creature.thread) == "dead" and 0 or 1))
         end
         print()
     end
