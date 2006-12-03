@@ -26,7 +26,7 @@ int   client_is_connected();
 
 int   client_traffic();
 
-void  client_init(char *source, char *demo_save_name);
+void  client_init(char *source);
 void  client_shutdown();
 
 #endif

@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "no coredump possible. enable them to help debug crashes.\n");
 #endif
 
+    signal(SIGTERM, sighandler);
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
 
@@ -70,7 +71,7 @@ int main(int argc, char *argv[]) {
 
     luaL_openlibs(L);
     if (luaL_dofile(L, "infond.lua")) 
-        die("cannot read 'infond.lua'");
+        die("cannot read 'infond.lua': ", lua_tostring(L, -1));
 
     game_init();
     server_init();
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     while (!game_exit) {
-        game_one_round();
+        game_one_game();
     }
 
     player_shutdown();

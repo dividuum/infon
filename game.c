@@ -152,7 +152,7 @@ void game_init() {
     lua_setglobal(L,  "GAME_NAME");
 }
 
-void game_one_round() {
+void game_one_game() {
     should_end_round = 0;
     game_time        = 0;
     
@@ -175,28 +175,16 @@ void game_one_round() {
     int lasttick = 0;
     gettimeofday(&start, NULL);
 
-    server_round_start();
-    player_round_start();
+    server_game_start();
+    player_game_start();
 
-    // Demo Aufnahme starten
-    client_t *demowriter = NULL;
-
-    lua_pushliteral(L, "onNewGameDemoStart");
+    // Spiel gestartet
+    lua_pushliteral(L, "onNewGameStarted");
     lua_rawget(L, LUA_GLOBALSINDEX);
-    if (lua_pcall(L, 0, 1, 0) != 0) {
-        fprintf(stderr, "error calling onNewGameDemoStart: %s\n", lua_tostring(L, -1));
-    } else {
-        const char *demoname = lua_tostring(L, -1);
-        if (demoname) {
-            demowriter = server_start_demo_writer(demoname);
-            if (demowriter) {
-                fprintf(stderr, "started recording demo %s\n", demoname);
-            } else {
-                fprintf(stderr, "couldn't start demo file %s\n", demoname);
-            }
-        } 
-    }
-    lua_pop(L, 1);
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        fprintf(stderr, "error calling onNewGameStarted: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    } 
 
     while (!game_exit && !should_end_round) {
         int tick  = get_tick();
@@ -240,10 +228,9 @@ void game_one_round() {
         // IO Lesen/Schreiben
         server_tick();
     }
-    
-    if (demowriter) 
-        server_destroy(demowriter, "game ended");
 
+    server_game_end();
+    
     creature_shutdown();
     world_shutdown();
 }

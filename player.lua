@@ -33,7 +33,6 @@ dofile          = nil   -- would allow file loading
 loadfile        = nil   -- no file loading
 _VERSION        = nil   -- who cares
 newproxy        = nil   -- huh?
-debug           = nil   -- no debugging function
 gcinfo          = nil   -- no access to the garbage collector
 os              = nil   -- no os access
 package         = nil   -- package support is not needed
@@ -45,6 +44,7 @@ module          = nil   -- module support not needed
 do
     local orig_loadstring = loadstring
     local check_code_size = string.len
+    local error           = error
     loadstring = function(code, name)
         if check_code_size(code) > 16384 then
             error("code too large")
@@ -53,6 +53,31 @@ do
         end
     end
 end
+
+-- provide thread tracing function
+do
+    local sethook = debug.sethook
+    local getinfo = debug.getinfo
+    local type, error, print = type, error, print
+    thread_trace = function(thread, text)
+        if type(thread) ~= "thread" then
+            error("arg #1 is not a thread")
+        end
+        local dumper = function(what, where)
+            local info = getinfo(2, "nlS")
+            print(text .. ":" .. info.source .. ":" .. info.currentline)
+        end
+        sethook(thread, dumper, "l")
+    end
+    thread_untrace = function(thread)
+        if type(thread) ~= "thread" then
+            error("arg #1 is not a thread")
+        end
+        sethook(thread)
+    end
+end
+
+debug           = nil   -- no debugging functions
 
 collectgarbage()
 collectgarbage  = nil   -- no access to the garbage collector
@@ -367,11 +392,7 @@ function player_think(events)
             local parent = other ~= -1 and other or nil
             local creature = {}
             setmetatable(creature, {
-                __index = function(self, what)
-                    if Creature[what] then
-                        return Creature[what]
-                    end
-                end,
+                __index    = Creature, 
                 __tostring = function(self)
                     local x, y  = get_pos(self.id)
                     local states = { [0]="idle",   [1]="walk",    [2]="heal",  [3]="eat",
@@ -442,6 +463,11 @@ function player_think(events)
                 creature.message = 'main() terminated (maybe it was killed for using too much cpu/memory?)'
             end
         else
+            if creature.debug then
+                thread_trace(creature.thread, creature.id)
+            else
+                thread_untrace(creature.thread)
+            end
             local ok, msg = coroutine.resume(creature.thread, creature)
             if not ok then
                 creature.message = msg
@@ -457,7 +483,7 @@ function player_think(events)
 
     can_yield = false
 
-    -- Nach jeder Runde eventuell vorhandene Funktion onRoundStart aufrufen
+    -- Nach jeder Runde eventuell vorhandene Funktion onRoundEnd aufrufen
     if onRoundEnd then
         local ok, msg = pcall(onRoundEnd)
         if not ok then
