@@ -51,6 +51,7 @@ typedef struct client_s {
     z_stream         strm;
 
     char            *kill_me;
+    int              kick_at_end_of_game;
 
     // Verbindung von: 1-player <-> N-client
     struct player_s *player;
@@ -63,7 +64,7 @@ typedef struct client_s {
     struct client_s *prev_gui;
 } client_t;
 
-client_t *server_accept(int fd, struct sockaddr_in *peer);
+client_t *server_accept(int fd, const char *address);
 void server_writeto(client_t *client, const void *data, size_t size);
 void server_writeto_all_gui_clients(const void *data, size_t size);
 void server_destroy(client_t *client, const char *reason);
@@ -72,12 +73,13 @@ client_t *client_get_checked_lua(lua_State *L, int idx);
 
 void server_send_packet(packet_t *packet, client_t *client);
 
-client_t *server_start_demo_writer(const char *demoname);
+client_t *server_start_demo_writer(const char *demoname, int one_game);
 
 void server_tick();
 
 void server_init();
-void server_round_start();
+void server_game_start();
+void server_game_end();
 void server_shutdown();
 
 #endif

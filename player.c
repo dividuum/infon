@@ -679,8 +679,13 @@ player_t *player_create(const char *pass) {
     lua_set_cycles(player->L, player->max_cycles);
     player_init_events(player);
 
-    if (luaL_dofile(player->L, "player.lua"))
-        die("cannot read 'player.lua'");
+    // player.lua sourcen
+    if (luaL_dofile(player->L, "player.lua")) {
+        fprintf(stderr, "cannot source 'player.lua': %s\n", lua_tostring(player->L, -1));
+        lua_close(player->L);
+        player->L = NULL;
+        return NULL;
+    }
     
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 
@@ -1160,7 +1165,7 @@ void player_init() {
     lua_setglobal(L, "CREATURE_FLYER");
 }
 
-void player_round_start() {
+void player_game_start() {
     int playerno;
     for (playerno = 0; playerno < MAXPLAYERS; playerno++) {
         if (PLAYER_USED(&players[playerno]))

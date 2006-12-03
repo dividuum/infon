@@ -169,7 +169,7 @@ class InfonDemo
             when 32:
                 welcome = @file.read(len).delete("\n").strip
             when 254:
-                # puts "compression start (ignored for demos)"
+                @file.compress = true
             when 255:
                 version = @file.read8
                 # puts  "server protocol version %d" % @file.read8

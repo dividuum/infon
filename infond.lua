@@ -264,7 +264,7 @@ function on_client_close(fd, reason)
     clients[fd] = nil
 end
 
-function server_new_round()
+function server_new_game()
     server_tick = coroutine.wrap(ServerMain)
 end
 
@@ -275,13 +275,11 @@ end
 -- Game C Callbacks
 -----------------------------------------------------------
 
-function onNewGameDemoStart()
+function onNewGameStarted()
     if type(demo) == "string" then
-        return string.format("%s-%08X.demo", demo, os.time());
+        server_start_demo(string.format("%s-%08X.demo", demo, os.time()));
     elseif type(demo) == "function" then
-        return demo()
-    else
-        return nil
+        server_start_demo(demo())
     end
 end
 

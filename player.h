@@ -97,7 +97,7 @@ void        player_send_initial_update(client_t *client);
 void        player_to_network(player_t *player, int dirtymask, client_t *client);
 
 void        player_init();
-void        player_round_start();
+void        player_game_start();
 void        player_shutdown();
 
 #endif

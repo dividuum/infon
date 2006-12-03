@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     if (!renderer_open(width, height, fullscreen))
         die("cannot open renderer. sorry");
 
-    client_init(host, NULL);
+    client_init(host);
     client_game_init();
 
     int lastticks = get_tick();

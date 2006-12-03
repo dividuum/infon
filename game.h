@@ -24,7 +24,7 @@
 #include "server.h"
 
 void game_init();
-void game_one_round();
+void game_one_game();
 void game_send_initial_update(client_t *client);
 
 #endif

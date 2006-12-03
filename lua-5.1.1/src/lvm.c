@@ -56,6 +56,28 @@ int luaV_tostring (lua_State *L, StkId obj) {
   }
 }
 
+static StkId traceexec (lua_State *L, const Instruction *pc) {
+  lu_byte mask = L->hookmask;
+  const Instruction *oldpc = GETPC(L);
+  SAVEPC(L, pc);
+  if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
+    if (L->hookcount == 0) {
+      resethookcount(L);
+      luaD_callhook(L, LUA_HOOKCOUNT, -1);
+    }
+  }     
+  if (mask & LUA_MASKLINE) {
+    Proto *p = ci_func(L->ci)->l.p;
+    int npc = pcRel(pc, p);
+    int newline = getline(p, npc);
+    /* call linehook when enter a new function, when jump back (loop),
+       or when enter a new line */
+    if (npc == 0 || pc <= oldpc || newline != getline(p, pcRel(oldpc, p)))
+      luaD_callhook(L, LUA_HOOKLINE, newline);
+  } 
+  return L->base;
+}   
+
 static void callTMres (lua_State *L, StkId res, const TValue *f,
                         const TValue *p1, const TValue *p2) {
   ptrdiff_t result = savestack(L, res);
@@ -384,6 +406,10 @@ int luaV_execute (lua_State *L) {
         SAVEPC(L, pc);
         cpu_limit_exceeded(L); // never returns
     }
+    if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
+        (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) 
+      base = traceexec(L, pc);
+
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
     lua_assert(base == L->base && L->base == L->ci->base);

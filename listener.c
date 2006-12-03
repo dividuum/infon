@@ -18,6 +18,7 @@
 
 */
 
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -60,7 +61,25 @@ static void listener_cb(int fd, short event, void *arg) {
         goto error;
     }
 
-    if (!server_accept(clientfd, &peer))
+    /* TCP_NODELAY setzen. Dadurch werden Daten fruehestmoeglich versendet */
+    static const int one = 1;
+    if (setsockopt(clientfd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) < 0) {
+        fprintf(stderr, "cannot enable TCP_NODELAY: %s\n", strerror(errno));
+        goto error;
+    }
+
+    /* SO_LINGER setzen. Falls sich noch Daten in der Sendqueue der Verbindung
+       befinden, werden diese verworfen. */
+    static const struct linger l = { 1, 0 };
+    if (setsockopt(clientfd, SOL_SOCKET, SO_LINGER, &l, sizeof(l)) == -1) {
+        fprintf(stderr, "cannot set SO_LINGER: %s\n", strerror(errno));
+        goto error;
+    }
+
+    static char address[128];
+    sprintf(address, "ip:%s:%d", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
+
+    if (!server_accept(clientfd, address))
         goto error; 
 
     event_add(cb_event, NULL);

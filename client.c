@@ -106,9 +106,7 @@ static void client_start_compression() {
     if (compression)
         PROTOCOL_ERROR();
 
-    // Bei Demofiles Kompressionstart ignorieren,
-    // da diese unkomprimiert abgelegt werden.
-    if (is_file_source)
+    if (getenv("UNCOMPRESSED_DEMO_COMPATIBILITY") && is_file_source)
         return;
 
     strm.zalloc = Z_NULL;
@@ -171,6 +169,77 @@ static void client_handle_packet(packet_t *packet) {
     }
 }
 
+// returns 0 on error
+// returns 1 if more data is needed
+// returns 2 if more time is needed
+static int client_parse_in_buf() {
+restart:
+    if (compression) {
+        char buf[8192];
+        strm.next_in   = EVBUFFER_DATA(in_buf);
+        strm.avail_in  = EVBUFFER_LENGTH(in_buf);
+        do {
+            strm.next_out  = (unsigned char*)buf;
+            strm.avail_out = sizeof(buf);
+
+            int ret = inflate(&strm, Z_SYNC_FLUSH);
+            if (ret != Z_OK && ret != Z_BUF_ERROR) {
+                client_destroy("decompression error");
+                return 0;
+            }
+
+            evbuffer_add(packet_buf, buf, sizeof(buf) - strm.avail_out);
+            if (EVBUFFER_LENGTH(packet_buf) > 1024 * 1024) {
+                client_destroy("too much to decompress. funny data?");
+                return 0;
+            }
+        } while (strm.avail_out == 0);
+        evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf) - strm.avail_in);
+    } else {
+        evbuffer_add_buffer(packet_buf, in_buf);
+        evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf));
+    }
+
+    while (EVBUFFER_LENGTH(packet_buf) >= PACKET_HEADER_SIZE) {
+        int packet_len = PACKET_HEADER_SIZE + EVBUFFER_DATA(packet_buf)[0];
+
+        // Nicht genuegend Daten da?
+        if (EVBUFFER_LENGTH(packet_buf) < packet_len)
+            return 1;
+
+        // Alten Kompressionszustand merken
+        int old_compression = compression;
+
+        // Packet rauspopeln...
+        static packet_t packet;
+        memcpy(&packet, EVBUFFER_DATA(packet_buf), packet_len);
+        packet_rewind(&packet);
+        client_handle_packet(&packet);
+
+        // Disconnect Packet?
+        if (!client_is_connected()) 
+            return 0;
+
+        // Weg damit
+        evbuffer_drain(packet_buf, packet_len);
+
+        // Wurde Kompression aktiviert? Dann Rest des packet_buf zurueck 
+        // in den in_buf, da es sich dabei bereits um komprimierte Daten 
+        // handelt und diese oben erst dekomprimiert werden muessen.
+        if (compression != old_compression) {
+            evbuffer_add_buffer(in_buf, packet_buf);
+            evbuffer_drain(packet_buf, EVBUFFER_LENGTH(packet_buf));
+            goto restart;
+        }
+
+        // Beim Demo abspielen muss erst pausiert werden
+        if (is_file_source && next_packet_countdown > 0)
+            return 2;
+    }
+    
+    return 1;
+}
+
 static void client_readable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
 
@@ -185,65 +254,8 @@ static void client_readable(int fd, short event, void *arg) {
     
     traffic += ret;
 
-restart:
-    if (compression) {
-        char buf[8192];
-        strm.next_in   = EVBUFFER_DATA(in_buf);
-        strm.avail_in  = EVBUFFER_LENGTH(in_buf);
-        do {
-            strm.next_out  = (unsigned char*)buf;
-            strm.avail_out = sizeof(buf);
-
-            int ret = inflate(&strm, Z_SYNC_FLUSH);
-            if (ret != Z_OK && ret != Z_BUF_ERROR) {
-                client_destroy("decompression error");
-                return;
-            }
-
-            evbuffer_add(packet_buf, buf, sizeof(buf) - strm.avail_out);
-            if (EVBUFFER_LENGTH(packet_buf) > 1024 * 1024) {
-                client_destroy("too much to decompress. funny server?");
-                return;
-            }
-        } while (strm.avail_out == 0);
-        evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf) - strm.avail_in);
-    } else {
-        evbuffer_add_buffer(packet_buf, in_buf);
-        evbuffer_drain(in_buf, EVBUFFER_LENGTH(in_buf));
-    }
-
-    while (EVBUFFER_LENGTH(packet_buf) >= PACKET_HEADER_SIZE) {
-        int packet_len = PACKET_HEADER_SIZE + EVBUFFER_DATA(packet_buf)[0];
-
-        // Genuegend Daten da?
-        if (EVBUFFER_LENGTH(packet_buf) < packet_len)
-            break;
-
-        // Alten Kompressionszustand merken
-        int old_compression = compression;
-
-        // Packet rauspopeln...
-        static packet_t packet;
-        memcpy(&packet, EVBUFFER_DATA(packet_buf), packet_len);
-        packet_rewind(&packet);
-        client_handle_packet(&packet);
-        evbuffer_drain(packet_buf, packet_len);
-
-        // Disconnect Packet?
-        if (!client_is_connected()) 
-            return;
-
-        // Wurde Kompression aktiviert? Dann Rest des packet_buf zurueck 
-        // in den in_buf, da es sich dabei bereits um komprimierte Daten 
-        // handelt und diese oben erst dekomprimiert werden muessen.
-        if (compression != old_compression) {
-            evbuffer_add_buffer(in_buf, packet_buf);
-            evbuffer_drain(packet_buf, EVBUFFER_LENGTH(packet_buf));
-            goto restart;
-        }
-    }
-
-    event_add(cb_event, NULL);
+    if (client_parse_in_buf()) 
+        event_add(cb_event, NULL);
 }
 
 static void client_writable(int fd, short event, void *arg) {
@@ -274,34 +286,33 @@ int  client_is_connected() {
 }
 
 void file_loop(int delta) {
-    static packet_t packet;
-    static char errbuf[128];
     int ret;
+
     next_packet_countdown -= delta;
+    
     while (next_packet_countdown <= 0) {
-        ret = read(clientfd, &packet, PACKET_HEADER_SIZE);
-        if (ret != PACKET_HEADER_SIZE) {
-            snprintf(errbuf, sizeof(errbuf), "eof, reading header: want %d, got %d", PACKET_HEADER_SIZE, ret);
-            client_destroy(errbuf);
-            return;
+        switch (client_parse_in_buf()) {
+            // error -> disconnected
+            case 0: 
+                return;
+
+            // more data needed?
+            case 1: 
+                ret = evbuffer_read(in_buf, clientfd, 4096);
+
+                if (ret < 0) {
+                    client_destroy(strerror(errno));
+                    return;
+                } else if (ret == 0) { 
+                    client_destroy("eof");
+                    return;
+                }
+                
+                traffic += ret;
+                break;
+            case 2: // call again later
+                return;
         }
-
-        traffic += ret;
-        
-        ret = read(clientfd, &packet.data, packet.len);
-        if (ret != packet.len) {
-            snprintf(errbuf, sizeof(errbuf), "eof, reading packet: want %d, got %d", packet.len, ret);
-            client_destroy(errbuf);
-            return;
-        }
-
-        traffic += ret;
-        
-        packet_rewind(&packet);
-        client_handle_packet(&packet);
-
-        if (!client_is_connected()) 
-            return;
     }
 }
 
@@ -394,8 +405,12 @@ int client_open_file(char *filename) {
     return fd;
 }
 
-void client_init(char *source, char *demo_save_name) {
+void client_init(char *source) {
     struct stat stat_buf;
+
+    if (!strcmp(source, "-"))
+        source = "/dev/stdin";
+
     if (stat(source, &stat_buf) < 0) {
 #ifdef WIN32
         WSADATA wsa;
