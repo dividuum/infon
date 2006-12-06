@@ -34,8 +34,14 @@
 #include "misc.h"
 
 static creature_t creatures[MAXCREATURES];
-
 #define CREATURE_USED(creature) (!!((creature)->player))
+
+#define HASHTABLE_SIZE  ((MAXCREATURES) * 4)
+
+static creature_t *creature_hash[HASHTABLE_SIZE] = {0};
+#define HASHVALUE(id)   ((id) % (HASHTABLE_SIZE))
+
+static int next_free_vm_id = 0;
 
 static creature_t *creature_find_unused() {
     for (int i = 0; i < MAXCREATURES; i++) {
@@ -44,13 +50,6 @@ static creature_t *creature_find_unused() {
             return creature;
     }
     return NULL;
-}
-
-static void creature_make_smile(const creature_t *creature, client_t *client) {
-    packet_t packet;
-    packet_init(&packet, PACKET_CREATURE_SMILE);
-    packet_write16(&packet, creature_num(creature));
-    server_send_packet(&packet, client);
 }
 
 creature_t *creature_by_num(int creature_num) {
@@ -62,14 +61,21 @@ creature_t *creature_by_num(int creature_num) {
     return creature;
 }
 
+int creature_id(const creature_t *creature) {
+    return creature->vm_id;
+}
+
 creature_t *creature_get_checked_lua(lua_State *L, int idx) {
-    int creatureno = luaL_checklong(L, idx);
-    if (creatureno < 0 || creatureno >= MAXCREATURES) 
-        luaL_error(L, "creature number %d out of range", creatureno);
-    creature_t *creature = &creatures[creatureno];
-    if (!CREATURE_USED(creature)) 
-        luaL_error(L, "creature %d not in use", creatureno);
-    return creature;
+    const int vm_id = luaL_checklong(L, idx);
+    const int hash  = HASHVALUE(vm_id);
+    creature_t *creature = creature_hash[hash];
+    while (creature && CREATURE_USED(creature)) {
+        if (creature->vm_id == vm_id) 
+            return creature;
+        creature = creature->hash_next;
+    }
+    luaL_error(L, "creature %d not in use", vm_id);
+    return NULL; // never reached
 }
 
 int creature_dist(const creature_t *a, const creature_t *b) {
@@ -81,6 +87,13 @@ int creature_dist(const creature_t *a, const creature_t *b) {
 
 int creature_num(const creature_t *creature) {
     return creature - creatures;
+}
+
+static void creature_make_smile(const creature_t *creature, client_t *client) {
+    packet_t packet;
+    packet_init(&packet, PACKET_CREATURE_SMILE);
+    packet_write16(&packet, creature_num(creature));
+    server_send_packet(&packet, client);
 }
 
 int creature_groundbased(const creature_t *creature) {
@@ -879,8 +892,12 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     creature->suicide      = 0;
     creature->message[0]   = '\0';
     creature->spawn_time   = game_time;
-
+    creature->vm_id        = next_free_vm_id++;
     creature->age_action_deltas = 0;
+
+    const int hash = HASHVALUE(creature->vm_id);
+    creature->hash_next = creature_hash[hash] ? creature_hash[hash] : NULL;
+    creature_hash[hash] = creature;
 
     player_on_creature_spawned(player, creature, parent);
 
@@ -897,6 +914,18 @@ void creature_kill(creature_t *creature, creature_t *killer) {
 
     path_delete(creature->path);
     creature->player = NULL;
+
+    const int hash = HASHVALUE(creature->vm_id);
+    creature_t *tmp = creature_hash[hash];
+    if (tmp == creature) {
+        creature_hash[hash] = creature_hash[hash]->hash_next;
+    } else {
+        while (tmp->hash_next != creature) {
+            tmp = tmp->hash_next;
+            assert(tmp);
+        }
+        tmp->hash_next = creature->hash_next;
+    }
     
     creature_to_network(creature, CREATURE_DIRTY_ALIVE, SEND_BROADCAST);
 }
@@ -971,6 +1000,10 @@ void creature_init() {
         creature_t *creature = &creatures[i];
         creature->player = NULL;
     }
+}
+
+void creature_game_start() {
+    next_free_vm_id = 0;
 }
 
 void creature_shutdown() {

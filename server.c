@@ -32,7 +32,6 @@
 #include <assert.h>
 #include <fcntl.h>
 
-
 #include <lauxlib.h>
 #include <event.h>
 #include <zlib.h>
@@ -72,7 +71,7 @@ client_t *server_accept(int fd, const char *address) {
     // Demo Dumper wird leicht unterschiedlich behandelt
     client->is_demo_dumper = strstr(address, "special:demodumper") == address;
 
-    // Non Blocking setzen */
+    // Non Blocking setzen 
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
         fprintf(stderr, "cannot set accept()ed socket nonblocking: %s\n", strerror(errno));
         return NULL;

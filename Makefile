@@ -102,6 +102,7 @@ source-dist: distclean
 win32-client-dist: $(GUI_EXECUTABLE) $(SDL_RENDERER)
 	/opt/xmingw/bin/i386-mingw32msvc-strip $^
 	upx -9 --all-methods $(GUI_EXECUTABLE)
+	upx -9 --all-methods $(SDL_RENDERER)
 	zip infon-win32-r$(REVISION).zip README $^ gfx/*.fnt gfx/*.png example.demo
 
 linux-client-dist: $(GUI_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER)

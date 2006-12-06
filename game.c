@@ -175,6 +175,7 @@ void game_one_game() {
     int lasttick = 0;
     gettimeofday(&start, NULL);
 
+    creature_game_start();
     server_game_start();
     player_game_start();
 

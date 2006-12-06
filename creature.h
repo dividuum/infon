@@ -60,10 +60,14 @@ typedef struct creature_s {
     // Letzte uebermittelte Koordinate (fuer Delta Kompression)
     int             network_last_x;
     int             network_last_y;
+
+    int                 vm_id;
+    struct creature_s  *hash_next;
 } creature_t;
 
-int         creature_num(const creature_t *creature);
 creature_t *creature_by_num(int creature_num);
+
+int         creature_id(const creature_t *creature);
 creature_t *creature_get_checked_lua(lua_State *L, int idx);
 
 creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, creature_type type);
@@ -97,6 +101,7 @@ void        creature_send_initial_update(client_t *client);
 void        creature_to_network(creature_t *creature, int dirtymask, client_t *client);
 
 void        creature_init();
+void        creature_game_start();
 void        creature_shutdown();
 
 #endif
