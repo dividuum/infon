@@ -104,8 +104,8 @@ void player_add_event(player_t *player, creature_event event) {
 }
 
 void player_on_creature_spawned(player_t *player, creature_t *creature, creature_t *parent) {
-    lua_pushnumber(player->L, creature_num(creature));
-    lua_pushnumber(player->L, parent ? creature_num(parent) : -1);
+    lua_pushnumber(player->L, creature_id(creature));
+    lua_pushnumber(player->L, parent ? creature_id(parent) : -1);
     player_add_event(player, CREATURE_SPAWNED);
 
     player->num_creatures++;
@@ -113,9 +113,9 @@ void player_on_creature_spawned(player_t *player, creature_t *creature, creature
     // Rule Handler aufrufen
     lua_pushliteral(L, "onCreatureSpawned");
     lua_rawget(L, LUA_GLOBALSINDEX);         
-    lua_pushnumber(L, creature_num(creature));
+    lua_pushnumber(L, creature_id(creature));
     if (parent)
-        lua_pushnumber(L, creature_num(parent));
+        lua_pushnumber(L, creature_id(parent));
     else
         lua_pushnil(L);
     
@@ -126,8 +126,8 @@ void player_on_creature_spawned(player_t *player, creature_t *creature, creature
 }
 
 void player_on_creature_killed(player_t *player, creature_t *victim, creature_t *killer) {
-    lua_pushnumber(player->L, creature_num(victim));
-    lua_pushnumber(player->L, killer ? creature_num(killer) : -1);
+    lua_pushnumber(player->L, creature_id(victim));
+    lua_pushnumber(player->L, killer ? creature_id(killer) : -1);
     player_add_event(player, CREATURE_KILLED);
 
     player->num_creatures--;
@@ -140,9 +140,9 @@ void player_on_creature_killed(player_t *player, creature_t *victim, creature_t 
     // Rule Handler aufrufen
     lua_pushliteral(L, "onCreatureKilled");
     lua_rawget(L, LUA_GLOBALSINDEX);         
-    lua_pushnumber(L, creature_num(victim));
+    lua_pushnumber(L, creature_id(victim));
     if (killer)
-        lua_pushnumber(L, creature_num(killer));
+        lua_pushnumber(L, creature_id(killer));
     else
         lua_pushnil(L);
     
@@ -153,8 +153,8 @@ void player_on_creature_killed(player_t *player, creature_t *victim, creature_t 
 }
 
 void player_on_creature_attacked(player_t *player, creature_t *victim, creature_t *attacker) {
-    lua_pushnumber(player->L, creature_num(victim));
-    lua_pushnumber(player->L, creature_num(attacker));
+    lua_pushnumber(player->L, creature_id(victim));
+    lua_pushnumber(player->L, creature_id(attacker));
     player_add_event(player, CREATURE_ATTACKED);
 }
 
@@ -285,7 +285,7 @@ static int player_get_cpu_usage(player_t *player) {
 #define assure_is_players_creature()                            \
     do { if (player && creature->player != player)              \
         return luaL_error(L, "%d isn't your creature",          \
-                             creature_num(creature));           \
+                             creature_id(creature));            \
     } while(0)                                                                  
 
 static int luaSaveInRegistry(lua_State *L) {
@@ -369,7 +369,7 @@ static int luaCreatureGetNearestEnemy(lua_State *L) {
     const creature_t *nearest = creature_nearest_enemy(creature, &mindist);
     if (!nearest)
         return 0;
-    lua_pushnumber(L, creature_num(nearest));
+    lua_pushnumber(L, creature_id(nearest));
     lua_pushnumber(L, nearest->x);
     lua_pushnumber(L, nearest->y);
     lua_pushnumber(L, player_num(nearest->player));
@@ -426,6 +426,7 @@ static int luaCreatureGetMaxFood(lua_State *L) {
 
 static int luaCreatureGetPos(lua_State *L) {
     get_player_and_creature();
+    if (RESTRICTIVE) assure_is_players_creature();
     lua_pushnumber(L, creature->x);
     lua_pushnumber(L, creature->y);
     return 2;
@@ -519,22 +520,26 @@ static int luaGetKothPos(lua_State *L) {
 }
 
 static int luaCreatureExists(lua_State *L) {
+    if (RESTRICTIVE) luaL_error(L, "this function is not available in restricted mode");
     lua_pushboolean(L, !!creature_by_num(luaL_checklong(L, 1)));
     return 1;
 }
 
 static int luaPlayerExists(lua_State *L) {
+    if (RESTRICTIVE) luaL_error(L, "this function is not available in restricted mode");
     lua_pushboolean(L, !!player_by_num(luaL_checklong(L, 1)));
     return 1;
 }
 
 static int luaCreatureGetPlayer(lua_State *L) {
+    if (RESTRICTIVE) luaL_error(L, "this function is not available in restricted mode");
     const creature_t *creature = creature_get_checked_lua(L, 1);
     lua_pushnumber(L, player_num(creature->player));
     return 1;
 }
 
 static int luaPlayerScore(lua_State *L) {
+    if (RESTRICTIVE) luaL_error(L, "this function is not available in restricted mode");
     lua_pushnumber(L, player_get_checked_lua(L, 1)->score);
     return 1;
 }
@@ -1090,7 +1095,7 @@ static int luaCreatureSpawn(lua_State *L) {
     if (!creature)
         lua_pushnil(L);
     else
-        lua_pushnumber(L, creature_num(creature));
+        lua_pushnumber(L, creature_id(creature));
     return 1;
 }
 
