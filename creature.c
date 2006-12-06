@@ -69,7 +69,8 @@ creature_t *creature_get_checked_lua(lua_State *L, int idx) {
     const int vm_id = luaL_checklong(L, idx);
     const int hash  = HASHVALUE(vm_id);
     creature_t *creature = creature_hash[hash];
-    while (creature && CREATURE_USED(creature)) {
+    while (creature) {
+        assert(CREATURE_USED(creature));
         if (creature->vm_id == vm_id) 
             return creature;
         creature = creature->hash_next;
@@ -896,7 +897,7 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     creature->age_action_deltas = 0;
 
     const int hash = HASHVALUE(creature->vm_id);
-    creature->hash_next = creature_hash[hash] ? creature_hash[hash] : NULL;
+    creature->hash_next = creature_hash[hash];
     creature_hash[hash] = creature;
 
     player_on_creature_spawned(player, creature, parent);
