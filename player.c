@@ -589,7 +589,7 @@ static void player_set_color(player_t *player, int color) {
     (lua_pushnumber((p)->L, name), \
      lua_setglobal((p)->L, #name))
 
-player_t *player_create(const char *pass) {
+player_t *player_create(const char *pass, const char *highlevel) {
     int playerno;
 
     for (playerno = 0; playerno < MAXPLAYERS; playerno++) {
@@ -621,7 +621,6 @@ player_t *player_create(const char *pass) {
     luaL_openlibs(player->L);
 
     lua_register_player(player, "save_in_registry",     luaSaveInRegistry);
-    lua_register_player(player, "print",                luaPrint);
     lua_register_player(player, "suicide",              luaCreatureSuicide);
     lua_register_player(player, "set_path",             luaCreatureSetPath);
     lua_register_player(player, "get_pos",              luaCreatureGetPos);
@@ -685,17 +684,30 @@ player_t *player_create(const char *pass) {
     player_init_events(player);
 
     // player.lua sourcen
-    if (luaL_dofile(player->L, "player.lua")) {
-        fprintf(stderr, "cannot source 'player.lua': %s\n", lua_tostring(player->L, -1));
-        lua_close(player->L);
-        player->L = NULL;
-        return NULL;
+    if (luaL_loadfile(player->L, "player.lua")) {
+        fprintf(stderr, "cannot load 'player.lua': %s\n", lua_tostring(player->L, -1));
+        goto failed;
     }
+
+    lua_pushstring(player->L, highlevel);
+
+    // starten
+    if (lua_pcall(player->L, 1, 0, 0) != 0) {
+        fprintf(stderr, "cannot execute 'player.lua': %s\n", lua_tostring(player->L, -1));
+        goto failed;
+    }
+
+    lua_register_player(player, "print", luaPrint);
     
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 
     player_on_created(player);
     return player;
+
+failed:
+    lua_close(player->L);
+    player->L = NULL;
+    return NULL;
 }
 
 void player_destroy(player_t *player) {
@@ -1027,7 +1039,8 @@ static int luaPlayerSpawnTime(lua_State *L) {
 }
 
 static int luaPlayerCreate(lua_State *L) {
-    player_t *player = player_create(luaL_checkstring(L, 1));
+    player_t *player = player_create(luaL_checkstring(L, 1), 
+                                     luaL_checkstring(L, 2));
     
     if (player) {
         lua_pushnumber(L, player_num(player));

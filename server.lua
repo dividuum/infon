@@ -56,7 +56,7 @@ function Client:joinmenu()
             self:writeln("password empty? aborting")
             return
         end
-        playerno = player_create(password)
+        playerno = player_create(password, self.highlevel)
         if playerno == nil then 
             self:writeln("could not join: full?")
             return
@@ -166,6 +166,27 @@ function Client:killmenu()
     self:write("kill all your creatures? [y/N] ")
     if self:readln() == "y" then
         self:kill()
+    end
+end
+
+function Client:highmenu() 
+    self:writeln("------------------------------")
+    for n, file in ipairs(highlevel) do
+        self:writeln(string.format("%3d - %-s", n, file))
+    end
+    self:writeln("------------------------------")
+    self:write("choose your api: ")
+    local num = self:readln()
+    if not isnumber(num) then
+        self:writeln("not numeric")
+        return
+    end
+    local api = highlevel[tonumber(num)]
+    if not api then
+        self:writeln("no highlevel api " .. num)
+    else
+        self.highlevel = api
+        self:writeln("highlevel api set to '" .. api .. '"')
     end
 end
 
@@ -324,6 +345,7 @@ function Client:mainmenu()
                 self:writeln("fwd    - set unknown command forward")
                 self:writeln("prompt - change prompt")
                 self:writeln("bb     - hex batch (load precompiled code)")
+                self:writeln("hl     - choose highlevel api")
                 self:writeln("0 - 9  - execute onInputX()")
                 self:menu_footer()
             elseif self.forward_unknown then
@@ -334,14 +356,20 @@ function Client:mainmenu()
         else
             if     input == "j" then
                 self:joinmenu() 
+            elseif input == "hl" then
+                self:highmenu()
             elseif input == "?" then
                 self:menu_header()
                 self:writeln("j - oin game")
                 self:writeln("s - how scores")
                 self:writeln("q - uit")
                 self:menu_footer()
+            elseif input == "??" then
+                self:menu_header()
+                self:writeln("hl     - choose highlevel api")
+                self:menu_footer()
             else
-                self:writeln("huh? use '?' for help")
+                self:writeln("huh? use '?' for help, or '??' for even more help.")
             end
         end
     end
