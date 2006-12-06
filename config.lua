@@ -30,5 +30,8 @@ acl        = {{ pattern = "^ip:127\.0\..*"             },
               { pattern = ".*"                         },
               { pattern = ".*", deny = "access denied" }}
 
+-- available highlevel apis
+highlevel  =  { 'player-highlevel' }
+
 -- show banner?              
--- no_banner = true              
+-- no_banner = true

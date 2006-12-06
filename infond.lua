@@ -95,6 +95,7 @@ function Client:on_new_client(addr)
     self.prompt          = "> "
     self.failed_shell    = 0
     self.forward_unknown = false
+    self.highlevel       = highlevel[1]
     print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
     self.thread = coroutine.create(self.handler)

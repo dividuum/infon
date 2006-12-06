@@ -84,7 +84,7 @@ void        player_execute_client_lua(client_t *result_client, player_t *player,
 void        player_writeto(player_t *player, const void *data, size_t size);
 
 void        player_set_name(player_t *player, const char *name);
-player_t   *player_create(const char *pass);
+player_t   *player_create(const char *pass, const char *highlevel);
 
 void        player_think();
 
