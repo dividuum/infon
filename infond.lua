@@ -24,6 +24,15 @@
 
 require 'config'
 
+stats  = {
+    num_clients     = 0;
+    num_refused     = 0;
+    num_players     = 0;
+    num_maps        = 0;
+    num_exec        = 0;
+    start_time      = os.time();
+}
+
 -----------------------------------------------------------
 -- Klasse fuer Clientverbindung
 -----------------------------------------------------------
@@ -33,6 +42,8 @@ clients= {}
 Client = {}
 
 function Client.create(fd, addr)
+    stats.num_clients = stats.num_clients + 1
+
     local obj = {}
     setmetatable(obj, {
         __index = function(self, what)
@@ -44,7 +55,7 @@ function Client.create(fd, addr)
         end
     })
     clients[fd] = obj
-    obj.fd   = fd
+    obj.fd      = fd
     obj:on_new_client(addr)
 end
 
@@ -54,6 +65,7 @@ function Client.check_accept(addr)
             table.remove(acl, n)
         elseif string.match(addr, rule.pattern) then
             if rule.deny then
+                stats.num_refused = stats.num_refused + 1
                 return false, "refusing connection " .. addr .. ": " .. rule.deny .. "\r\n"
             else
                 return true
@@ -74,8 +86,12 @@ function Client:nextpaste()
     return paste
 end
 
-function Client:pastename(num) 
-    return "paste " .. num .. " from client " .. self.fd
+function Client:paste_name(num) 
+    return num
+end
+
+function Client:paste_full_name(num) 
+    return "paste " .. self:paste_name(num) .. " from client " .. self.fd
 end
 
 function Client:kick_ban(reason, time)
@@ -96,8 +112,13 @@ function Client:on_new_client(addr)
     self.failed_shell    = 0
     self.forward_unknown = false
     self.highlevel       = highlevel[1]
+    self.last_action     = {}
     print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
+    self:start_thread()
+end
+
+function Client:start_thread() 
     self.thread = coroutine.create(self.handler)
     local ok, msg = coroutine.resume(self.thread, self)
     if not ok then
@@ -110,24 +131,17 @@ function Client:on_destroy(reason)
     scroller_add(self.addr .. " disconnected: " .. reason)
 end
 
-
 function Client:on_input(line)
     local ok, msg = coroutine.resume(self.thread, line)
     if not ok then
         self:writeln(msg)
         self:writeln("restarting mainloop...")
-        self.thread = coroutine.create(self.handler)
-        local ok, msg = coroutine.resume(self.thread, self)
-        if not ok then
-            self:disconnect(msg)
-        end
+        self:start_thread()
     end
 end
 
 function Client:disconnect(reason)
-    if not string.match(self.addr, "^special:") then 
-        client_disconnect(self.fd, reason)
-    end
+    client_disconnect(self.fd, reason)
 end
 
 function Client:write(data) 
@@ -157,6 +171,8 @@ function Client:detach()
     local playerno = self:get_player()
     if playerno then
         client_detach_from_player(self.fd, playerno)
+    else
+        self:writeln("you cannot detach since you are not attached")
     end
 end
 
@@ -179,20 +195,28 @@ end
 
 function Client:set_color(color)
     local playerno = self:get_player()
-    player_set_color(playerno, color)
+    if playerno then
+        player_set_color(playerno, color)
+    else
+        self:writeln("you have no player!")
+    end
 end
 
 function Client:kill()
     if self:get_player() then
         player_kill(self:get_player())
-        return true
     else
-        return false
+        self:writeln("no need to kill. you have no player")
     end
 end
 
 function Client:execute(code, name)
-    client_execute(self.fd, code, self.local_output, name)
+    if self:get_player() then
+        stats.num_exec = stats.num_exec + 1
+        client_execute(self.fd, code, self.local_output, name)
+    else
+        self:writeln("no player to execute the code. sorry")
+    end
 end
 
 function Client:writeln(line)
@@ -203,11 +227,14 @@ function Client:writeln(line)
     end
 end
 
-function Client:check_repeat(name, time)
-    if not self[name] or game_time() < self[name] or game_time() > self[name] + time then
-        self[name] = game_time()
+function Client:rate_limit(action, every)
+    local time, last = game_time(), self.last_action[action]
+    if not last or time < last or time > last + every then 
+        self.last_action[action] = game_time()
         return true
     else
+        self:writeln(string.format("%s too fast. please wait %.1fs...", 
+                                   action, (every - (time - last)) / 1000))
         return false
     end
 end
@@ -288,14 +315,6 @@ end
 -- World Funktionen
 -----------------------------------------------------------
 
-function world_main()
-    level_init()
-    while true do
-        level_tick()
-        coroutine.yield()
-    end
-end
-
 current_map = 1
 map         = maps[current_map]
 
@@ -307,12 +326,65 @@ function world_rotate_map()
     map = maps[current_map]
 end
 
-function world_init()
-    dofile("level/" .. map .. ".lua")
-    local w,  h  = level_size()
-    local kx, ky = level_koth_pos()
-    world_tick = coroutine.wrap(world_main)
+function world_load(map)
+    local world_code = assert(loadfile("level/" .. map .. ".lua"))
+
+    -- prepare safe world environment
+    world = {
+        -- lua functions
+        print             = print;
+        pairs             = pairs;
+        math              = { random = math.random };
+        string            = { upper  = string.upper;
+                              sub    = string.sub;
+                              len    = string.len; };
+        table             = { getn   = table.getn  };                                
+        
+        -- game functions
+        world_dig         = world_dig;
+        world_find_digged = world_find_digged;
+        world_add_food    = world_add_food;
+        game_info         = game_info;
+  
+        -- game constants                              
+        TILE_SOLID        = TILE_SOLID;
+        TILE_PLAIN        = TILE_PLAIN;
+        TILE_WATER        = TILE_WATER;
+    }
+
+    -- activate environment for world code and load world
+    setfenv(world_code, world)()
+
+    local w,  h  = world.level_size()
+    local kx, ky = world.level_koth_pos()
     return w, h, kx, ky
+end
+
+function world_init()
+    stats.num_maps = stats.num_maps + 1
+    local ok, w, h, kx, ky = pcall(world_load, map)
+    if not ok then
+        print("cannot load world '" .. map .. "': " .. w .. ". using 3x3 dummy world")
+        world_tick = coroutine.wrap(function () while true do coroutine.yield() end end)
+        return 3, 3, 1, 1
+    else
+        world_tick = coroutine.wrap(world_main)
+        return w, h, kx, ky
+    end
+end
+
+function world_main()
+    local ok, ret = pcall(world.level_init)
+    if not ok then
+        print("initializing world failed: " .. ret)
+    end
+    while true do
+        ok, ret = pcall(world.level_tick)
+        if not ok then
+            print("calling level_tick failed: " .. ret)
+        end
+        coroutine.yield()
+    end
 end
 
 function world_add_food_by_worldcoord(x, y, amount)

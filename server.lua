@@ -23,10 +23,8 @@
 -----------------------------------------------------------
 
 function Client:joinmenu()
-    if not self:check_repeat("last_join", 3000) then
-        self:writeln("joining too fast. please wait...")
-        return
-    end
+    if not self:rate_limit("joining", 3000) then return end
+
     self:writeln("------------------------------")
     local numplayers = 0
     for n = 0, MAXPLAYERS - 1 do 
@@ -53,17 +51,25 @@ function Client:joinmenu()
         self:write("password for new player: ")
         password = self:readln()
         if password == "" then
-            self:writeln("password empty? aborting")
+            self:writeln("you cannot join with an empty password.")
             return
         end
+
+        if disable_joining then
+            self:writeln("joining is currently disabled: " .. disable_joining)
+            return
+        end
+    
         playerno = player_create(password, self.highlevel)
         if playerno == nil then 
-            self:writeln("could not join: full?")
+            self:writeln("cannot join: full?")
             return
         end
+
+        stats.num_players = stats.num_players + 1
     else
         if not isnumber(playerno) then
-            self:writeln("playernum not numeric.")
+            self:writeln("the player number must be numeric!")
             return
         end
         self:write("password for player " .. playerno .. ": ")
@@ -85,10 +91,7 @@ function Client:partmenu()
 end
 
 function Client:namemenu() 
-    if not self:check_repeat("last_name", 1000) then
-        self:writeln("changing too fast. please wait")
-        return
-    end
+    if not self:rate_limit("changing name", 1000) then return end
 
     self:write("Player Name: ")
     if not self:set_name(self:readln()) then
@@ -97,10 +100,7 @@ function Client:namemenu()
 end
 
 function Client:colormenu() 
-    if not self:check_repeat("last_color", 1000) then
-        self:writeln("changing too fast. please wait")
-        return
-    end
+    if not self:rate_limit("changing color", 1000) then return end
 
     self:write("color (0 - 255): ")
     local color = self:readln()
@@ -114,19 +114,19 @@ end
 function Client:luamenu() 
     while true do 
         local paste = self:nextpaste()
-        self:write("lua(" .. paste .. ")> ")
+        self:write("lua(" .. self:paste_name(paste) .. ")> ")
         local line = self:readln()
         if line == "" then 
             break
         else
-            self:execute(line, self:pastename(paste))
+            self:execute(line, self:paste_full_name(paste))
         end
     end
 end
 
 function Client:batchmenu()
     local paste = self:nextpaste()
-    self:writeln("enter your lua code for paste " .. paste .. ". '.' ends input.")
+    self:writeln("enter your lua code for paste " .. self:paste_name(paste) .. ". '.' ends input.")
     local code = ""
     while true do 
         local input = self:readln()
@@ -140,12 +140,12 @@ function Client:batchmenu()
             return
         end
     end
-    self:execute(code, self:pastename(paste))
+    self:execute(code, self:paste_full_name(paste))
 end
 
 function Client:hexbatchmenu()
     local paste = self:nextpaste()
-    self:writeln("enter your hex-encoded lua code for paste " .. paste .. ". '.' ends input")
+    self:writeln("enter your hex-encoded lua code for paste " .. self:paste_name(paste) .. ". '.' ends input")
     local code = ""
     while true do 
         local input = self:readln()
@@ -159,7 +159,7 @@ function Client:hexbatchmenu()
             return
         end
     end
-    self:execute(hex_decode(code), self:pastename(paste))
+    self:execute(hex_decode(code), self:paste_full_name(paste))
 end
 
 function Client:killmenu() 
@@ -199,10 +199,7 @@ function Client:shell()
             self:writeln("password must be set in config.lua")
             return
         end
-        if not self:check_repeat("last_shell", 3000) then
-            self:writeln("you're too fast. please wait.")
-            return
-        end
+        if not self:rate_limit("entering the shell", 5000) then return end
         self:write("password: ")
         ok = self:readln() == debugpass 
     end
@@ -266,6 +263,24 @@ function Client:showscores()
     self:writeln("-------+-----------+------+---------+-----+----+-------------")
 end
 
+function Client:info()
+    self:writeln("-------------------------------------------------")
+    self:writeln("Server Information")
+    self:writeln("-------------------+-----------------------------")
+    self:writeln("uptime             | " .. (os.time() - stats.start_time) .. "s")
+    self:writeln("cpu usage          | " .. os.clock() .. "s")
+    self:writeln("-------------------+------------------------------")
+    self:writeln("accepted clients   | " .. stats.num_clients)
+    self:writeln("refused clients    | " .. stats.num_refused)
+    self:writeln("joined players     | " .. stats.num_players)
+    self:writeln("played maps        | " .. stats.num_maps)
+    self:writeln("code executions    | " .. stats.num_exec)
+    self:writeln("-------------------+------------------------------")
+    self:writeln("time limit         | " .. (time_limit and string.format("%ds", time_limit / 1000) or "none"))
+    self:writeln("score limit        | " .. (score_limit or "none"))
+    self:writeln("-------------------------------------------------")
+end
+
 function Client:menu_header()
     self:writeln("-------------------------------------------------")
     self:writeln(GAME_NAME)
@@ -292,6 +307,8 @@ function Client:mainmenu()
             self.prompt = self:readln()
         elseif input == "shell" then
             self:shell()
+        elseif input == "info" then
+            self:info()
         elseif input == "" then
             -- nix
         elseif self:get_player() then
@@ -347,11 +364,12 @@ function Client:mainmenu()
                 self:writeln("bb     - hex batch (load precompiled code)")
                 self:writeln("hl     - choose highlevel api")
                 self:writeln("0 - 9  - execute onInputX()")
+                self:writeln("info   - server information")
                 self:menu_footer()
             elseif self.forward_unknown then
                 self:execute("onCommand(" .. string.format("%q", input) .. ")", "onCommand")
             else
-                self:writeln("huh? use '?' for help, or '??' for even more help.")
+                self:writeln("huh? use '?' for help")
             end
         else
             if     input == "j" then
@@ -360,16 +378,21 @@ function Client:mainmenu()
                 self:highmenu()
             elseif input == "?" then
                 self:menu_header()
-                self:writeln("j - oin game")
+                if disable_joining then
+                    self:writeln("j - oin game (currently disabled)")
+                else
+                    self:writeln("j - oin game")
+                end
                 self:writeln("s - how scores")
-                self:writeln("q - uit")
+                self:writeln("q - uit                    use '??' for more help")
                 self:menu_footer()
             elseif input == "??" then
                 self:menu_header()
                 self:writeln("hl     - choose highlevel api")
+                self:writeln("info   - server information")
                 self:menu_footer()
             else
-                self:writeln("huh? use '?' for help, or '??' for even more help.")
+                self:writeln("huh? use '?' for help")
             end
         end
     end
@@ -382,7 +405,7 @@ function Client:gui_client_menu()
 end
 
 function Client:handler()
-    if self.fd == 0 then -- XXX: HACK, stdin client
+    if self.addr == "special:console" then 
         self.authorized = true
         self:writeln("")
     else

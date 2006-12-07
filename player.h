@@ -39,7 +39,8 @@ typedef struct player_s {
     int           num_clients;
     client_t     *clients;
 
-    client_t     *bot_output_client;
+    client_t     *output_client;     // if set, output is limited to this client
+    client_t     *bot_output_client; // output client used during botcode execution
 
     int           score;
     int           koth_time;
@@ -63,8 +64,9 @@ typedef struct player_s {
 typedef enum {
     CREATURE_SPAWNED,
     CREATURE_KILLED,
-    CREATURE_ATTACKED
-} creature_event;
+    CREATURE_ATTACKED,
+    PLAYER_CREATED
+} vm_event;
 
 struct creature_s;
 
