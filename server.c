@@ -182,9 +182,11 @@ static void server_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
+#ifdef CONSOLE_CLIENT    
     // HACK um die Ausgabe des Consolenclients an
     // stdout statt stdin zu schicken.
     if (fd == STDIN_FILENO) fd = STDOUT_FILENO; 
+#endif
 
     // Kompressionsrest flushen
     if (client->compress) {
@@ -341,7 +343,11 @@ void server_destroy(client_t *client, const char *reason) {
             guiclients = client->next_gui;
         }
     }
-    close(fd);
+    
+#ifdef CONSOLE_CLIENT    
+    if (fd != STDIN_FILENO)
+#endif
+        close(fd);
 }
 
 static void initial_update(client_t *client) {

@@ -269,18 +269,20 @@ void world_init() {
     if (lua_pcall(L, 0, 4, 0) != 0) {
         fprintf(stderr, "error calling world_init: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
+        world_w = world_h = 3;
+        koth_x  = koth_y  = 1;
+    } else {
+        world_w = lua_tonumber(L, -4);
+        world_h = lua_tonumber(L, -3);
+
+        koth_x  = lua_tonumber(L, -2);
+        koth_y  = lua_tonumber(L, -1);
+
+        lua_pop(L, 4);
     }
 
-    world_w = lua_tonumber(L, -4);
-    world_h = lua_tonumber(L, -3);
-
-    koth_x  = lua_tonumber(L, -2);
-    koth_y  = lua_tonumber(L, -1);
-
-    lua_pop(L, 4);
-
-    if (world_w < 10 || world_w > 255 ||
-        world_h < 10 || world_h > 255)
+    if (world_w < 3 || world_w > 255 ||
+        world_h < 3 || world_h > 255)
         die("world size invalid: %d x %d", world_w, world_h);
 
     if (koth_x <= 0 || koth_x >= world_w - 1 ||

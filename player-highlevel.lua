@@ -231,9 +231,14 @@ function Creature:main_restarter()
     end
 end
 
+function Creature:traceback()
+    print(_TRACEBACK(self.thread))
+end
+
 function Creature:restart()
     set_state(self.id, CREATURE_IDLE)
     self.thread = coroutine.create(self.main_restarter)
+ -- self.thread = coroutine.create(function(self) self:main_restarter() end)
     if self.onRestart then
         local ok, msg = pcall(self.onRestart, self)
         if not ok then 
@@ -266,23 +271,11 @@ creatures = {}
 function player_think(events)
     can_yield = false
 
-    -- Gesetzt nach Rundenstart und/oder Joinen
-    if  _player_created then
-        _player_created = nil
-        if onGameStart then
-            local ok, msg = pcall(onGameStart)
-            if not ok then
-                print("onGameStart failed: " .. msg)
-            end
-        end
-    end
-
     -- Events abarbeiten
     for n, event in ipairs(events) do 
-        local event_type, id, other = unpack(event) 
-        if event_type == CREATURE_SPAWNED then
-            -- id = id der neuen creature, other = id des parents oder -1
-            local parent = other ~= -1 and other or nil
+        if event.type == CREATURE_SPAWNED then
+            local id     = event.id
+            local parent = event.parent ~= -1 and event.parent or nil
             local creature = {}
             setmetatable(creature, {
                 __index    = Creature, 
@@ -309,9 +302,9 @@ function player_think(events)
                 print("onSpawned method deleted")
             end
             creature:restart()
-        elseif event_type == CREATURE_KILLED then
-            -- id = id der getoeteten creature, other = id des killers oder -1
-            local killer = other ~= -1 and other or nil
+        elseif event.type == CREATURE_KILLED then
+            local id     = event.id
+            local killer = event.killer ~= -1 and event.killer or nil
             assert(creatures[id])
             if creatures[id].onKilled then 
                 local ok, msg = pcall(creatures[id].onKilled, creatures[id], killer)
@@ -322,18 +315,26 @@ function player_think(events)
                 print("onKilled method deleted")
             end
             creatures[id] = nil
-        elseif event_type == CREATURE_ATTACKED then
-            -- id = id der angegriffenen creature, other = id des angreifers
+        elseif event.type == CREATURE_ATTACKED then
+            local id       = event.id
+            local attacker = event.attacker
             if creatures[id].onAttacked then 
-                local ok, msg = pcall(creatures[id].onAttacked, creatures[id], other)
+                local ok, msg = pcall(creatures[id].onAttacked, creatures[id], attacker)
                 if not ok then 
                     print("onAttacked failed: " .. msg)
                 end
             else
                 print("onAttacked method deleted")
             end
+        elseif event.type == PLAYER_CREATED then
+            if onGameStart then
+                local ok, msg = pcall(onGameStart)
+                if not ok then
+                    print("onGameStart failed: " .. msg)
+                end
+            end
         else
-            error("invalid event " .. event_type)
+            error("invalid event " .. event.type)
         end
     end
 

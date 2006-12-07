@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
     luaL_openlibs(L);
     if (luaL_dofile(L, "infond.lua")) 
-        die("cannot read 'infond.lua': ", lua_tostring(L, -1));
+        die("cannot read 'infond.lua': %s", lua_tostring(L, -1));
 
     game_init();
     server_init();

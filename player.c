@@ -39,7 +39,6 @@
 
 static player_t players[MAXPLAYERS];
 static player_t *king_player   = NULL;
-static client_t *output_client = NULL;
 
 void player_score(player_t *player, int scoredelta, const char *reason) {
     char buf[1024];
@@ -85,28 +84,29 @@ void player_init_events(player_t *player) {
     lua_settable(player->L, LUA_REGISTRYINDEX);
 }
 
-// Erwartet Name an -2 und Wert an -1
-void player_add_event(player_t *player, creature_event event) {
+// erwartet values x [key, value] paare
+void player_add_event(player_t *player, vm_event event, int values) {
     lua_pushliteral(player->L, "events");
-    lua_rawget(player->L, LUA_REGISTRYINDEX); // name val _events        
+    lua_rawget(player->L, LUA_REGISTRYINDEX);           // kv* _events        
     assert(!lua_isnil(player->L, -1));
-    lua_createtable(player->L, 3, 0);         // name val _events t
-    lua_pushnumber(player->L, event);         // name val _events t e
-    lua_rawseti(player->L, -2, 1);            // name val _events t
-    lua_insert(player->L, -3);                // name t val _events 
-    lua_insert(player->L, -4);                // _events name t val
-    lua_rawseti(player->L, -2, 3);            // _events name t
-    lua_insert(player->L, -2);                // _events t name
-    lua_rawseti(player->L, -2, 2);            // _events t
-    size_t size = lua_objlen(player->L, -2);
-    lua_rawseti(player->L, -2, size + 1);     // _events
-    lua_pop(player->L, 1);                    //
+    lua_createtable(player->L, 3, 0);                   // kv* _events event
+    lua_pushliteral(player->L, "type");                 // kv* _events event 'type'
+    lua_pushnumber(player->L, event);                   // kv* _events event 'type' id
+    lua_rawset(player->L, -3);                          // kv* _events event
+    lua_insert(player->L, -2);                          // kv* event _events 
+    lua_insert(player->L, -2 - 2 * values);             // _events kv* event
+    lua_insert(player->L, -1 - 2 * values);             // _events event kv*
+    for (int i = 0; i < values; i++) 
+        lua_rawset(player->L, - 1 - 2 * (values - i));  // _events event kv*
+    size_t size = lua_objlen(player->L, -2);            // _events
+    lua_rawseti(player->L, -2, size + 1);               // _events
+    lua_pop(player->L, 1);                              //
 }
 
 void player_on_creature_spawned(player_t *player, creature_t *creature, creature_t *parent) {
-    lua_pushnumber(player->L, creature_id(creature));
-    lua_pushnumber(player->L, parent ? creature_id(parent) : -1);
-    player_add_event(player, CREATURE_SPAWNED);
+    lua_pushliteral(player->L, "id");     lua_pushnumber(player->L, creature_id(creature));
+    lua_pushliteral(player->L, "parent"); lua_pushnumber(player->L, parent ? creature_id(parent) : -1);
+    player_add_event(player, CREATURE_SPAWNED, 2);
 
     player->num_creatures++;
         
@@ -120,15 +120,15 @@ void player_on_creature_spawned(player_t *player, creature_t *creature, creature
         lua_pushnil(L);
     
     if (lua_pcall(L, 2, 0, 0) != 0) {
-        fprintf(stderr, "error calling onCreaturSpawned: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "error calling onCreatureSpawned: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 }
 
 void player_on_creature_killed(player_t *player, creature_t *victim, creature_t *killer) {
-    lua_pushnumber(player->L, creature_id(victim));
-    lua_pushnumber(player->L, killer ? creature_id(killer) : -1);
-    player_add_event(player, CREATURE_KILLED);
+    lua_pushliteral(player->L, "id");     lua_pushnumber(player->L, creature_id(victim));
+    lua_pushliteral(player->L, "killer"); lua_pushnumber(player->L, killer ? creature_id(killer) : -1);
+    player_add_event(player, CREATURE_KILLED, 2);
 
     player->num_creatures--;
 
@@ -153,9 +153,9 @@ void player_on_creature_killed(player_t *player, creature_t *victim, creature_t 
 }
 
 void player_on_creature_attacked(player_t *player, creature_t *victim, creature_t *attacker) {
-    lua_pushnumber(player->L, creature_id(victim));
-    lua_pushnumber(player->L, creature_id(attacker));
-    player_add_event(player, CREATURE_ATTACKED);
+    lua_pushliteral(player->L, "id");       lua_pushnumber(player->L, creature_id(victim));
+    lua_pushliteral(player->L, "attacker"); lua_pushnumber(player->L, creature_id(attacker));
+    player_add_event(player, CREATURE_ATTACKED, 2);
 }
 
 void player_on_all_dead(player_t *player) {
@@ -175,6 +175,10 @@ void player_on_created(player_t *player) {
     player->all_disconnected_time = game_time;
     player->spawn_time            = game_time;
 
+    // Event eintragen
+    lua_pushliteral(player->L, "id"); lua_pushnumber(player->L, player_num(player));
+    player_add_event(player, PLAYER_CREATED, 1);
+
     // Rule Handler aufrufen
     lua_pushliteral(L, "onPlayerCreated");
     lua_rawget(L, LUA_GLOBALSINDEX);         
@@ -183,10 +187,6 @@ void player_on_created(player_t *player) {
         fprintf(stderr, "error calling onPlayerCreated: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
-    
-    lua_pushliteral(player->L, "_player_created");
-    lua_pushnumber(player->L, player_num(player));
-    lua_rawset(player->L, LUA_GLOBALSINDEX);         
 }
 
 static int player_at_panic(lua_State *L) {
@@ -674,6 +674,7 @@ player_t *player_create(const char *pass, const char *highlevel) {
     lua_register_player_global(player, CREATURE_SPAWNED);
     lua_register_player_global(player, CREATURE_KILLED);
     lua_register_player_global(player, CREATURE_ATTACKED);
+    lua_register_player_global(player, PLAYER_CREATED);
 
     lua_pushnumber(player->L, playerno);
 
@@ -741,7 +742,7 @@ void player_writeto(player_t *player, const void *data, size_t size) {
             
     client_t *client = player->clients;
     do {
-        if (!output_client || output_client == client)
+        if (!player->output_client || player->output_client == client)
             server_writeto(client, data, size);
         client = client->next;
     } while (client != player->clients);
@@ -842,13 +843,9 @@ int player_detach_client(client_t *client, player_t *player) {
     return 1;
 }
 
-void player_execute_client_lua(client_t *result_client, player_t *player, const char *code, size_t codelen, const char *where) {
-    // switch output to specified client (if given)
-    output_client = result_client;
-
-    int error = luaL_loadbuffer(player->L, code, codelen, where);
-
-    if (!error) {
+void player_execute_client_lua(client_t *output_client, player_t *player, const char *code, size_t codelen, const char *where) {
+    player->output_client = output_client;
+    if (luaL_loadbuffer(player->L, code, codelen, where) == 0) {
         call_user_lua("during interactive execution", player, 0);
     } else {
         const char *msg = lua_tostring(player->L, -1);
@@ -858,9 +855,7 @@ void player_execute_client_lua(client_t *result_client, player_t *player, const 
         player_writeto(player, "\r\n", 2); 
         lua_pop(player->L, 1);
     }
-
-    // switch back to player-based output
-    output_client = NULL;
+    player->output_client = NULL;
 }
 
 void player_think() {
@@ -912,9 +907,9 @@ void player_think() {
         lua_rawget(player->L, LUA_GLOBALSINDEX);         
         lua_pushliteral(player->L, "events");
         lua_rawget(player->L, LUA_REGISTRYINDEX);
-        output_client = player->bot_output_client;
+        player->output_client = player->bot_output_client; 
         call_user_lua("calling player_think", player, 1);
-        output_client = NULL;
+        player->output_client = NULL;
 
         // Events Strukur neu initialisieren
         player_init_events(player);
