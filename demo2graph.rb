@@ -3,9 +3,9 @@ require 'zlib'
 require 'stringio'
 
 class Tile
-    attr_accessor :food, :type
-    def initialize(type, food)
-        @food, @type = food == 0xFF ? 0 : food + 1, type
+    attr_accessor :food, :type, :gfx
+    def initialize(type, gfx, food)
+        @food, @type, @gfx = food, type, gfx
     end
 end
 
@@ -106,7 +106,9 @@ class InfonDemo
                     player.score = @file.read16 - 500
                 end
             when 1:
-                @world[[@file.read8, @file.read8]] = Tile.new(@file.read8, @file.read8)
+                pos = [@file.read8, @file.read8]
+                food_type, gfx = @file.read8, @file.read8
+                @world[pos] = Tile.new(food_type & 0xF0 >> 4, gfx, food_type & 0xF)
             when 2:
                 msg = @file.readXX(len)
             when 3: 

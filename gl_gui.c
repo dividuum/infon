@@ -399,7 +399,7 @@ static void world_draw() {
         for (int x = 0; x < info->width; x++) {
             glPushMatrix();
                 glTranslatef(TILE_X1(x), TILE_Y1(y), 0.0);
-                switch (tile->map) {
+                switch (tile->type) {
                     case TILE_SOLID:
                         wall_draw();
                         break;

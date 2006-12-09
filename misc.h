@@ -36,8 +36,13 @@ int yesno(const char *fmt, ...);
 #define max(a,b) ((a)>(b)?(a):(b))
 #endif
 
+#define limit(v,a,b) ((v)<(a)?(a):((v)>(b)?(b):(v)))
+
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
+
+#define lua_register_constant(L, name) \
+    do { lua_pushnumber(L, name); lua_setglobal(L, #name); } while (0)
 
 #define save_lua_stack(L, diff)         \
     lua_State *check_L = L;             \

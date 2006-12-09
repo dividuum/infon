@@ -334,6 +334,7 @@ function world_load(map)
         -- lua functions
         print             = print;
         pairs             = pairs;
+        unpack            = unpack;
         math              = { random = math.random };
         string            = { upper  = string.upper;
                               sub    = string.sub;
@@ -342,14 +343,31 @@ function world_load(map)
         
         -- game functions
         world_dig         = world_dig;
+        world_set_type    = world_set_type;
+        world_set_gfx     = world_set_gfx;
+        world_get_type    = world_get_type;
+        world_get_gfx     = world_get_gfx;
         world_find_digged = world_find_digged;
         world_add_food    = world_add_food;
+        world_make_border = world_make_border;
+        world_fill_all    = world_fill_all;
         game_info         = game_info;
   
         -- game constants                              
-        TILE_SOLID        = TILE_SOLID;
-        TILE_PLAIN        = TILE_PLAIN;
-        TILE_WATER        = TILE_WATER;
+        TILE_SOLID                 = TILE_SOLID;
+        TILE_PLAIN                 = TILE_PLAIN;
+        TILE_WATER                 = 2; -- compatibility
+
+        TILE_GFX_SOLID             = TILE_GFX_SOLID;
+        TILE_GFX_PLAIN             = TILE_GFX_PLAIN;
+        TILE_GFX_BORDER            = TILE_GFX_BORDER;
+        TILE_GFX_SNOW_SOLID        = TILE_GFX_SNOW_SOLID;
+        TILE_GFX_SNOW_PLAIN        = TILE_GFX_SNOW_PLAIN;
+        TILE_GFX_SNOW_BORDER       = TILE_GFX_SNOW_BORDER;
+        TILE_GFX_WATER             = TILE_GFX_WATER;
+        TILE_GFX_LAVA              = TILE_GFX_LAVA;
+        TILE_GFX_NONE              = TILE_GFX_NONE;
+        TILE_GFX_KOTH              = TILE_GFX_KOTH;
     }
 
     -- activate environment for world code and load world
@@ -364,9 +382,8 @@ function world_init()
     stats.num_maps = stats.num_maps + 1
     local ok, w, h, kx, ky = pcall(world_load, map)
     if not ok then
-        print("cannot load world '" .. map .. "': " .. w .. ". using 3x3 dummy world")
         world_tick = coroutine.wrap(function () while true do coroutine.yield() end end)
-        return 3, 3, 1, 1
+        error("cannot load world '" .. map .. "': " .. w .. ". using dummy world")
     else
         world_tick = coroutine.wrap(world_main)
         return w, h, kx, ky
@@ -393,8 +410,45 @@ end
 
 function world_find_digged_worldcoord()
     local x, y = world_find_digged()
+    if not x then return end
     return x * TILE_WIDTH  + TILE_WIDTH  / 2, 
            y * TILE_HEIGHT + TILE_HEIGHT / 2
+end
+
+-- compatibility function
+function world_dig(x, y, typ, gfx)
+    gfx = gfx or typ
+    if typ == 2 then -- water
+        world_set_gfx(x, y, TILE_GFX_WATER)
+        return
+    end
+    local w,  h  = world.level_size()
+    local kx, ky = world.level_koth_pos()
+    if x == kx and y == ky then
+        gfx = TILE_GFX_KOTH
+    end
+    return world_set_type(x, y, typ) and world_set_gfx(x, y, gfx)
+end
+
+function world_fill_all(gfx)
+    local w, h = world.level_size()
+    for x = 0, w - 1 do
+        for y = 0, h - 1 do
+            world_set_gfx(x, y, gfx)
+        end
+    end
+end
+
+function world_make_border(gfx)
+    local w, h = world.level_size()
+    for x = 0, w-1 do
+        world_set_gfx(x,     0, gfx)
+        world_set_gfx(x, h - 1, gfx)
+    end
+    for y = 0, h-1 do
+        world_set_gfx(0    , y, gfx)
+        world_set_gfx(w - 1, y, gfx)
+    end
 end
 
 -----------------------------------------------------------
@@ -424,19 +478,24 @@ function kickban(fd, msg)
 end
 
 function killall()
-    for n = 0, MAXPLAYERS - 1 do
-        pcall(player_kill_all_creatures, n)
+    for pno in each_player() do 
+        player_kill_all_creatures(pno)
     end
 end
 
 function reset()
     killall()
-    for n = 0, MAXPLAYERS - 1 do
-        pcall(player_set_score, n, 0)
+    for pno in each_player() do 
+        player_set_score(pno, 0)
     end
     scroller_add("About to restart on map " .. map)
     wall("About to restart on map " .. map)
     game_end()
+end
+
+function changemap(next_map)
+    map = next_map
+    reset()
 end
 
 function kickall()
@@ -462,7 +521,6 @@ function clientlist()
         cprint(string.format("%4d - %s", fd, client.addr))
     end)
 end
-
 
 function acllist()
     for n, rule in ipairs(acl) do

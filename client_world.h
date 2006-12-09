@@ -26,7 +26,8 @@
 
 typedef struct maptile_s {
     int       food;
-    maptype_e map;
+    maptype_e type;
+    mapgfx_e  gfx;
 } client_maptile_t;
 
 typedef struct world_info_s {

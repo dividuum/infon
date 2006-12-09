@@ -266,7 +266,7 @@ end
 function this_function_call_fails_if_cpu_limit_exceeded() end
 
 -- Globales Array alle Kreaturen
-creatures = {}
+creatures = creatures or {}
 
 function player_think(events)
     can_yield = false
@@ -366,8 +366,8 @@ function player_think(events)
             if not ok then
                 creature.message = msg
                 -- Falls die Coroutine abgebrochen wurde, weil zuviel
-                -- CPU benutzt wurde, so triggert folgeder Funktions
-                -- Aufruf den Abbruch von player_think. Um zu ermitteln,
+                -- CPU benutzt wurde, so triggert folgender Funktions-
+                -- aufruf den Abbruch von player_think. Um zu ermitteln,
                 -- wo zuviel CPU gebraucht wurde, kann der Traceback
                 -- in creature.message mittels 'i' angezeigt werden.
                 this_function_call_fails_if_cpu_limit_exceeded()

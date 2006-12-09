@@ -939,22 +939,13 @@ function level_init()
     world_dig(61, 40, TILE_PLAIN)
     world_dig(60, 38, TILE_PLAIN)
     world_dig(61, 38, TILE_PLAIN)
-    world_dig(62, 38, TILE_PLAIN)
-    world_dig(62, 39, TILE_PLAIN)
     world_dig(61, 37, TILE_PLAIN)
-    world_dig(62, 37, TILE_PLAIN)
     world_dig(61, 36, TILE_PLAIN)
-    world_dig(62, 36, TILE_PLAIN)
-    world_dig(62, 35, TILE_PLAIN)
-    world_dig(62, 34, TILE_PLAIN)
     world_dig(61, 34, TILE_PLAIN)
     world_dig(61, 35, TILE_PLAIN)
     world_dig(61, 33, TILE_PLAIN)
-    world_dig(62, 33, TILE_PLAIN)
     world_dig(61, 32, TILE_PLAIN)
-    world_dig(62, 32, TILE_PLAIN)
     world_dig(61, 31, TILE_PLAIN)
-    world_dig(62, 31, TILE_PLAIN)
     world_dig(60, 31, TILE_PLAIN)
     world_dig(60, 32, TILE_PLAIN)
     world_dig(60, 30, TILE_PLAIN)
@@ -1003,15 +994,10 @@ function level_init()
     world_dig(61, 5, TILE_PLAIN)
     world_dig(60, 6, TILE_PLAIN)
     world_dig(61, 6, TILE_PLAIN)
-    world_dig(62, 6, TILE_PLAIN)
     world_dig(61, 7, TILE_PLAIN)
-    world_dig(62, 7, TILE_PLAIN)
     world_dig(61, 8, TILE_PLAIN)
-    world_dig(62, 8, TILE_PLAIN)
     world_dig(61, 9, TILE_PLAIN)
-    world_dig(62, 9, TILE_PLAIN)
     world_dig(61, 10, TILE_PLAIN)
-    world_dig(62, 10, TILE_PLAIN)
     world_dig(60, 10, TILE_PLAIN)
     world_dig(60, 11, TILE_PLAIN)
     world_dig(61, 11, TILE_PLAIN)
@@ -1107,18 +1093,11 @@ function level_init()
     world_dig(6, 43, TILE_PLAIN)
     world_dig(7, 42, TILE_PLAIN)
     world_dig(7, 43, TILE_PLAIN)
-    world_dig(6, 44, TILE_PLAIN)
-    world_dig(7, 44, TILE_PLAIN)
     world_dig(8, 43, TILE_PLAIN)
-    world_dig(8, 44, TILE_PLAIN)
     world_dig(9, 43, TILE_PLAIN)
-    world_dig(9, 44, TILE_PLAIN)
     world_dig(10, 43, TILE_PLAIN)
-    world_dig(10, 44, TILE_PLAIN)
     world_dig(11, 43, TILE_PLAIN)
-    world_dig(11, 44, TILE_PLAIN)
     world_dig(12, 43, TILE_PLAIN)
-    world_dig(12, 44, TILE_PLAIN)
     world_dig(11, 42, TILE_PLAIN)
     world_dig(12, 42, TILE_PLAIN)
     world_dig(11, 41, TILE_PLAIN)
@@ -1182,6 +1161,28 @@ function level_init()
     world_dig(22, 19, TILE_PLAIN)
     world_dig(22, 20, TILE_PLAIN)
     world_dig(23, 21, TILE_PLAIN)
+    
+    local w, h = level_size()
+    local offsets = { { -1, -1 }, { 0, -1 }, { 1, -1 },
+                      { -1,  0 },            { 1,  0 },
+                      { -1,  1 }, { 0,  1 }, { 1,  1 } }
+    for x = 1, w-2 do
+        for y = 1, h-2 do
+            local change = true
+            for n, offset in pairs(offsets) do 
+                local xx, yy = unpack(offset)
+                if world_get_type(x + xx, y + yy) ~= TILE_SOLID then
+                    change = false
+                    break
+                end
+            end
+            if change then
+               world_set_gfx(x, y, TILE_GFX_LAVA)
+           end
+        end
+    end
+
+    world_make_border(TILE_GFX_LAVA)
 
     food_spawner = {}
     for s = 0, 15 do

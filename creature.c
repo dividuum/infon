@@ -52,6 +52,10 @@ static creature_t *creature_find_unused() {
     return NULL;
 }
 
+static int creature_num(const creature_t *creature) {
+    return creature - creatures;
+}
+
 creature_t *creature_by_num(int creature_num) {
     if (creature_num < 0 || creature_num >= MAXCREATURES)
         return NULL;
@@ -65,8 +69,7 @@ int creature_id(const creature_t *creature) {
     return creature->vm_id;
 }
 
-creature_t *creature_get_checked_lua(lua_State *L, int idx) {
-    const int vm_id = luaL_checklong(L, idx);
+creature_t *creature_by_id(int vm_id) {
     const int hash  = HASHVALUE(vm_id);
     creature_t *creature = creature_hash[hash];
     while (creature) {
@@ -75,6 +78,14 @@ creature_t *creature_get_checked_lua(lua_State *L, int idx) {
             return creature;
         creature = creature->hash_next;
     }
+    return NULL;
+}
+
+creature_t *creature_get_checked_lua(lua_State *L, int idx) {
+    const int vm_id = luaL_checklong(L, idx);
+    creature_t *creature = creature_by_id(vm_id);
+    if (creature)
+        return creature;
     luaL_error(L, "creature %d not in use", vm_id);
     return NULL; // never reached
 }
@@ -84,10 +95,6 @@ int creature_dist(const creature_t *a, const creature_t *b) {
     const int distx = a->x - b->x;
     const int disty = a->y - b->y;
     return sqrt(distx * distx + disty * disty);
-}
-
-int creature_num(const creature_t *creature) {
-    return creature - creatures;
 }
 
 static void creature_make_smile(const creature_t *creature, client_t *client) {
@@ -123,6 +130,7 @@ int creature_max_health(const creature_t *creature) {
             return  5000;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -136,6 +144,7 @@ int creature_max_food(const creature_t *creature) {
             return  5000;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -149,6 +158,7 @@ int creature_aging(const creature_t *creature) {
             return 5;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -177,10 +187,6 @@ creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
 
 // ------------- Bewegung -------------
 
-int  creature_can_move_to_target(creature_t *creature) {
-    return creature->path != NULL;
-}
-
 int creature_speed(const creature_t *creature) {
     switch (creature->type) {
         case CREATURE_SMALL:
@@ -191,7 +197,12 @@ int creature_speed(const creature_t *creature) {
             return 800;
         default:
             assert(0);
+            return 0;
     }
+}
+
+int  creature_can_move_to_target(creature_t *creature) {
+    return creature->path != NULL && creature_speed(creature) > 0;
 }
 
 void creature_do_move_to_target(creature_t *creature, int delta) {
@@ -245,6 +256,7 @@ int creature_heal_rate(const creature_t *creature) {
             return 600;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -285,6 +297,7 @@ int creature_eat_rate(const creature_t *creature) {
             return 600;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -325,6 +338,7 @@ int creature_hitpoints(const creature_t *creature) {
             return    0;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -338,6 +352,7 @@ int creature_attack_distance(const creature_t *creature) {
             return 0;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -346,7 +361,7 @@ void creature_do_attack(creature_t *creature, int delta) {
     if (hitpoints == 0)
         goto finished_attacking;
     
-    creature_t *target = creature_by_num(creature->target);
+    creature_t *target = creature_by_id(creature->target_id);
 
     // Nicht gefunden?
     if (!target) 
@@ -357,8 +372,8 @@ void creature_do_attack(creature_t *creature, int delta) {
         goto finished_attacking;
     
     // Ziel zu jung?
-    if (target->spawn_time + 500 > game_time)
-        goto finished_attacking;
+    // if (target->spawn_time + 500 > game_time)
+    //    goto finished_attacking;
 
     // Eigenes Viech?
     if (target->player == creature->player)
@@ -529,6 +544,7 @@ int creature_can_feed(const creature_t *creature) {
             return creature->food > 0;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -542,6 +558,7 @@ int creature_feed_distance(const creature_t *creature) {
             return TILE_SCALE;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -555,6 +572,7 @@ int creature_feed_speed(const creature_t *creature) {
             return 400;
         default:
             assert(0);
+            return 0;
     }
 }
 
@@ -562,15 +580,15 @@ void creature_do_feed(creature_t *creature, int delta) {
     int food     = creature_feed_speed(creature) * delta / 1000;
     int finished = 0;
     
-    creature_t *target = creature_by_num(creature->target);
+    creature_t *target = creature_by_id(creature->target_id);
 
     // Nicht gefunden?
     if (!target) 
         goto finished_feeding;
 
     // Ziel zu jung?
-    if (target->spawn_time + 500 > game_time)
-        goto finished_feeding;
+    // if (target->spawn_time + 500 > game_time)
+    //     goto finished_feeding;
 
     // Zu weit weg?
     if (creature_dist(creature, target) > creature_feed_distance(creature))
@@ -596,19 +614,19 @@ finished_feeding:
 }
 
 
-int creature_set_target(creature_t *creature, int target) {
+int creature_set_target(creature_t *creature, int target_id) {
     // Sich selbst als Ziel macht nie Sinn.
-    if (target == creature_num(creature))
+    if (target_id == creature->vm_id)
         return 0;
 
     // Nicht vorhanden?
-    if (!creature_by_num(target))
+    if (!creature_by_id(target_id))
         return 0;
 
     // Nicht mehr pruefen, da sich das Ziel bereits in dieser
     // Runde toeten koennte und daher ein true hier nicht heisst,
     // dass tatsaechlich attackiert/gefuettert werden kann.
-    creature->target = target;
+    creature->target_id = target_id;
     return 1;
 }
 
@@ -707,12 +725,12 @@ void creature_update_network_variables(creature_t *creature) {
         creature->dirtymask |= CREATURE_DIRTY_SPEED;
     }
 
-    if ((creature->state == CREATURE_ATTACK ||
-         creature->state == CREATURE_FEED) &&
-        creature->network_target != creature->target)
-    {
-        creature->network_target = creature->target;
-        creature->dirtymask |= CREATURE_DIRTY_TARGET;
+    if ((creature->state == CREATURE_ATTACK || creature->state == CREATURE_FEED)) { 
+        const creature_t *target = creature_by_id(creature->target_id);
+        if (target && creature_num(target) != creature->network_target) {
+            creature->network_target = creature_num(target);
+            creature->dirtymask |= CREATURE_DIRTY_TARGET;
+        }
     }
 }
 
@@ -878,13 +896,14 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
 
     memset(creature, 0, sizeof(creature_t));
 
+    creature->vm_id        = next_free_vm_id++;
     creature->x            = x;
     creature->y            = y;
     creature->type         = type;
     creature->food         = 0;
     creature->health       = creature_max_health(creature);
     creature->player       = player;
-    creature->target       = creature_num(creature); // muesste nicht gesetzt werden
+    creature->target_id    = creature->vm_id; // muesste nicht gesetzt werden
     creature->path         = NULL;
     creature->convert_food = 0;
     creature->convert_type = type;
@@ -893,7 +912,6 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     creature->suicide      = 0;
     creature->message[0]   = '\0';
     creature->spawn_time   = game_time;
-    creature->vm_id        = next_free_vm_id++;
     creature->age_action_deltas = 0;
 
     const int hash = HASHVALUE(creature->vm_id);

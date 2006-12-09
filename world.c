@@ -36,6 +36,8 @@ static int           world_h;
 static int           koth_x;
 static int           koth_y;
 
+static int           has_plains;
+
 // TODO: Jeder Kreaturtype sollte eigene Pfadsuche haben
 static map_t        *walkmap;
 static pathfinder_t  finder;
@@ -43,6 +45,7 @@ static pathfinder_t  finder;
 typedef struct maptile_s {
     int         food;
     maptype_e   type;
+    mapgfx_e    gfx;
 } maptile_t;
 
 static maptile_t *map;
@@ -64,24 +67,52 @@ int world_walkable(int x, int y) {
            map_walkable(walkmap, x, y);
 }
 
-int world_dig(int x, int y, maptype_e type) {
-    if (type == TILE_SOLID)
+static int food_to_network_food(int food) {
+    // 0 = 0, 1 - 999 = 1, 1000 - 1999 = 2 ... 9000 - 9999 = 10
+    return food == 0 ? 0 : food / 1000 + 1;
+}
+
+void world_to_network(int x, int y, client_t *client) {
+    packet_t packet;
+    packet_init(&packet, PACKET_WORLD_UPDATE);
+    packet_write08(&packet, x);
+    packet_write08(&packet, y);
+    packet_write08(&packet, food_to_network_food(MAPTILE(x, y).food) | MAPTILE(x, y).type << 4);
+    packet_write08(&packet, MAPTILE(x, y).gfx);
+    server_send_packet(&packet, client);
+}
+
+int world_set_gfx(int x, int y, int gfx) {
+    if (gfx < 0 || gfx >= TILE_GFX_LAST_DEFINED)
+        return 0;
+
+    if (!world_is_on_map(x, y))
+        return 0;
+    
+    int old_gfx = MAPTILE(x, y).gfx;
+    MAPTILE(x, y).gfx = gfx;
+
+    if (gfx != old_gfx)
+        world_to_network(x, y, SEND_BROADCAST);
+
+    return 1;
+}
+
+int world_set_type(int x, int y, maptype_e type) {
+    if (type != TILE_PLAIN)
         return 0;
 
     if (!world_is_within_border(x, y))
         return 0;
 
-    if (MAPTILE(x, y).type != TILE_SOLID)
-        return 0;
+    if (MAPTILE(x, y).type == TILE_PLAIN)
+        return 1;
     
-    // fprintf(stderr, "world_dig(%d, %d, %d)\n", x, y, type);
-
     // Pfadsuche fuer Bodenbasierte Viecher aktualisieren
-    if (type == TILE_PLAIN)
-        map_dig(walkmap, x, y);
-    
+    map_dig(walkmap, x, y);
     MAPTILE(x, y).type = type;
     world_to_network(x, y, SEND_BROADCAST);
+    has_plains = 1;
     return 1;
 }
 
@@ -103,10 +134,6 @@ maptype_e world_get_type(int x, int y) {
     return MAPTILE(x, y).type;
 }
 
-
-static int food_to_network_food(int food) {
-    return food == 0 ? 0xFF : food / 1000;
-}
 
 int world_add_food(int x, int y, int amount) {
     if (!world_is_on_map(x, y))
@@ -163,15 +190,18 @@ int world_koth_y() {
     return koth_y;
 }
 
-void world_find_plain(int *x, int *y) {
-    // Terminiert, da kothtile immer freigegraben
+int world_find_plain(int *x, int *y) {
+    if (!has_plains)
+        return 0;
+
+    // TODO: effizienter machen.
     while (1) {
         int xx = rand() % world_w;
         int yy = rand() % world_h;
         if (MAPTILE(xx, yy).type == TILE_PLAIN) {
             *x = xx;
             *y = yy;
-            return;
+            return 1;
         }
     }
 }
@@ -196,17 +226,6 @@ void world_send_initial_update(client_t *client) {
     }
 }
 
-void world_to_network(int x, int y, client_t *client) {
-    packet_t packet;
-    packet_init(&packet, PACKET_WORLD_UPDATE);
-
-    packet_write08(&packet, x);
-    packet_write08(&packet, y);
-    packet_write08(&packet, MAPTILE(x, y).type);
-    packet_write08(&packet, food_to_network_food(MAPTILE(x, y).food));
-    server_send_packet(&packet, client);
-}
-
 void world_tick() {
     lua_pushliteral(L, "world_tick");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -216,10 +235,35 @@ void world_tick() {
     }
 }
 
-static int luaWorldDig(lua_State *L) {
-    lua_pushboolean(L, world_dig(luaL_checklong(L, 1), 
-                                 luaL_checklong(L, 2),
-                                 luaL_checklong(L, 3)));
+static int luaWorldSetType(lua_State *L) {
+    lua_pushboolean(L, world_set_type(luaL_checklong(L, 1), 
+                                      luaL_checklong(L, 2),
+                                      luaL_checklong(L, 3)));
+    return 1;
+}
+
+static int luaWorldGetType(lua_State *L) {
+    int x = luaL_checklong(L, 1);
+    int y = luaL_checklong(L, 2);
+    if (!world_is_on_map(x, y))
+        luaL_error(L, "%d,%d is not on map", x, y);
+    lua_pushnumber(L, MAPTILE(x, y).type);
+    return 1;
+}
+
+static int luaWorldSetGfx(lua_State *L) {
+    lua_pushboolean(L, world_set_gfx(luaL_checklong(L, 1), 
+                                     luaL_checklong(L, 2),
+                                     luaL_checklong(L, 3)));
+    return 1;
+}
+
+static int luaWorldGetGfx(lua_State *L) {
+    int x = luaL_checklong(L, 1);
+    int y = luaL_checklong(L, 2);
+    if (!world_is_on_map(x, y))
+        luaL_error(L, "%d,%d is not on map", x, y);
+    lua_pushnumber(L, MAPTILE(x, y).gfx);
     return 1;
 }
 
@@ -237,32 +281,38 @@ static int luaWorldWalkable(lua_State *L) {
 
 static int luaWorldFindDigged(lua_State *L) {
     int x, y;
-    world_find_plain(&x, &y);
+    if (!world_find_plain(&x, &y)) 
+        return 0;
     lua_pushnumber(L, x);
     lua_pushnumber(L, y);
     return 2;
 }
 
 void world_init() {
-    lua_register(L, "world_dig",            luaWorldDig);
+    lua_register(L, "world_set_type",       luaWorldSetType);
+    lua_register(L, "world_set_gfx",        luaWorldSetGfx);
+    lua_register(L, "world_get_type",       luaWorldGetType);
+    lua_register(L, "world_get_gfx",        luaWorldGetGfx);
     lua_register(L, "world_add_food",       luaWorldAddFood);
     lua_register(L, "world_is_walkable",    luaWorldWalkable);
     lua_register(L, "world_find_digged",    luaWorldFindDigged);
 
-    lua_pushnumber(L, TILE_SOLID);
-    lua_setglobal(L, "TILE_SOLID"); 
+    lua_register_constant(L, TILE_SOLID);
+    lua_register_constant(L, TILE_PLAIN);
 
-    lua_pushnumber(L, TILE_PLAIN);
-    lua_setglobal(L, "TILE_PLAIN"); 
+    lua_register_constant(L, TILE_GFX_SOLID);
+    lua_register_constant(L, TILE_GFX_PLAIN);
+    lua_register_constant(L, TILE_GFX_BORDER);
+    lua_register_constant(L, TILE_GFX_SNOW_SOLID);
+    lua_register_constant(L, TILE_GFX_SNOW_PLAIN);
+    lua_register_constant(L, TILE_GFX_SNOW_BORDER);
+    lua_register_constant(L, TILE_GFX_WATER);
+    lua_register_constant(L, TILE_GFX_LAVA);
+    lua_register_constant(L, TILE_GFX_NONE);
+    lua_register_constant(L, TILE_GFX_KOTH);
 
-    lua_pushnumber(L, TILE_WATER);
-    lua_setglobal(L, "TILE_WATER"); 
-
-    lua_pushnumber(L, TILE_WIDTH);
-    lua_setglobal(L, "TILE_WIDTH"); 
-    
-    lua_pushnumber(L, TILE_HEIGHT);
-    lua_setglobal(L, "TILE_HEIGHT"); 
+    lua_register_constant(L, TILE_WIDTH);
+    lua_register_constant(L, TILE_HEIGHT);
     
     lua_pushliteral(L, "world_init");
     lua_rawget(L, LUA_GLOBALSINDEX);
@@ -281,13 +331,11 @@ void world_init() {
         lua_pop(L, 4);
     }
 
-    if (world_w < 3 || world_w > 255 ||
-        world_h < 3 || world_h > 255)
-        die("world size invalid: %d x %d", world_w, world_h);
+    world_w = limit(world_w, 3, 255);
+    world_h = limit(world_h, 3, 255);
 
-    if (koth_x <= 0 || koth_x >= world_w - 1 ||
-        koth_y <= 0 || koth_y >= world_h - 1)
-        die("koth pos invalid: %d, %d", koth_x, koth_y);
+    koth_x  = limit(koth_x, 0, world_w - 1);
+    koth_y  = limit(koth_y, 0, world_h - 1);
     
     walkmap = map_alloc();
     map_init(walkmap, world_w, world_h);
@@ -296,11 +344,10 @@ void world_init() {
     map  =  malloc(world_w * world_h * sizeof(maptile_t));
     memset(map, 0, world_w * world_h * sizeof(maptile_t));
 
+    has_plains = 0;
+
     // World Informationen an GUI Clients schicken
     world_send_info(SEND_BROADCAST);
-
-    // Koth Tile freigraben
-    world_dig(koth_x, koth_y, TILE_PLAIN);
 }
 
 void world_shutdown() {

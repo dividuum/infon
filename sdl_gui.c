@@ -327,32 +327,52 @@ static void draw_world() {
         for (int x = x1; x < x2; x++) {
             int pos_rand = rand_table[(x ^ y) & 0xFF];
             int floor_sprite;
-            switch (tile->map) {
-                case TILE_SOLID:
-                    if (x == 0 || x == info->width - 1 || y == 0 || y == info->height - 1) {
-                        floor_sprite = SPRITE_BORDER + pos_rand % SPRITE_NUM_BORDER;
-                    } else {
-                        floor_sprite = SPRITE_SOLID  + pos_rand % SPRITE_NUM_SOLID;
-                    };
+            switch (tile->gfx) {
+                case TILE_GFX_SOLID:
+                    floor_sprite = SPRITE_SOLID  + pos_rand % SPRITE_NUM_SOLID;
                     break;
-                case TILE_PLAIN:
-                    if (x == info->koth_x && y == info->koth_y) {
-                        floor_sprite = SPRITE_KOTH;
-                    } else {
-                        floor_sprite = SPRITE_PLAIN + pos_rand % SPRITE_NUM_PLAIN;
-                    }
+                case TILE_GFX_PLAIN:
+                    floor_sprite = SPRITE_PLAIN + pos_rand % SPRITE_NUM_PLAIN;
                     break;
-                case TILE_WATER:
-                    floor_sprite = SPRITE_WATER + ((render_real_time >> 8) + x + y) % SPRITE_NUM_WATER;
+                case TILE_GFX_BORDER:
+                    floor_sprite = SPRITE_BORDER + pos_rand % SPRITE_NUM_BORDER;
+                    break;
+                case TILE_GFX_SNOW_SOLID:
+                    floor_sprite = SPRITE_SNOW_SOLID  + pos_rand % SPRITE_NUM_SNOW_SOLID;
+                    break;
+                case TILE_GFX_SNOW_PLAIN:
+                    floor_sprite = SPRITE_SNOW_PLAIN + pos_rand % SPRITE_NUM_SNOW_PLAIN;
+                    break;
+                case TILE_GFX_SNOW_BORDER:
+                    floor_sprite = SPRITE_SNOW_BORDER + pos_rand % SPRITE_NUM_SNOW_BORDER;
+                    break;
+                case TILE_GFX_WATER:
+                    floor_sprite = SPRITE_WATER + ((render_real_time >> 7) + x + y) % SPRITE_NUM_WATER;
+                    break;
+                case TILE_GFX_LAVA:
+                    floor_sprite = SPRITE_LAVA  + ((render_real_time >> 7) + x + y) % SPRITE_NUM_LAVA;
+                    break;
+                case TILE_GFX_NONE:
+                    floor_sprite = -1;
+                    break;
+                case TILE_GFX_KOTH:
+                    floor_sprite = SPRITE_KOTH;
                     break;
                 default:
-                    assert(0);
+                    floor_sprite = SPRITE_KOTH;
             }
 
-            video_draw(screenx, screeny, sprite_get(floor_sprite));
+            if (floor_sprite < 0) 
+                video_rect(screenx, screeny, screenx + SPRITE_TILE_SIZE, screeny + SPRITE_TILE_SIZE, 30, 30, 30, 0);
+            else
+                video_draw(screenx, screeny, sprite_get(floor_sprite));
 
-            if (tile->food >= 0) 
-                video_draw(screenx, screeny, sprite_get(SPRITE_FOOD + tile->food));
+            if (tile->food != 0) {
+                if (tile->gfx == TILE_GFX_SNOW_PLAIN) 
+                    video_draw(screenx, screeny, sprite_get(SPRITE_SNOW_FOOD - 1 + tile->food));
+                else
+                    video_draw(screenx, screeny, sprite_get(SPRITE_FOOD      - 1 + tile->food));
+            }
             
             screenx += SPRITE_TILE_SIZE;
             tile++;

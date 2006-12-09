@@ -311,6 +311,8 @@ function level_init()
     world_dig(1, 23, TILE_PLAIN)
     world_dig(15, 6, TILE_PLAIN)
 
+    world_make_border(TILE_GFX_BORDER)
+
     food_spawner = {}
     for s = 0, 10 do
         local dx, dy = world_find_digged()

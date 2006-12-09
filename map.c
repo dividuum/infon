@@ -362,10 +362,12 @@ again:
         assert(cur->next->prev == cur);
         assert(cur->prev->next == cur);
         
+#ifndef NDEBUG
         int cur_value  = portalside_to_value(cur);
         int next_value = portalside_to_value(cur->next);
         
         assert(cur == cur->next || cur_value != next_value);
+#endif
         
         if (portal_is_mergable_with_neighbour(cur)) {
             portalside_merge_with_neighbour(cur);

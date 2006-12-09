@@ -2042,6 +2042,8 @@ function level_init()
     world_dig(55, 26, TILE_PLAIN)
     world_dig(56, 26, TILE_PLAIN)
 
+    world_make_border(TILE_GFX_BORDER)
+
     food_spawner = {
         {
             x = 5,

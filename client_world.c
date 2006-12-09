@@ -60,18 +60,22 @@ void client_world_from_network(packet_t *packet) {
     if (!packet_read08(packet, &y))         PROTOCOL_ERROR(); 
     if (x >= info.width)                    PROTOCOL_ERROR();
     if (y >= info.height)                   PROTOCOL_ERROR();
-    uint8_t type;
-    if (!packet_read08(packet, &type))      PROTOCOL_ERROR(); 
-    if (type > TILE_WATER)                  PROTOCOL_ERROR();
-    MAPTILE(x,y).map = type;
-    uint8_t food; 
-    if (!packet_read08(packet, &food))      PROTOCOL_ERROR();
-    if (food == 0xFF) {
-        MAPTILE(x, y).food = -1;
-    } else {
-        if (food >= 10)                     PROTOCOL_ERROR();
-        MAPTILE(x, y).food = food;
-    }
+    uint8_t food_type; 
+    if (!packet_read08(packet, &food_type)) PROTOCOL_ERROR();
+
+    uint8_t food = food_type & 0x0F;
+    if (food > 10)                          PROTOCOL_ERROR();
+    MAPTILE(x, y).food = food;
+
+    uint8_t type = (food_type & 0xF0) >> 4;
+    if (type >= TILE_LAST_DEFINED)          PROTOCOL_ERROR();
+    MAPTILE(x,y).type = type;
+
+    uint8_t gfx;
+    if (!packet_read08(packet, &gfx))       PROTOCOL_ERROR();
+    if (gfx >= TILE_GFX_LAST_DEFINED)       PROTOCOL_ERROR();
+    MAPTILE(x,y).gfx = gfx;
+    
     renderer_world_changed(x, y);
 }
 
@@ -100,8 +104,9 @@ void client_world_info_from_network(packet_t *packet) {
     // Tile Texturen setzen
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
-            MAPTILE(x,y).food = -1;
-            MAPTILE(x,y).map  = TILE_SOLID;
+            MAPTILE(x,y).food = 0;
+            MAPTILE(x,y).type = TILE_SOLID;
+            MAPTILE(x,y).gfx  = TILE_GFX_SOLID;
         }
     }
 

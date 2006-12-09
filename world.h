@@ -40,13 +40,12 @@ int         world_koth_x();
 int         world_koth_y();
 
 pathnode_t *world_findpath(int x1, int y1, int x2, int y2);
-void        world_find_plain(int *x, int *y);
+int         world_find_plain(int *x, int *y);
 
 void        world_tick();
 
 /* Network */
 void        world_send_initial_update(client_t *client);
-void        world_to_network(int x, int y, client_t *client);
 
 void        world_init();
 void        world_shutdown();

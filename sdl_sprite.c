@@ -54,10 +54,27 @@ static void sprite_load_background() {
         {  4,  2 }, {  5,  2 }, {  6,  2 }, {  7,  2 }, 
         {  8,  2 }, {  9,  2 }, { 10,  2 }, { 11,  2 }, 
         { 12,  2 }, { 13,  2 }, { 14,  2 }, { 15,  2 }, 
+        // Border Snow
+        { 16,  0 }, { 17,  0 }, { 18,  0 }, { 19,  0 }, 
+        { 20,  0 }, { 21,  0 }, { 22,  0 }, { 23,  0 }, 
+        { 24,  0 }, { 25,  0 }, { 26,  0 }, { 27,  0 }, 
+        { 28,  0 }, { 29,  0 }, { 30,  0 }, { 31,  0 }, 
+        // Solid Snow
+        { 16,  1 }, { 17,  1 }, { 18,  1 }, { 19,  1 }, 
+        { 20,  1 }, { 21,  1 }, { 22,  1 }, { 23,  1 }, 
+        { 24,  1 }, { 25,  1 }, { 26,  1 }, { 27,  1 }, 
+        { 28,  1 }, { 29,  1 }, { 30,  1 }, { 31,  1 }, 
+        // Plain Snow
+        { 16,  2 }, { 17,  2 }, { 18,  2 }, { 19,  2 }, 
+        { 20,  2 }, { 21,  2 }, { 22,  2 }, { 23,  2 }, 
+        { 24,  2 }, { 25,  2 }, { 26,  2 }, { 27,  2 }, 
+        { 28,  2 }, { 29,  2 }, { 30,  2 }, { 31,  2 }, 
         // KOTH
         {  0,  3 },
         // Water
         {  0,  6 }, {  1,  6 }, {  2,  6 }, {  3,  6 }, 
+        // Lava
+        {  0,  7 }, {  1,  7 }, {  2,  7 }, {  3,  7 }, 
     };
 
     for (int i = 0; i < SPRITE_NUM_TILES; i++) {
@@ -74,6 +91,12 @@ static void sprite_load_food() {
                                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
         SDL_Rect srcrect = { f * 16, 256, 16, 16 };
         SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_FOOD + f], NULL);
+    }
+    for (int f = 0; f < SPRITE_NUM_SNOW_FOOD; f++) {
+        sprites[SPRITE_SNOW_FOOD + f] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
+                                                             32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
+        SDL_Rect srcrect = { f * 16, 256 + 16, 16, 16 };
+        SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_SNOW_FOOD + f], NULL);
     }
 }
 

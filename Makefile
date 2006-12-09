@@ -37,7 +37,11 @@ ifdef WINDOWS
 else
 	SDLDIR  := $(shell sdl-config --prefix)
 	CFLAGS  += $(COMMON_CFLAGS)
-	LUAPLAT  = debug #linux
+ifdef OPTIMIZE
+	LUAPLAT  = linux
+else
+	LUAPLAT  = debug
+endif
 	LDFLAGS += -ldl
 endif
 

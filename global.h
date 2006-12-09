@@ -45,7 +45,7 @@ extern int game_exit;
 #define PATHFIND_AREA_MERGE 
 
 // Netzwerk Protokoll
-#define PROTOCOL_VERSION 6
+#define PROTOCOL_VERSION 7
 
 // open stdin (console) client
 #define CONSOLE_CLIENT
