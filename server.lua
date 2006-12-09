@@ -27,12 +27,9 @@ function Client:joinmenu()
 
     self:writeln("------------------------------")
     local numplayers = 0
-    for n = 0, MAXPLAYERS - 1 do 
-        local ok, name = pcall(player_get_name, n)
-        if ok then
-            numplayers = numplayers + 1
-            self:writeln(string.format("%3d - %s", n, name))
-        end
+    for pno in each_player() do 
+        numplayers = numplayers + 1
+        self:writeln(string.format("%3d - %s", pno, player_get_name(pno)))
     end
     if numplayers == 0 then
         self:writeln("no one here")
@@ -231,18 +228,16 @@ end
 
 function Client:showscores()
     local players = {}
-    for n = 0, MAXPLAYERS - 1 do 
-        if player_exists(n) then
-            table.insert(players, {
-                num         = n,
-                name        = player_get_name(n),
-                score       = player_score(n),
-                creatures   = player_num_creatures(n),
-                age         = (game_time() - player_spawntime(n)) / 1000 / 60,
-                mem         = player_get_used_mem(n),
-                cpu         = player_get_used_cpu(n)
-            })
-        end
+    for pno in each_player() do 
+        table.insert(players, {
+            num         = pno,
+            name        = player_get_name(pno),
+            score       = player_score(pno),
+            creatures   = player_num_creatures(pno),
+            age         = (game_time() - player_spawntime(pno)) / 1000 / 60,
+            mem         = player_get_used_mem(pno),
+            cpu         = player_get_used_cpu(pno)
+        })
     end
     table.sort(players, function (a,b) 
         return a.score > b.score

@@ -59,6 +59,7 @@ function level_init()
 		end
 	end
 
+    world_make_border(TILE_GFX_WATER)
 
 	food_spawner = {}
 	for s = 0, 11 do

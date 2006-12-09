@@ -26,9 +26,26 @@
 
 typedef enum {
     TILE_SOLID = 0,
-    TILE_PLAIN = 1,
-    TILE_WATER = 2,
-    TILE_LAVA  = 3,
+    TILE_PLAIN,
+
+    TILE_LAST_DEFINED,
 } maptype_e;
+
+typedef enum {
+    TILE_GFX_SOLID = 0,
+    TILE_GFX_PLAIN,
+    TILE_GFX_BORDER,
+
+    TILE_GFX_SNOW_SOLID,
+    TILE_GFX_SNOW_PLAIN,
+    TILE_GFX_SNOW_BORDER,
+
+    TILE_GFX_WATER,
+    TILE_GFX_LAVA,
+    TILE_GFX_NONE,
+    TILE_GFX_KOTH,
+
+    TILE_GFX_LAST_DEFINED
+} mapgfx_e;
 
 #endif

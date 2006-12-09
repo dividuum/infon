@@ -29,24 +29,12 @@ _TRACEBACK = debug.traceback
 save_in_registry('traceback', debug.traceback)
 save_in_registry = nil
 
-dofile          = nil   -- would allow file loading
-loadfile        = nil   -- no file loading
-_VERSION        = nil   -- who cares
-newproxy        = nil   -- huh?
-gcinfo          = nil   -- no access to the garbage collector
-os              = nil   -- no os access
-package         = nil   -- package support is not needed
-io              = nil   -- disable io
-load            = nil   -- no file loading
-module          = nil   -- module support not needed
-
 -- limit strings accepted by loadstring to 16k
 do
     local orig_loadstring = loadstring
-    local check_code_size = string.len
     local error           = error
     loadstring = function(code, name)
-        if check_code_size(code) > 16384 then
+        if #code > 16384 then
             error("code too large")
         else
             return orig_loadstring(code, name)
@@ -63,11 +51,13 @@ do
         if type(thread) ~= "thread" then
             error("arg #1 is not a thread")
         end
-        local dumper = function(what, where)
-            local info = getinfo(2, "nlS")
+        local dumper = type(text) == "function" and text or function(info)
             print(text .. ":" .. info.source .. ":" .. info.currentline)
         end
-        sethook(thread, dumper, "l")
+        local hook = function(what, where)
+            dumper(getinfo(2, "nlS"))
+        end
+        sethook(thread, hook, "l")
     end
     thread_untrace = function(thread)
         if type(thread) ~= "thread" then
@@ -78,8 +68,16 @@ do
 end
 
 debug           = nil   -- no debugging functions
-
-collectgarbage()
+dofile          = nil   -- would allow file loading
+loadfile        = nil   -- no file loading
+_VERSION        = nil   -- who cares
+newproxy        = nil   -- huh?
+gcinfo          = nil   -- no access to the garbage collector
+os              = nil   -- no os access
+package         = nil   -- package support is not needed
+io              = nil   -- disable io
+load            = nil   -- no file loading
+module          = nil   -- module support not needed
 collectgarbage  = nil   -- no access to the garbage collector
 
 ------------------------------------------------------------------------
@@ -130,4 +128,7 @@ end
 ------------------------------------------------------------------------
 
 require(...)
-require = nil
+
+require = function(what) 
+    print("cannot require file '" .. what .. "'. upload it using the batch (b) command.")
+end

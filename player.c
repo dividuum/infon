@@ -521,7 +521,7 @@ static int luaGetKothPos(lua_State *L) {
 
 static int luaCreatureExists(lua_State *L) {
     if (RESTRICTIVE) luaL_error(L, "this function is not available in restricted mode");
-    lua_pushboolean(L, !!creature_by_num(luaL_checklong(L, 1)));
+    lua_pushboolean(L, !!creature_by_id(luaL_checklong(L, 1)));
     return 1;
 }
 
@@ -584,10 +584,6 @@ static void player_set_color(player_t *player, int color) {
      lua_pushlightuserdata((p)->L, p), \
      lua_pushcclosure((p)->L, f, 1), \
      lua_settable((p)->L, LUA_GLOBALSINDEX))    
-
-#define lua_register_player_global(p, name) \
-    (lua_pushnumber((p)->L, name), \
-     lua_setglobal((p)->L, #name))
 
 player_t *player_create(const char *pass, const char *highlevel) {
     int playerno;
@@ -657,24 +653,22 @@ player_t *player_create(const char *pass, const char *highlevel) {
     lua_register(player->L,     "king_player",          luaKingPlayer);
     lua_register(player->L,     "player_score",         luaPlayerScore);
 
-    lua_register_player_global(player, CREATURE_IDLE);
-    lua_register_player_global(player, CREATURE_WALK);
-    lua_register_player_global(player, CREATURE_HEAL);
-    lua_register_player_global(player, CREATURE_EAT);
-    lua_register_player_global(player, CREATURE_ATTACK);
-    lua_register_player_global(player, CREATURE_CONVERT);
-    lua_register_player_global(player, CREATURE_SPAWN);
-    lua_register_player_global(player, CREATURE_FEED);
+    lua_register_constant(player->L, CREATURE_IDLE);
+    lua_register_constant(player->L, CREATURE_WALK);
+    lua_register_constant(player->L, CREATURE_HEAL);
+    lua_register_constant(player->L, CREATURE_EAT);
+    lua_register_constant(player->L, CREATURE_ATTACK);
+    lua_register_constant(player->L, CREATURE_CONVERT);
+    lua_register_constant(player->L, CREATURE_SPAWN);
+    lua_register_constant(player->L, CREATURE_FEED);
 
-    lua_register_player_global(player, TILE_SOLID);
-    lua_register_player_global(player, TILE_PLAIN);
-    lua_register_player_global(player, TILE_WATER);
-    lua_register_player_global(player, TILE_LAVA);
+    lua_register_constant(player->L, TILE_SOLID);
+    lua_register_constant(player->L, TILE_PLAIN);
 
-    lua_register_player_global(player, CREATURE_SPAWNED);
-    lua_register_player_global(player, CREATURE_KILLED);
-    lua_register_player_global(player, CREATURE_ATTACKED);
-    lua_register_player_global(player, PLAYER_CREATED);
+    lua_register_constant(player->L, CREATURE_SPAWNED);
+    lua_register_constant(player->L, CREATURE_KILLED);
+    lua_register_constant(player->L, CREATURE_ATTACKED);
+    lua_register_constant(player->L, PLAYER_CREATED);
 
     lua_pushnumber(player->L, playerno);
 
@@ -1130,6 +1124,23 @@ out:
     return 1;
 }
 
+static int luaPlayerIterator(lua_State *L) {
+    if (lua_gettop(L) == 0) {
+        lua_pushcfunction(L, luaPlayerIterator);
+        return 1;
+    }
+
+    int pno = lua_isnumber(L, 2) ? lua_tonumber(L, 2) + 1 : 0;
+    while (pno >= 0 && pno < MAXPLAYERS) {
+        if (PLAYER_USED(&players[pno])) {
+            lua_pushnumber(L, pno);
+            return 1;
+        }
+        pno++;
+    }
+    return 0;
+}
+
 void player_init() {
     memset(players, 0, sizeof(players));
 
@@ -1150,6 +1161,8 @@ void player_init() {
     lua_register(L, "player_get_used_cpu",          luaPlayerGetCPUUsage);
     lua_register(L, "player_set_output_client",     luaPlayerSetOutputClient);
 
+    lua_register(L, "each_player",                  luaPlayerIterator);
+
     lua_register(L, "creature_spawn",               luaCreatureSpawn);
     lua_register(L, "creature_get_pos",             luaCreatureGetPos);
     lua_register(L, "creature_get_state",           luaCreatureGetState);
@@ -1168,14 +1181,9 @@ void player_init() {
     lua_register(L, "creature_set_food",            luaCreatureSetFood);
     lua_register(L, "creature_set_type",            luaCreatureSetType);
 
-    lua_pushnumber(L, CREATURE_SMALL);
-    lua_setglobal(L, "CREATURE_SMALL");
-
-    lua_pushnumber(L, CREATURE_BIG);
-    lua_setglobal(L, "CREATURE_BIG");
-
-    lua_pushnumber(L, CREATURE_FLYER);
-    lua_setglobal(L, "CREATURE_FLYER");
+    lua_register_constant(L, CREATURE_SMALL);
+    lua_register_constant(L, CREATURE_BIG);
+    lua_register_constant(L, CREATURE_FLYER);
 }
 
 void player_game_start() {

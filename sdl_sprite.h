@@ -28,49 +28,65 @@
 #define SPRITE_NUM 16384
 
 // Tiles Konstanten
-#define SPRITE_BORDER       0
-#define SPRITE_NUM_BORDER   16
+#define SPRITE_BORDER           0
+#define SPRITE_NUM_BORDER       16
 
-#define SPRITE_SOLID        (SPRITE_BORDER + SPRITE_NUM_BORDER)
-#define SPRITE_NUM_SOLID    16
+#define SPRITE_SOLID            (SPRITE_BORDER + SPRITE_NUM_BORDER)
+#define SPRITE_NUM_SOLID        16
 
-#define SPRITE_PLAIN        (SPRITE_SOLID + SPRITE_NUM_SOLID)
-#define SPRITE_NUM_PLAIN    16
+#define SPRITE_PLAIN            (SPRITE_SOLID + SPRITE_NUM_SOLID)
+#define SPRITE_NUM_PLAIN        16
 
-#define SPRITE_KOTH         (SPRITE_PLAIN + SPRITE_NUM_PLAIN)
-#define SPRITE_NUM_KOTH     1
+#define SPRITE_SNOW_BORDER      (SPRITE_PLAIN + SPRITE_NUM_PLAIN)
+#define SPRITE_NUM_SNOW_BORDER  16
 
-#define SPRITE_WATER        (SPRITE_KOTH  + SPRITE_NUM_KOTH)
-#define SPRITE_NUM_WATER    4
+#define SPRITE_SNOW_SOLID       (SPRITE_SNOW_BORDER + SPRITE_NUM_SNOW_BORDER)
+#define SPRITE_NUM_SNOW_SOLID   16
+
+#define SPRITE_SNOW_PLAIN       (SPRITE_SNOW_SOLID + SPRITE_NUM_SNOW_SOLID)
+#define SPRITE_NUM_SNOW_PLAIN   16
+
+#define SPRITE_KOTH             (SPRITE_SNOW_PLAIN + SPRITE_NUM_SNOW_PLAIN)
+#define SPRITE_NUM_KOTH         1
+
+#define SPRITE_WATER            (SPRITE_KOTH  + SPRITE_NUM_KOTH)
+#define SPRITE_NUM_WATER        4
+
+#define SPRITE_LAVA             (SPRITE_WATER + SPRITE_NUM_WATER)
+#define SPRITE_NUM_LAVA         4
 
 #define SPRITE_NUM_TILES (SPRITE_NUM_SOLID  + \
                           SPRITE_NUM_PLAIN  + \
                           SPRITE_NUM_BORDER + \
+                          SPRITE_NUM_SNOW_SOLID  + \
+                          SPRITE_NUM_SNOW_PLAIN  + \
+                          SPRITE_NUM_SNOW_BORDER + \
                           SPRITE_NUM_KOTH   + \
-                          SPRITE_NUM_WATER)
-
-// Sprite Nummern bis hier duerfen maximal 255 sein, da diese 
-// beim World Netzwerk syncen in Bytes verpackt werden.
+                          SPRITE_NUM_WATER  + \
+                          SPRITE_NUM_LAVA)
 
 #define SPRITE_TILE_SIZE    16
 
 // Food Konstanten
-#define SPRITE_FOOD         256
-#define SPRITE_NUM_FOOD     10
+#define SPRITE_FOOD             256
+#define SPRITE_NUM_FOOD         10
+
+#define SPRITE_SNOW_FOOD        (SPRITE_FOOD + SPRITE_NUM_FOOD)
+#define SPRITE_NUM_SNOW_FOOD    10
 
 // Thought Konstanten
-#define SPRITE_THOUGHT      (SPRITE_FOOD + SPRITE_NUM_FOOD)
-#define SPRITE_NUM_THOUGHT  CREATURE_STATES + 1 /* + Smile */
+#define SPRITE_THOUGHT          (SPRITE_SNOW_FOOD + SPRITE_NUM_SNOW_FOOD)
+#define SPRITE_NUM_THOUGHT      CREATURE_STATES + 1 /* + Smile */
 
 // Koth Krone
-#define SPRITE_CROWN        (SPRITE_THOUGHT + SPRITE_NUM_THOUGHT)
-#define SPRITE_NUM_CROWN    1
+#define SPRITE_CROWN            (SPRITE_THOUGHT + SPRITE_NUM_THOUGHT)
+#define SPRITE_NUM_CROWN        1
 
 // Logo
-#define SPRITE_LOGO         (SPRITE_CROWN + SPRITE_NUM_CROWN)
-#define SPRITE_NUM_LOGO     1
+#define SPRITE_LOGO             (SPRITE_CROWN + SPRITE_NUM_CROWN)
+#define SPRITE_NUM_LOGO         1
 
-#define SPRITE_CREATURE     512
+#define SPRITE_CREATURE         512
 
 // Creature Konstanten
 #define CREATURE_SPRITE(player, type, direction, anim) \

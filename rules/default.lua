@@ -88,20 +88,20 @@ function onCreatureKilled(victim, killer)
     end
 end
 
+function spawnCreatureAtRandomPos(player)
+    local x, y = world_find_digged_worldcoord()
+    if not x then return end
+    return creature_spawn(player, nil, x, y, CREATURE_SMALL)
+end
+
 function onPlayerCreated(player)
-    local x, y
-    x, y = world_find_digged_worldcoord()
-    creature_spawn(player, nil, x, y, CREATURE_SMALL)
-    x, y = world_find_digged_worldcoord()
-    creature_spawn(player, nil, x, y, CREATURE_SMALL)
+    spawnCreatureAtRandomPos(player)
+    spawnCreatureAtRandomPos(player)
 end
 
 function onPlayerAllCreaturesDied(player)
-    local x, y
-    x, y = world_find_digged_worldcoord()
-    creature_spawn(player, nil, x, y, CREATURE_SMALL)
-    x, y = world_find_digged_worldcoord()
-    creature_spawn(player, nil, x, y, CREATURE_SMALL)
+    spawnCreatureAtRandomPos(player)
+    spawnCreatureAtRandomPos(player)
 end
 
 function onPlayerScoreChange(player, score)

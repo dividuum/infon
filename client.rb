@@ -77,7 +77,7 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
             print "score=%d " % (socket.read16 - 500)                     if mask & 16 != 0
             puts
         when 1:
-            puts  "%d, %d => %d (%d) " % [socket.read8, socket.read8, socket.read8, socket.read8]
+            puts  "%d, %d => %d " % [socket.read8, socket.read8, socket.read8]
         when 2:
             puts  "msg: %s  " % socket.readXX(len)
         when 3: 

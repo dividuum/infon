@@ -36,7 +36,7 @@ typedef struct creature_s {
     int             food;
     int             health;
     player_t       *player;
-    int             target;
+    int             target_id;
     pathnode_t     *path;
     int             convert_food;
     creature_type   convert_type;
@@ -65,9 +65,9 @@ typedef struct creature_s {
     struct creature_s  *hash_next;
 } creature_t;
 
-creature_t *creature_by_num(int creature_num);
-
+creature_t *creature_by_id(int creature_num);
 int         creature_id(const creature_t *creature);
+
 creature_t *creature_get_checked_lua(lua_State *L, int idx);
 
 creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, creature_type type);

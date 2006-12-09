@@ -30,7 +30,7 @@
 #include "creature.h"
 #include "misc.h"
 
-static int            should_end_round = 0;
+static int            should_end_game = 0;
 static struct timeval start;
 static char           intermission[256] = {0};
 
@@ -67,7 +67,7 @@ void game_send_initial_update(client_t *client) {
 }
 
 static int luaGameEnd(lua_State *L) {
-    should_end_round = 1;
+    should_end_game = 1;
     return 0;
 }
 
@@ -153,8 +153,8 @@ void game_init() {
 }
 
 void game_one_game() {
-    should_end_round = 0;
-    game_time        = 0;
+    should_end_game = 0;
+    game_time       = 0;
     
     game_send_info(SEND_BROADCAST);
     
@@ -187,7 +187,7 @@ void game_one_game() {
         lua_pop(L, 1);
     } 
 
-    while (!game_exit && !should_end_round) {
+    while (!game_exit && !should_end_game) {
         int tick  = get_tick();
         int delta = tick - lasttick;
 
