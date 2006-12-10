@@ -334,6 +334,7 @@ function world_load(map)
         -- lua functions
         print             = print;
         pairs             = pairs;
+        ipairs            = ipairs;
         unpack            = unpack;
         math              = { random = math.random };
         string            = { upper  = string.upper;
@@ -351,9 +352,15 @@ function world_load(map)
         world_add_food    = world_add_food;
         world_make_border = world_make_border;
         world_fill_all    = world_fill_all;
+        world_tile_center = world_tile_center;
         game_info         = game_info;
-  
+
+        level_spawn_point = world_find_digged_worldcoord;
+
         -- game constants                              
+        TILE_WIDTH                 = TILE_WIDTH;
+        TILE_HEIGHT                = TILE_HEIGHT;
+        
         TILE_SOLID                 = TILE_SOLID;
         TILE_PLAIN                 = TILE_PLAIN;
         TILE_WATER                 = 2; -- compatibility
@@ -409,11 +416,14 @@ function world_add_food_by_worldcoord(x, y, amount)
     return world_add_food(x / TILE_WIDTH, y / TILE_HEIGHT, amount)
 end
 
+function world_tile_center(x, y)
+    return (x + 0.5) * TILE_WIDTH, (y + 0.5) * TILE_HEIGHT
+end
+
 function world_find_digged_worldcoord()
     local x, y = world_find_digged()
     if not x then return end
-    return x * TILE_WIDTH  + TILE_WIDTH  / 2, 
-           y * TILE_HEIGHT + TILE_HEIGHT / 2
+    return world_tile_center(x, y)
 end
 
 -- compatibility function
