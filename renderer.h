@@ -29,7 +29,7 @@ extern "C" {
 #include "client_player.h"
 #include "client_world.h"
 
-#define RENDERER_API_VERSION 3
+#define RENDERER_API_VERSION 4
 
 typedef struct {
     /* the renderer version number. set this to RENDERER_API_VERSION. */

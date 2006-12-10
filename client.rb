@@ -63,9 +63,10 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
     end
 
     loop do 
-        len = socket.read8
-        print "len=%3d " % len
-        case type = socket.read8
+        len  = socket.read8
+        type = socket.read8
+        print "type=%3d len=%3d " % [type, len]
+        case type
         when 0:
             print "player upd: "
             print "pno=%d "   % socket.read8
@@ -77,7 +78,7 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
             print "score=%d " % (socket.read16 - 500)                     if mask & 16 != 0
             puts
         when 1:
-            puts  "%d, %d => %d " % [socket.read8, socket.read8, socket.read8]
+            puts  "%d, %d => %d %d " % [socket.read8, socket.read8, socket.read8, socket.read8]
         when 2:
             puts  "msg: %s  " % socket.readXX(len)
         when 3: 
@@ -87,7 +88,7 @@ TCPSocket.open(ARGV[0] || 'localhost', 1234) { |socket|
             if mask &  1 != 0            
                 print "alive=%s "   % [socket.read8 == 0xFF ? 
                                        "dead" : 
-                                       "spawned %d,%d" % [socket.read16, socket.read16] ]
+                                       "spawned %d %d,%d" % [socket.read16, socket.read16, socket.read16] ]
             end
             print "type=%d "        % socket.read8                      if mask &  2 != 0
             if mask & 4 != 0

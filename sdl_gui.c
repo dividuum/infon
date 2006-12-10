@@ -49,6 +49,8 @@ static int          offset_y;
 static struct evbuffer *scrollbuffer;
 static int          rand_table[256];
 
+static int          debug = 0;
+
 static void recenter() {
     const client_world_info_t *info = infon->get_world_info();
     if (!info) return;
@@ -66,6 +68,7 @@ static void handle_events() {
                         if (event.key.keysym.mod & KMOD_ALT)
                             video_fullscreen_toggle();
                         break;
+                    case SDLK_F12: debug ^= 1; break;
                     case SDLK_1: video_resize( 640,  480); break;
                     case SDLK_2: video_resize( 800,  600); break;
                     case SDLK_3: video_resize(1024,  768); break;
@@ -161,6 +164,14 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
     }
 
     video_tiny(x - strlen(creature->message) * 6 / 2 + 9, y + 14, creature->message);
+
+    if (debug) {
+        char tmp[128];
+        snprintf(tmp, sizeof(tmp), "%d(%d) p%d", creature->vm_id, creature->num, creature->player); 
+        video_tiny(x, y + 20, tmp);
+        snprintf(tmp, sizeof(tmp), "f=%d h=%d", creature->food, creature->health); 
+        video_tiny(x, y + 28, tmp);
+    }
         
     if (creature->state == CREATURE_ATTACK) {
         const client_creature_t *target = infon->get_creature(creature->target);
@@ -358,9 +369,16 @@ static void draw_world() {
                 case TILE_GFX_KOTH:
                     floor_sprite = SPRITE_KOTH;
                     break;
+                case TILE_GFX_DESERT:
+                    floor_sprite = SPRITE_DESERT + pos_rand % SPRITE_NUM_DESERT;
+                    break;
                 default:
-                    floor_sprite = SPRITE_KOTH;
+                    floor_sprite = -1;
+                    break;
             }
+
+            if (debug)
+                floor_sprite = tile->type == TILE_PLAIN ? SPRITE_SNOW_PLAIN : -1;
 
             if (floor_sprite < 0) 
                 video_rect(screenx, screeny, screenx + SPRITE_TILE_SIZE, screeny + SPRITE_TILE_SIZE, 30, 30, 30, 0);

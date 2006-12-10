@@ -183,12 +183,14 @@ void client_creature_from_network(packet_t *packet) {
             if (playerno >= MAXPLAYERS)         PROTOCOL_ERROR();
             creature->player = playerno;
 
-            uint16_t x, y;
+            uint16_t vm_id, x, y;
+            if (!packet_read16(packet, &vm_id)) PROTOCOL_ERROR();
             if (!packet_read16(packet, &x))     PROTOCOL_ERROR();
             if (!packet_read16(packet, &y))     PROTOCOL_ERROR();
 
             creature->last_x = x;
             creature->last_y = y;
+            creature->vm_id  = vm_id;
             creature->num    = creatureno;
             creature->x      = x * CREATURE_POS_RESOLUTION;
             creature->y      = y * CREATURE_POS_RESOLUTION;

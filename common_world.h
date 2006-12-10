@@ -44,6 +44,7 @@ typedef enum {
     TILE_GFX_LAVA,
     TILE_GFX_NONE,
     TILE_GFX_KOTH,
+    TILE_GFX_DESERT,
 
     TILE_GFX_LAST_DEFINED
 } mapgfx_e;

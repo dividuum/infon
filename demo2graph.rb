@@ -10,9 +10,9 @@ class Tile
 end
 
 class Creature
-    attr_accessor :type, :state, :food, :health, :target, :message, :speed, :x, :y, :id, :player
-    def initialize(player, x, y)
-        @player, @x, @y = player, x, y
+    attr_accessor :type, :state, :food, :health, :target, :message, :speed, :x, :y, :id, :player, :vm_id
+    def initialize(player, vm_id, x, y)
+        @player, @vm_id, @x, @y = player, vm_id, x, y
     end
 end
 
@@ -119,7 +119,7 @@ class InfonDemo
                     if pno == 0xFF
                         @creatures.delete(cno)
                     else
-                        creature = @creatures[cno] = Creature.new(pno, @file.read16, @file.read16)
+                        creature = @creatures[cno] = Creature.new(pno, @file.read16, @file.read16, @file.read16)
                         creature.id = cno
                     end
                 else

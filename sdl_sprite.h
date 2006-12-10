@@ -55,6 +55,9 @@
 #define SPRITE_LAVA             (SPRITE_WATER + SPRITE_NUM_WATER)
 #define SPRITE_NUM_LAVA         4
 
+#define SPRITE_DESERT           (SPRITE_LAVA + SPRITE_NUM_LAVA)
+#define SPRITE_NUM_DESERT       10
+
 #define SPRITE_NUM_TILES (SPRITE_NUM_SOLID  + \
                           SPRITE_NUM_PLAIN  + \
                           SPRITE_NUM_BORDER + \
@@ -63,7 +66,8 @@
                           SPRITE_NUM_SNOW_BORDER + \
                           SPRITE_NUM_KOTH   + \
                           SPRITE_NUM_WATER  + \
-                          SPRITE_NUM_LAVA)
+                          SPRITE_NUM_LAVA   + \
+                          SPRITE_NUM_DESERT)
 
 #define SPRITE_TILE_SIZE    16
 
