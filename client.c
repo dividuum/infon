@@ -63,8 +63,6 @@ static int              is_file_source;
 static int              next_packet_countdown = 0;
 static int              traffic               = 0;
 
-// static int           demo_write_fd;
-
 static int              compression;
 static z_stream         strm;
 
@@ -310,7 +308,9 @@ void file_loop(int delta) {
                 
                 traffic += ret;
                 break;
-            case 2: // call again later
+                
+            // call again later
+            case 2: 
                 return;
         }
     }
