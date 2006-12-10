@@ -310,6 +310,7 @@ void world_init() {
     lua_register_constant(L, TILE_GFX_LAVA);
     lua_register_constant(L, TILE_GFX_NONE);
     lua_register_constant(L, TILE_GFX_KOTH);
+    lua_register_constant(L, TILE_GFX_DESERT);
 
     lua_register_constant(L, TILE_WIDTH);
     lua_register_constant(L, TILE_HEIGHT);

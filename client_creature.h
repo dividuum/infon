@@ -35,6 +35,7 @@ struct client_pathnode_s {
 
 typedef struct client_creature_s {
     int             num;
+    int             vm_id;
     int             used;
     void           *userdata;
 

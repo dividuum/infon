@@ -368,6 +368,7 @@ function world_load(map)
         TILE_GFX_LAVA              = TILE_GFX_LAVA;
         TILE_GFX_NONE              = TILE_GFX_NONE;
         TILE_GFX_KOTH              = TILE_GFX_KOTH;
+        TILE_GFX_DESERT            = TILE_GFX_DESERT;
     }
 
     -- activate environment for world code and load world
