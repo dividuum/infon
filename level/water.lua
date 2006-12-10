@@ -9,6 +9,10 @@ function level_koth_pos()
     return 56, 22
 end
 
+-- function level_spawn_point(player)
+--    return world_tile_center(11, 11)
+-- end
+
 function level_init()
     world_dig(32, 23, TILE_WATER)
     world_dig(61, 16, TILE_WATER)
