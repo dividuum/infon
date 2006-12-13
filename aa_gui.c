@@ -118,7 +118,7 @@ static void aarenderer_tick(int gt, int delta) {
                 terrainy < 0 || terrainy >= worldsize->height)
                 continue;
             const client_maptile_t *tile = &world[terrainy * worldsize->width + terrainx];
-            switch (tile->map) {
+            switch (tile->type) {
                 case TILE_SOLID:
                     *p = 90;
                     break;

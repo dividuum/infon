@@ -83,7 +83,7 @@ int renderer_init_from_pointer(render_loader loader) {
     if (renderer->version == RENDERER_API_VERSION) 
         return 1;
 
-    fprintf(stderr, "version mismatch between renderer and engine: renderer api %d <> engine api %d\n", 
+    fprintf(stderr, "version mismatch between renderer and engine: renderer api %d != engine api %d\n", 
                     renderer->version, RENDERER_API_VERSION);
     return 0;
 }
@@ -140,7 +140,7 @@ failed:
 }
 
 int renderer_search_and_load(const char *name) {
-    char buf[PATH_MAX];
+    char buf[4096];
     
 #ifdef WIN32
     const char *ext = "dll";
@@ -174,6 +174,7 @@ int renderer_search_and_load(const char *name) {
 #ifdef RENDERER_PATH
     renderer_try("%s/%s.%s", RENDERER_PATH, name, ext);
 #endif
+    renderer_try("%s%s", PREFIX, name);
     return 0;
 }
 

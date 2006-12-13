@@ -26,6 +26,7 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
+#include "infond.h"
 #include "global.h"
 #include "creature.h"
 #include "player.h"
@@ -201,11 +202,11 @@ int creature_speed(const creature_t *creature) {
     }
 }
 
-int  creature_can_move_to_target(creature_t *creature) {
+static int creature_can_walk_path(creature_t *creature) {
     return creature->path != NULL && creature_speed(creature) > 0;
 }
 
-void creature_do_move_to_target(creature_t *creature, int delta) {
+void creature_do_walk_path(creature_t *creature, int delta) {
     int travelled = creature_speed(creature) * delta / 1000;
 
     if (travelled == 0)
@@ -643,7 +644,7 @@ int creature_set_state(creature_t *creature, int newstate) {
         case CREATURE_IDLE:
             break;
         case CREATURE_WALK:
-            if (!creature_can_move_to_target(creature))
+            if (!creature_can_walk_path(creature))
                 return 0;
             break;
         case CREATURE_HEAL:
@@ -768,7 +769,7 @@ void creature_moveall(int delta) {
                 // Nichts machen
                 break;
             case CREATURE_WALK:
-                creature_do_move_to_target(creature, delta);
+                creature_do_walk_path(creature, delta);
                 break;
             case CREATURE_HEAL:
                 creature_do_heal(creature, delta);

@@ -10,13 +10,12 @@ FILETYPE VFT_APP
          BLOCK "040904E4"
          {
              VALUE "CompanyName", "fw@dividuum.de"
-             VALUE "FileVersion", REVISION
              VALUE "FileDescription", "Infon Battle Arena Client"
+             VALUE "FileVersion", REVISION
              VALUE "InternalName", "infon"
              VALUE "LegalCopyright", "GPL"
-             VALUE "LegalTrademarks", ""
-             VALUE "OriginalFilename", ""
-             VALUE "ProductName", "infon"
+             VALUE "OriginalFilename", "infon.exe"
+             VALUE "ProductName", "Infon Battle Arena"
              VALUE "ProductVersion", REVISION
          }
      }

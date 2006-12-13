@@ -78,13 +78,14 @@ function Client:joinmenu()
         self:writeln("could not attach to player " .. playerno .. ": " .. errormsg)
     else
         self:writeln("joined. player " .. playerno .. " has now " .. player_num_clients(playerno) .. " client(s)")
-        self.last_join = game_time()
     end
 end
 
 function Client:partmenu() 
+    local playerno = self:get_player()
+    local warning  = player_num_clients(playerno) == 1 and " reattach within 2 minutes or your player will be killed." or ""
     self:detach()
-    self:writeln("detached")
+    self:writeln("detached from player " .. playerno .. "." .. warning)
 end
 
 function Client:namemenu() 
@@ -209,9 +210,14 @@ function Client:shell()
             if code == "" then 
                 break
             end
-            local ok, msg = xpcall(loadstring(code, "shell"), debug.traceback)
-            if not ok then 
+            local chunk, msg = loadstring(code, "input from client '" .. self.addr .. "'")
+            if not chunk then
                 self:writeln(msg)
+            else
+                local ok, msg = xpcall(chunk, debug.traceback)
+                if not ok then 
+                    self:writeln(msg)
+                end
             end
         end
     else
@@ -231,6 +237,7 @@ function Client:showscores()
     for pno in each_player() do 
         table.insert(players, {
             num         = pno,
+            clients     = player_num_clients(pno),
             name        = player_get_name(pno),
             score       = player_score(pno),
             creatures   = player_num_creatures(pno),
@@ -242,20 +249,21 @@ function Client:showscores()
     table.sort(players, function (a,b) 
         return a.score > b.score
     end)
-    self:writeln("Scores | Creatures | Time |     Mem | CPU | No | Name")
-    self:writeln("-------+-----------+------+---------+-----+----+-------------")
+    self:writeln("Scores | Creatures | Time |     Mem | CPU | #Cl | No | Name")
+    self:writeln("-------+-----------+------+---------+-----+-----+----+-------------")
     for i,player in ipairs(players) do 
-        self:writeln(string.format("%s%5d | %9d | %4dm| %7d | %3d%%| %2d | %s",
+        self:writeln(string.format("%s%5d | %9d | %4dm| %7d | %3d%%| %3d | %2d | %s",
                                    self:get_player() == player.num and "*" or " ",
                                    player.score,
                                    player.creatures,
                                    player.age,
                                    player.mem,
                                    player.cpu,
+                                   player.clients,
                                    player.num,
                                    player.name))
     end
-    self:writeln("-------+-----------+------+---------+-----+----+-------------")
+    self:writeln("-------+-----------+------+---------+-----+-----+----+-------------")
 end
 
 function Client:info()
@@ -264,6 +272,7 @@ function Client:info()
     self:writeln("-------------------+-----------------------------")
     self:writeln("uptime             | " .. (os.time() - stats.start_time) .. "s")
     self:writeln("cpu usage          | " .. os.clock() .. "s")
+    self:writeln("memory             | " .. string.format("%d", collectgarbage("count")) .. "kb")
     self:writeln("-------------------+------------------------------")
     self:writeln("accepted clients   | " .. stats.num_clients)
     self:writeln("refused clients    | " .. stats.num_refused)
@@ -357,7 +366,6 @@ function Client:mainmenu()
                 self:writeln("fwd    - set unknown command forward")
                 self:writeln("prompt - change prompt")
                 self:writeln("bb     - hex batch (load precompiled code)")
-                self:writeln("hl     - choose highlevel api")
                 self:writeln("0 - 9  - execute onInputX()")
                 self:writeln("info   - server information")
                 self:menu_footer()

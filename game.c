@@ -67,6 +67,18 @@ void game_send_initial_update(client_t *client) {
     game_send_intermission(client);
 }
 
+void game_call_rule_handler(const char *name, int params) {
+    lua_pushliteral(L, "rules_call");   // arg* 'rules_call'
+    lua_rawget(L, LUA_GLOBALSINDEX);    // arg* rules_call
+    lua_insert(L, -1 - params);         // rules_call arg* 
+    lua_pushstring(L, name);            // rules_call arg* name
+    lua_insert(L, -1 - params);         // rules_call name arg* 
+    if (lua_pcall(L, 1 + params, 0, 0) != 0) {
+        fprintf(stderr, "error calling rules_call: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+}
+
 static int luaGameEnd(lua_State *L) {
     should_end_game = 1;
     return 0;
@@ -100,7 +112,7 @@ static int luaHexDecode(lua_State *L) {
     luaL_Buffer out;
     luaL_buffinit(L, &out);
     int    hi   = 1;
-    char   cur;
+    char   cur  = 0;
     while (left > 0) {
         int val = -1;
         switch (*ptr) {
@@ -129,13 +141,6 @@ static int luaHexDecode(lua_State *L) {
 }
 
 void game_init() {
-    lua_pushliteral(L, "rules_init");
-    lua_rawget(L, LUA_GLOBALSINDEX);
-    if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling rules_init: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
-
     lua_register(L, "game_end",         luaGameEnd);
     lua_register(L, "game_info",        luaGameInfo);
     lua_register(L, "game_time",        luaGameTime);
@@ -158,18 +163,18 @@ void game_one_game() {
     game_time       = 0;
     
     game_send_info(SEND_BROADCAST);
-    
-    lua_pushliteral(L, "onNewGame");
+
+    lua_pushliteral(L, "rules_init");
     lua_rawget(L, LUA_GLOBALSINDEX);
     if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling onNewGame: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "error calling rules_init: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 
     world_init();
     creature_init();
 
-    // Initialer Worldtick
+    // Initialer Worldtick. ruft level_init und ersten level_tick auf.
     world_tick();
 
     // Beginn der Zeitrechnung...
@@ -181,12 +186,15 @@ void game_one_game() {
     player_game_start();
 
     // Spiel gestartet
-    lua_pushliteral(L, "onNewGameStarted");
+    lua_pushliteral(L, "new_game_started");
     lua_rawget(L, LUA_GLOBALSINDEX);
     if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling onNewGameStarted: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "error calling new_game_started: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     } 
+
+    // Rule Handler
+    game_call_rule_handler("onNewGame", 0);
 
     while (!game_exit && !should_end_game) {
         int tick  = get_tick();
@@ -219,12 +227,8 @@ void game_one_game() {
             // Zeit weiterlaufen lassen
             game_time += delta;
 
-            lua_pushliteral(L, "onRound");
-            lua_rawget(L, LUA_GLOBALSINDEX);
-            if (lua_pcall(L, 0, 0, 0) != 0) {
-                fprintf(stderr, "error calling onNewRound: %s\n", lua_tostring(L, -1));
-                lua_pop(L, 1);
-            }
+            // Rule Handler
+            game_call_rule_handler("onRound", 0);
         }
         
         // IO Lesen/Schreiben
