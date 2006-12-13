@@ -26,12 +26,14 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
+#include "infond.h"
 #include "global.h"
 #include "player.h"
 #include "server.h"
 #include "creature.h"
 #include "world.h"
 #include "misc.h"
+#include "game.h"
 #include "rules.h"
 #include "scroller.h"
 
@@ -65,17 +67,10 @@ void player_score(player_t *player, int scoredelta, const char *reason) {
         player->dirtymask |= PLAYER_DIRTY_SCORE;
 
     // Rule Handler aufrufen
-    lua_pushliteral(L, "onPlayerScoreChange");
-    lua_rawget(L, LUA_GLOBALSINDEX);         
     lua_pushnumber(L, player_num(player));
     lua_pushnumber(L, player->score);
-    if (lua_pcall(L, 2, 0, 0) != 0) {
-        fprintf(stderr, "error calling onPlayerScoreChange: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
-
-    fprintf(stderr, "stat: %10d %3d '%10s' %5d: %s\n", 
-            game_time, player_num(player), player->name, player->score, reason);
+    lua_pushstring(L, reason);
+    game_call_rule_handler("onPlayerScoreChange", 3);
 }
 
 void player_init_events(player_t *player) {
@@ -111,18 +106,12 @@ void player_on_creature_spawned(player_t *player, creature_t *creature, creature
     player->num_creatures++;
         
     // Rule Handler aufrufen
-    lua_pushliteral(L, "onCreatureSpawned");
-    lua_rawget(L, LUA_GLOBALSINDEX);         
     lua_pushnumber(L, creature_id(creature));
     if (parent)
         lua_pushnumber(L, creature_id(parent));
     else
         lua_pushnil(L);
-    
-    if (lua_pcall(L, 2, 0, 0) != 0) {
-        fprintf(stderr, "error calling onCreatureSpawned: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
+    game_call_rule_handler("onCreatureSpawned", 2);
 }
 
 void player_on_creature_killed(player_t *player, creature_t *victim, creature_t *killer) {
@@ -138,18 +127,12 @@ void player_on_creature_killed(player_t *player, creature_t *victim, creature_t 
         player->all_dead_time = game_time;
 
     // Rule Handler aufrufen
-    lua_pushliteral(L, "onCreatureKilled");
-    lua_rawget(L, LUA_GLOBALSINDEX);         
     lua_pushnumber(L, creature_id(victim));
     if (killer)
         lua_pushnumber(L, creature_id(killer));
     else
         lua_pushnil(L);
-    
-    if (lua_pcall(L, 2, 0, 0) != 0) {
-        fprintf(stderr, "error calling onCreatureKilled: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
+    game_call_rule_handler("onCreatureKilled", 2);
 }
 
 void player_on_creature_attacked(player_t *player, creature_t *victim, creature_t *attacker) {
@@ -160,13 +143,8 @@ void player_on_creature_attacked(player_t *player, creature_t *victim, creature_
 
 void player_on_all_dead(player_t *player) {
     // Rule Handler aufrufen
-    lua_pushliteral(L, "onPlayerAllCreaturesDied");
-    lua_rawget(L, LUA_GLOBALSINDEX);         
     lua_pushnumber(L, player_num(player));
-    if (lua_pcall(L, 1, 0, 0) != 0) {
-        fprintf(stderr, "error calling onPlayerAllCreaturesDied: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
+    game_call_rule_handler("onPlayerAllCreaturesDied", 1);
 }
 
 void player_on_created(player_t *player) {
@@ -180,13 +158,8 @@ void player_on_created(player_t *player) {
     player_add_event(player, PLAYER_CREATED, 1);
 
     // Rule Handler aufrufen
-    lua_pushliteral(L, "onPlayerCreated");
-    lua_rawget(L, LUA_GLOBALSINDEX);         
     lua_pushnumber(L, player_num(player));
-    if (lua_pcall(L, 1, 0, 0) != 0) {
-        fprintf(stderr, "error calling onPlayerCreated: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
+    game_call_rule_handler("onPlayerCreated", 1);
 }
 
 static int player_at_panic(lua_State *L) {
@@ -224,7 +197,7 @@ static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 // Erwartet Funktion sowie params Parameter auf dem Stack
-static int call_user_lua(const char *where, player_t *player, int params) {
+static int player_call_user_lua(const char *where, player_t *player, int params) {
     lua_pushliteral(player->L, "traceback");    // func params* 'traceback'
     lua_rawget(player->L, LUA_REGISTRYINDEX);   // func params* traceback
     lua_insert(player->L, -2 - params);         // traceback func params*
@@ -608,15 +581,16 @@ player_t *player_create(const char *pass, const char *highlevel) {
     player->max_cycles = LUA_MAX_CPU;
 
     player->L = lua_newstate(player_allocator, player);
+    luaL_openlibs(player->L);
 
     lua_atcpu_exceeded(player->L, player_at_cpu_exceeded);
     lua_atpanic       (player->L, player_at_panic);
 
     player_set_color(player, rand() % 256);
-    
-    luaL_openlibs(player->L);
 
+    lua_register_string_constant(player->L, PREFIX);
     lua_register_player(player, "save_in_registry",     luaSaveInRegistry);
+
     lua_register_player(player, "suicide",              luaCreatureSuicide);
     lua_register_player(player, "set_path",             luaCreatureSetPath);
     lua_register_player(player, "get_pos",              luaCreatureGetPos);
@@ -679,7 +653,7 @@ player_t *player_create(const char *pass, const char *highlevel) {
     player_init_events(player);
 
     // player.lua sourcen
-    if (luaL_loadfile(player->L, "player.lua")) {
+    if (luaL_loadfile(player->L, PREFIX "player.lua")) {
         fprintf(stderr, "cannot load 'player.lua': %s\n", lua_tostring(player->L, -1));
         goto failed;
     }
@@ -840,7 +814,7 @@ int player_detach_client(client_t *client, player_t *player) {
 void player_execute_client_lua(client_t *output_client, player_t *player, const char *code, size_t codelen, const char *where) {
     player->output_client = output_client;
     if (luaL_loadbuffer(player->L, code, codelen, where) == 0) {
-        call_user_lua("during interactive execution", player, 0);
+        player_call_user_lua("during interactive execution", player, 0);
     } else {
         const char *msg = lua_tostring(player->L, -1);
         if (!msg) 
@@ -902,7 +876,7 @@ void player_think() {
         lua_pushliteral(player->L, "events");
         lua_rawget(player->L, LUA_REGISTRYINDEX);
         player->output_client = player->bot_output_client; 
-        call_user_lua("calling player_think", player, 1);
+        player_call_user_lua("calling player_think", player, 1);
         player->output_client = NULL;
 
         // Events Strukur neu initialisieren

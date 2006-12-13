@@ -25,6 +25,7 @@
 
 #include <lauxlib.h>
 
+#include "infond.h"
 #include "global.h"
 #include "world.h"
 #include "path.h"

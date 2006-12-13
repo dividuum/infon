@@ -68,9 +68,11 @@ int main(int argc, char *argv[]) {
     srand(time(0));
 
     L = luaL_newstate();
-
     luaL_openlibs(L);
-    if (luaL_dofile(L, "infond.lua")) 
+    
+    lua_register_string_constant(L, PREFIX);
+    
+    if (luaL_dofile(L, PREFIX "infond.lua")) 
         die("cannot read 'infond.lua': %s", lua_tostring(L, -1));
 
     game_init();

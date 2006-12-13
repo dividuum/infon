@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "infon.h"
 #include "renderer.h"
 #include "global.h"
 #include "client_creature.h"

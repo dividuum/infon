@@ -22,18 +22,25 @@
 -- Unsicheres Zeugs weg
 ------------------------------------------------------------------------
 
--- save traceback function
-_TRACEBACK = debug.traceback
-
 -- save in registry for usage within 'out of cycles' handler
 save_in_registry('traceback', debug.traceback)
 save_in_registry = nil
 
+-- save traceback function
+_TRACEBACK = debug.traceback
+
+-- new dofile function uses defined PREFIX
+do
+    local PREFIX, orig_dofile = PREFIX, dofile
+    function dofile(file)
+        return orig_dofile(PREFIX .. file .. ".lua")
+    end
+end
+
 -- limit strings accepted by loadstring to 16k
 do
-    local orig_loadstring = loadstring
-    local error           = error
-    loadstring = function(code, name)
+    local orig_loadstring, error = loadstring, error
+    function loadstring(code, name)
         if #code > 16384 then
             error("code too large")
         else
@@ -67,8 +74,10 @@ do
     end
 end
 
+PREFIX          = nil   -- no need to know
 debug           = nil   -- no debugging functions
-dofile          = nil   -- would allow file loading
+load            = nil   -- not needed
+require         = nil   -- no file loading
 loadfile        = nil   -- no file loading
 _VERSION        = nil   -- who cares
 newproxy        = nil   -- huh?
@@ -76,7 +85,6 @@ gcinfo          = nil   -- no access to the garbage collector
 os              = nil   -- no os access
 package         = nil   -- package support is not needed
 io              = nil   -- disable io
-load            = nil   -- no file loading
 module          = nil   -- module support not needed
 collectgarbage  = nil   -- no access to the garbage collector
 
@@ -127,8 +135,8 @@ end
 -- Load Highlevel API
 ------------------------------------------------------------------------
 
-require(...)
-
-require = function(what) 
-    print("cannot require file '" .. what .. "'. upload it using the batch (b) command.")
+dofile(...)
+dofile = function(what) 
+    print("cannot 'dofile(\"" .. what .. "\")'. upload it using the batch (b) command.")
 end
+

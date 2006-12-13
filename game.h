@@ -26,5 +26,6 @@
 void game_init();
 void game_one_game();
 void game_send_initial_update(client_t *client);
+void game_call_rule_handler(const char *name, int params);
 
 #endif

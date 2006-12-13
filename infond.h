@@ -18,35 +18,15 @@
 
 */
 
-#ifndef GLOBAL_H
-#define GLOBAL_H
+#ifndef INFOND_H
+#define INFOND_H
 
-#ifdef EVENT_NAME
-#define GAME_NAME "Infon Battle Arena (" EVENT_NAME " Edition)"
-#else
-#define GAME_NAME "Infon Battle Arena " REVISION
-#endif
+#include <lua.h>
 
-// Pfadsuche, bei der mehrere beieinanderliegende
-// Tiles zu einem Area zusammengefasst werden. Die
-// Pfadsuche verwendet dann diese Areas fuer die 
-// Pfadsuche. Dies ist schneller und die gefundenen
-// Pfade sehen natuerlicher aus. Allerdings ergeben 
-// sich gelegentlich aufgrund der zusammenfassung
-// der Tiles komische Pfade.
-#define PATHFIND_AREA_MERGE 
+extern lua_State *L;
 
-// Netzwerk Protokoll
-#define PROTOCOL_VERSION 7
-
-// do not open stdin (console) client?
-// #define NO_CONSOLE_CLIENT
-
-// warn if no coredumps possible
-// #define WARN_COREDUMP
-
-#ifndef DEFAULT_RENDERER
-#define DEFAULT_RENDERER sdl_gui
-#endif
+extern int game_time;
+extern int game_paused;
+extern int game_exit;
 
 #endif

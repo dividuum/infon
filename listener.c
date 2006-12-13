@@ -32,6 +32,7 @@
 
 #include <event.h>
 
+#include "infond.h"
 #include "global.h"
 #include "server.h"
 #include "listener.h"

@@ -4,20 +4,19 @@ function onNewGame()
 end
 
 function onRound()
-    if not round_end_text and time_limit and game_time() > time_limit then
+    local time_limit = get_time_limit()
+    if not round_end_text and time_limit and game_time() > get_time_limit() then
         local maxscore   = -1000000
         local winner     = nil
         local num_winner = 0
-        for n = 0, MAXPLAYERS - 1 do 
-            if player_exists(n) then
-                local score = player_score(n)
-                if score > maxscore then 
-                    winner     = n
-                    maxscore   = score
-                    num_winner = 1
-                elseif score == maxscore then
-                    num_winner = num_winner + 1
-                end
+        for n in each_player() do 
+            local score = player_score(n)
+            if score > maxscore then 
+                winner     = n
+                maxscore   = score
+                num_winner = 1
+            elseif score == maxscore then
+                num_winner = num_winner + 1
             end
         end
         if not winner then
@@ -89,20 +88,21 @@ function onCreatureKilled(victim, killer)
 end
 
 function onPlayerCreated(player)
-    local x, y = world.level_spawn_point(player)
+    local x, y = world_get_spawn_point(player)
     if x and y then creature_spawn(player, nil, x, y, CREATURE_SMALL) end
-    local x, y = world.level_spawn_point(player)
+    local x, y = world_get_spawn_point(player)
     if x and y then creature_spawn(player, nil, x, y, CREATURE_SMALL) end
 end
 
 function onPlayerAllCreaturesDied(player)
-    local x, y = world.level_spawn_point(player)
+    local x, y = world_get_spawn_point(player)
     if x and y then creature_spawn(player, nil, x, y, CREATURE_SMALL) end
-    local x, y = world.level_spawn_point(player)
+    local x, y = world_get_spawn_point(player)
     if x and y then creature_spawn(player, nil, x, y, CREATURE_SMALL) end
 end
 
-function onPlayerScoreChange(player, score)
+function onPlayerScoreChange(player, score, reason)
+    local score_limit = get_score_limit()
     if not round_end_text and score_limit and score >= score_limit then
         round_end_text = "player " .. player_get_name(player) .. " wins the game!"
     end 

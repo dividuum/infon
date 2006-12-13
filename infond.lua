@@ -22,7 +22,7 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
-require 'config'
+assert(loadfile(PREFIX .. "config.lua"))()
 
 stats  = {
     num_clients     = 0;
@@ -113,7 +113,7 @@ function Client:on_new_client(addr)
     self.forward_unknown = false
     self.highlevel       = highlevel[1]
     self.last_action     = {}
-    print(self.addr .. " accepted")
+ -- print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
     self:start_thread()
 end
@@ -127,7 +127,7 @@ function Client:start_thread()
 end
 
 function Client:on_destroy(reason)
-    print(self.addr .. " closed: " .. reason)
+ -- print(self.addr .. " closed: " .. reason)
     scroller_add(self.addr .. " disconnected: " .. reason)
 end
 
@@ -256,19 +256,19 @@ function Client:welcome(msg)
     self:write("  \r\n" .. msg .. string.rep(" ", 28 - msglen) .. "\r\n")
 end
 
-function Client.writeAll(line)
+function Client.write_all(line)
     table.foreach(clients, function (fd, obj)
                                obj:write(line)
                            end)
 end
 
-function Client.writelnAll(line)
+function Client.writeln_all(line)
     table.foreach(clients, function (fd, obj)
                                obj:writeln(line)
                            end)
 end
 
-wall = Client.writelnAll
+wall = Client.writeln_all
 
 -----------------------------------------------------------
 -- Server C Callbacks
@@ -303,7 +303,7 @@ end
 -- Game C Callbacks
 -----------------------------------------------------------
 
-function onNewGameStarted()
+function new_game_started()
     if type(demo) == "string" then
         server_start_demo(string.format("%s-%08X.demo", demo, os.time()));
     elseif type(demo) == "function" then
@@ -327,7 +327,7 @@ function world_rotate_map()
 end
 
 function world_load(map)
-    local world_code = assert(loadfile("level/" .. map .. ".lua"))
+    local world_code = assert(loadfile(PREFIX .. "level/" .. map .. ".lua"))
 
     -- prepare safe world environment
     world = {
@@ -426,10 +426,14 @@ function world_find_digged_worldcoord()
     return world_tile_center(x, y)
 end
 
--- compatibility function
+function world_get_spawn_point(player)
+    return world.level_spawn_point(player)
+end
+
+-- compatibility function. do not use for new maps.
 function world_dig(x, y, typ, gfx)
     gfx = gfx or typ
-    if typ == 2 then -- water
+    if typ == world.TILE_WATER then -- water
         world_set_gfx(x, y, TILE_GFX_WATER)
         return
     end
@@ -467,7 +471,56 @@ end
 -----------------------------------------------------------
 
 function rules_init()
-    dofile("rules/" .. rules .. ".lua")
+    local rules_code = assert(loadfile(PREFIX .. "rules/" .. rules .. ".lua"))
+
+    -- prepare safe rules environment
+    rule = {
+        -- lua functions
+        print                       = print;
+        
+        -- game functions
+        game_time                   = game_time;
+        each_player                 = each_player;
+
+        player_score                = player_score;
+        player_get_name             = player_get_name;
+        player_change_score         = player_change_score;
+        
+        creature_spawn              = creature_spawn;
+        creature_set_food           = creature_set_food;
+        creature_get_food           = creature_get_food;
+        creature_get_pos            = creature_get_pos;
+        creature_get_player         = creature_get_player;
+        creature_get_type           = creature_get_type;
+
+        world_get_spawn_point       = world_get_spawn_point;
+        world_add_food_by_worldcoord= world_add_food_by_worldcoord;
+
+        get_score_limit             = function () return score_limit end;
+        get_time_limit              = function () return time_limit  end;
+        scroller_add                = scroller_add;
+        set_intermission            = set_intermission;
+        world_rotate_map            = world_rotate_map;
+        reset                       = reset;
+
+        -- game constants                              
+        CREATURE_SMALL              = CREATURE_SMALL;
+        CREATURE_BIG                = CREATURE_BIG;
+        CREATURE_FLYER              = CREATURE_FLYER;
+    }
+
+    -- activate environment for rules code and load rules
+    setfenv(rules_code, rule)()
+end
+
+function rules_call(name, ...)
+    if type(rule) ~= "table" then
+        error("'rule' is not a table. cannot call rule handler '" .. name .. "'")
+    end
+    if not rule[name] then
+        error("rule handler '" .. name .. "' not defined")
+    end
+    rule[name](...)
 end
 
 -----------------------------------------------------------
@@ -543,4 +596,4 @@ end
 -- Clienthandler laden
 -----------------------------------------------------------
 
-require "server"
+assert(loadfile(PREFIX .. "server.lua"))()

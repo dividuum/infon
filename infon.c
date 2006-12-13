@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifndef WIN32
+    signal(SIGTERM, sighandler);
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
 #endif

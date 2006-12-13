@@ -34,6 +34,7 @@
 #include <zlib.h>
 
 #include "packet.h"
+#include "infond.h"
 #include "global.h"
 
 #define MAXCLIENTS 1024

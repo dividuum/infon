@@ -94,9 +94,8 @@ static void client_round_info_from_network(packet_t *packet) {
 }
 
 static void client_scroller_from_network(packet_t *packet) {
-    char buf[257];
-    memcpy(buf, &packet->data, packet->len);
-    buf[packet->len] = '\0';
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%.*s", packet->len, packet->data); 
     renderer_scroll_message(buf);
 }
 
@@ -116,6 +115,7 @@ static void client_start_compression() {
 }
 
 static void client_handle_packet(packet_t *packet) {
+    printf("handling %d\n", packet->type);
     switch (packet->type) {
         case PACKET_PLAYER_UPDATE:  
             client_player_from_network(packet);

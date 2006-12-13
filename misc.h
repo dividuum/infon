@@ -44,6 +44,9 @@ int yesno(const char *fmt, ...);
 #define lua_register_constant(L, name) \
     do { lua_pushnumber(L, name); lua_setglobal(L, #name); } while (0)
 
+#define lua_register_string_constant(L, name) \
+    do { lua_pushliteral(L, name); lua_setglobal(L, #name); } while (0)
+
 #define save_lua_stack(L, diff)         \
     lua_State *check_L = L;             \
     int lua_stack = lua_gettop(check_L) - diff;\

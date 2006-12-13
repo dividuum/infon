@@ -36,6 +36,7 @@
 #include <event.h>
 #include <zlib.h>
 
+#include "infond.h"
 #include "server.h"
 #include "packet.h"
 #include "global.h"
@@ -182,7 +183,7 @@ static void server_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
-#ifdef CONSOLE_CLIENT    
+#ifndef NO_CONSOLE_CLIENT    
     // HACK um die Ausgabe des Consolenclients an
     // stdout statt stdin zu schicken.
     if (fd == STDIN_FILENO) fd = STDOUT_FILENO; 
@@ -344,7 +345,7 @@ void server_destroy(client_t *client, const char *reason) {
         }
     }
     
-#ifdef CONSOLE_CLIENT    
+#ifndef NO_CONSOLE_CLIENT    
     if (fd != STDIN_FILENO)
 #endif
         close(fd);
@@ -551,7 +552,7 @@ void server_init() {
     lua_register(L, "server_start_demo",        luaStartDemoWriter);
 
     // XXX: HACK: stdin client starten
-#ifdef CONSOLE_CLIENT    
+#ifndef NO_CONSOLE_CLIENT    
     server_accept(STDIN_FILENO, "special:console"); 
 #endif
 }
