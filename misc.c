@@ -62,3 +62,13 @@ int yesno(const char *fmt, ...) {
 #endif
 }
 
+#ifdef WIN32
+const char *ErrorString(int error) {
+    static char buf[4096];
+    if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                       NULL, error, MAKELANGID (LANG_NEUTRAL, SUBLANG_DEFAULT),
+                       (LPTSTR) buf, sizeof (buf), NULL))
+        snprintf(buf, sizeof(buf), "errorcode %d", error);
+    return buf;
+}
+#endif

@@ -23,6 +23,9 @@
 
 void die(const char *fmt, ...);
 int yesno(const char *fmt, ...);
+#ifdef WIN32
+const char *ErrorString(int error);
+#endif
 
 #ifndef abs
 #define abs(a) ((a)<0?-(a):(a))

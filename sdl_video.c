@@ -20,6 +20,7 @@
 
 #include <SDL.h>
 #include <SDL_gfxPrimitives.h>
+#include <SDL_syswm.h>
 #include <sge.h>
 #include <stdio.h>
 #include <string.h>
@@ -60,13 +61,13 @@ void video_init(int w, int h, int fs) {
 
     video_set_title(GAME_NAME);
     SDL_ShowCursor(1);
-#if 0
+#if 1
     SDL_SysWMinfo wminfo;
     if (SDL_GetWMInfo(&wminfo) == 1) {
         HWND      hwnd   = wminfo.window;
-        HINSTANCE handle = ::GetModuleHandle(NULL);
-        HICON     icon   = ::LoadIcon(handle, "icon");
-        ::SetClassLong(hwnd, GCL_HICON, (LONG) icon);
+        HINSTANCE handle = GetModuleHandle(NULL);
+        HICON     icon   = LoadIcon(handle, "icon");
+        SetClassLong(hwnd, GCL_HICON, (LONG) icon);
     }
 #endif
     //SDL_EnableUNICODE(1);

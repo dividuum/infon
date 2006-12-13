@@ -108,7 +108,7 @@ int renderer_open_file(const char *shared) {
     dlhandle = LoadLibrary(shared);
 
     if (!dlhandle) {
-        fprintf(stderr, "LoadLibrary failed: %d\n", GetLastError());
+        fprintf(stderr, "LoadLibrary failed: %s\n", ErrorString(GetLastError()));
         goto failed;
     }
 
