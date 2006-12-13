@@ -61,7 +61,7 @@ void video_init(int w, int h, int fs) {
 
     video_set_title(GAME_NAME);
     SDL_ShowCursor(1);
-#if 1
+#if WIN32
     SDL_SysWMinfo wminfo;
     if (SDL_GetWMInfo(&wminfo) == 1) {
         HWND      hwnd   = wminfo.window;
