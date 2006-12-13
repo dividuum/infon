@@ -26,7 +26,7 @@ else
 endif
 
 ifdef WINDOWS
-	PREFIX           ?= .\\
+	PREFIX           ?= .\\\\
 	MINGW             = $(HOME)/progs/mingw32/
 	SDLDIR            = $(MINGW)
 	CC                = /opt/xmingw/bin/i386-mingw32msvc-gcc
