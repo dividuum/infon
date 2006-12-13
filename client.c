@@ -115,7 +115,6 @@ static void client_start_compression() {
 }
 
 static void client_handle_packet(packet_t *packet) {
-    printf("handling %d\n", packet->type);
     switch (packet->type) {
         case PACKET_PLAYER_UPDATE:  
             client_player_from_network(packet);
