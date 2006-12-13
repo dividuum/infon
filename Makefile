@@ -76,6 +76,7 @@ $(SDL_RENDERER)     : CFLAGS   += -I$(SDLDIR)/include/SDL
 $(SDL_RENDERER)     : LDFLAGS  += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
                                   $(MINGW)/lib/libpng.a $(MINGW)/lib/libz.a     $(MINGW)/lib/libSDL_gfx.a $(MINGW)/lib/libSDL.a \
                                   -lmingw32 -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
+$(SDL_RENDERER)     : infon.res
 else
 $(INFON_EXECUTABLE) : LDFLAGS  += -levent -lz -lm 
 

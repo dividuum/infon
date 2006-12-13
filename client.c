@@ -347,7 +347,7 @@ int client_open_socket(char *addr) {
     host = gethostbyname(addr);
     if (!host)
 #ifdef WIN32
-        die("gethostbyname failed: %d", WSAGetLastError());
+        die("gethostbyname failed: %s", ErrorString(WSAGetLastError()));
 #else
         die("gethostbyname failed: %s", hstrerror(h_errno));
 #endif
@@ -365,7 +365,7 @@ int client_open_socket(char *addr) {
     /* Fehler beim Socket erzeugen? */
 #ifdef WIN32
     if (fd == INVALID_SOCKET)
-        die("cannot open socket: Error %d", WSAGetLastError());
+        die("cannot open socket: %s", ErrorString(WSAGetLastError()));
 #else
     if (fd == -1) 
         die("cannot open socket: %s", strerror(errno));
@@ -373,7 +373,7 @@ int client_open_socket(char *addr) {
 
 #ifdef WIN32
     if (connect(fd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
-        die("cannot connect socket: Error %d", WSAGetLastError());
+        die("cannot connect socket: %s", ErrorString(WSAGetLastError()));
 #else
     if (connect(fd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
         die("cannot connect socket: %s", strerror(errno));
