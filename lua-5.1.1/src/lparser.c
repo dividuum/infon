@@ -489,7 +489,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 
 static void listfield (LexState *ls, struct ConsControl *cc) {
   expr(ls, &cc->v);
-  luaY_checklimit(ls->fs, cc->na, MAXARG_Bx, "items in a constructor");
+  luaY_checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
   cc->na++;
   cc->tostore++;
 }
