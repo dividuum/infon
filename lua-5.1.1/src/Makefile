@@ -93,6 +93,9 @@ generic:
 
 debug:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -ggdb -DLUA_USE_APICHECK" MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
+	
+optimize:
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -fexpensive-optimizations -finline-functions -fomit-frame-pointer"
 
 linux:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
