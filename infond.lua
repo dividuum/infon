@@ -326,6 +326,16 @@ function world_rotate_map()
     map = maps[current_map]
 end
 
+function world_get_dummy()
+    return {
+        level_size        = function () return 3,3 end;
+        level_koth_pos    = function () return 1,1 end;
+        level_init        = function () end;
+        level_tick        = function () end;
+        level_spawn_point = function () end;
+    }
+end
+
 function world_load(map)
     local world_code = assert(loadfile(PREFIX .. "level/" .. map .. ".lua"))
 
@@ -390,12 +400,13 @@ function world_init()
     stats.num_maps = stats.num_maps + 1
     local ok, w, h, kx, ky = pcall(world_load, map)
     if not ok then
-        world_tick = coroutine.wrap(function () while true do coroutine.yield() end end)
-        error("cannot load world '" .. map .. "': " .. w .. ". using dummy world")
-    else
-        world_tick = coroutine.wrap(world_main)
-        return w, h, kx, ky
+        print("cannot load world '" .. map .. "': " .. w .. ". using dummy world")
+        world = world_get_dummy()
+        w,  h  = world.level_size()
+        kx, ky = world.level_koth_pos()
     end
+    world_tick = coroutine.wrap(world_main)
+    return w, h, kx, ky
 end
 
 function world_main()

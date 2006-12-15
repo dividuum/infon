@@ -132,6 +132,16 @@ function info()
 end
 
 ------------------------------------------------------------------------
+-- compatibility
+------------------------------------------------------------------------
+
+function nearest_enemy(...)
+    print(_TRACEBACK("calling 'nearest_enemy' is deprecated. use 'get_nearest_enemy' instead.", 2))
+    nearest_enemy = get_nearest_enemy
+    return get_nearest_enemy(...)
+end
+
+------------------------------------------------------------------------
 -- Load Highlevel API
 ------------------------------------------------------------------------
 
