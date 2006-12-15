@@ -92,6 +92,14 @@ endif
 $(INFOND_EXECUTABLE): CFLAGS   += -Ilua-5.1.1/src/ # -DCHEATS
 $(INFOND_EXECUTABLE): LDFLAGS  += -levent -lz -lm
 
+# Experimental usage of 'all of lua in one file' as seen in lua-5.1.1/etc/all.c
+ifdef OPTIMIZE
+$(INFOND_EXECUTABLE): luacore.o
+luacore.o           : CFLAGS   += -DLUA_USE_POSIX
+else
+$(INFOND_EXECUTABLE): lua-5.1.1/src/liblua.a
+endif
+
 $(SDL_RENDERER)     : CFLAGS   += -fPIC -I$(SDLDIR)/include/SDL 
 $(SDL_RENDERER)     : LDFLAGS  += -lSDL -lSDL_image -lSGE -lSDL_gfx 
 
@@ -138,7 +146,7 @@ linux-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER)
 linux-server-dist: $(INFOND_EXECUTABLE)
 	tar cfvz infond-linux-i386-r$(REVISION).tgz README $(INFOND_EXECUTABLE) $(INFOND_EXECUTABLE)-static *.lua level/*.lua rules/*.lua
 
-$(INFOND_EXECUTABLE): infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o lua-5.1.1/src/liblua.a  
+$(INFOND_EXECUTABLE): infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o 
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(CC) $^ $(LDFLAGS) -static -o $@-static
 

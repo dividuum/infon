@@ -101,6 +101,11 @@ static int luaScrollerAdd(lua_State *L) {
     return 0;
 }
 
+static int luaShutdown(lua_State *L) {
+    game_exit = 1;
+    return 0;
+}
+
 static int luaGameIntermission(lua_State *L) {
     snprintf(intermission, sizeof(intermission), "%s", luaL_checkstring(L, 1));
     game_send_intermission(SEND_BROADCAST);
@@ -150,6 +155,7 @@ void game_init() {
     lua_register(L, "scroller_add",     luaScrollerAdd);
     
     lua_register(L, "hex_decode",       luaHexDecode);
+    lua_register(L, "shutdown",         luaShutdown);
 
     lua_pushnumber(L, MAXPLAYERS);
     lua_setglobal(L, "MAXPLAYERS");
@@ -210,6 +216,9 @@ void game_one_game() {
         }
 
         lasttick = tick;
+        
+        // GC
+        lua_gc(L, LUA_GCSTEP, 1);
 
         if (!game_paused) {
             // Runde starten

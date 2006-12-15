@@ -53,6 +53,8 @@ static client_t *guiclients = NULL;
 static client_t  clients[MAXCLIENTS];
 static client_t *output_client = NULL;
 
+static int       traffic       = 0;
+
 static void server_readable(int fd, short event, void *arg);
 static void server_writable(int fd, short event, void *arg);
 
@@ -243,6 +245,7 @@ void server_start_compression(client_t *client) {
 void server_writeto(client_t *client, const void *data, size_t size) {
     if (size == 0) 
         return;
+    traffic += size;
     if (client->is_demo_dumper) {
         write(client_num(client), data, size);
         return;
@@ -500,6 +503,10 @@ static int luaClientPrint(lua_State *L) {
     return 0;
 }
 
+static int luaGetTraffic(lua_State *L) {
+    lua_pushnumber(L, traffic);
+    return 1;
+}
 
 void server_tick() {
     lua_set_cycles(L, 0xFFFFFF);
@@ -550,6 +557,7 @@ void server_init() {
     lua_register(L, "client_print",             luaClientPrint);
     lua_register(L, "cprint",                   luaClientPrint);
     lua_register(L, "server_start_demo",        luaStartDemoWriter);
+    lua_register(L, "server_get_traffic",       luaGetTraffic);
 
     // XXX: HACK: stdin client starten
 #ifndef NO_CONSOLE_CLIENT    

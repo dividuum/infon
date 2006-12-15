@@ -380,7 +380,10 @@ static void cpu_limit_exceeded(lua_State *L) {
     lua_assert(L->ci->top <= L->stack_last);
     lua_unlock(L);
     lua_set_cycles(L, 0xFFFFFF);        
-    G(L)->cpu_exceeded(L);
+    if (G(L)->cpu_exceeded)
+        G(L)->cpu_exceeded(L);
+    else
+        lua_pushliteral(L, "cycles exceeded");
     lua_set_cycles(L, cpu_exceeded_grace_cycles);
     lua_error(L);
     abort();
