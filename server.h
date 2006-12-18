@@ -47,7 +47,7 @@ typedef struct client_s {
     struct evbuffer *in_buf;
     struct evbuffer *out_buf;
 
-    int              is_demo_dumper;
+    int              is_file_writer;
     int              compress;
     z_stream         strm;
 
@@ -79,7 +79,6 @@ client_t *server_start_demo_writer(const char *demoname, int one_game);
 void server_tick();
 
 void server_init();
-void server_game_start();
 void server_game_end();
 void server_shutdown();
 

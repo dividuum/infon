@@ -45,6 +45,7 @@
 
 lua_State *L;
 
+int real_time   = 0;
 int game_time   = 0;
 int game_paused = 0;
 int game_exit   = 0;
@@ -71,13 +72,18 @@ int main(int argc, char *argv[]) {
     luaL_openlibs(L);
     
     lua_register_string_constant(L, PREFIX);
-    
-    if (luaL_dofile(L, PREFIX "infond.lua")) 
-        die("cannot read 'infond.lua': %s", lua_tostring(L, -1));
 
     game_init();
     server_init();
     player_init();
+    
+    if (luaL_dofile(L, PREFIX "infond.lua")) 
+        die("cannot execute 'infond.lua': %s", lua_tostring(L, -1));
+    
+    // XXX: HACK: stdin client starten
+#ifndef NO_CONSOLE_CLIENT    
+    server_accept(STDIN_FILENO, "special:console"); 
+#endif
 
 #ifdef DAEMONIZING
     daemonize(argc, argv);

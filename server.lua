@@ -83,7 +83,10 @@ end
 
 function Client:partmenu() 
     local playerno = self:get_player()
-    local warning  = player_num_clients(playerno) == 1 and " reattach within 2 minutes or your player will be killed." or ""
+    local disconnect_time = player_get_no_client_kick_time(playerno)
+    local warning  = player_num_clients(playerno) == 1 and disconnect_time ~= 0 and 
+                         string.format(" reattach within %d seconds or your player will be killed.", 
+                                       disconnect_time / 1000) or ""
     self:detach()
     self:writeln("detached from player " .. playerno .. "." .. warning)
 end
@@ -133,7 +136,7 @@ function Client:batchmenu()
         else
             code = code .. input .. "\n"
         end
-        if code:len() > 262144 then
+        if #code > 262144 then
             self:writeln("your code is too large.")
             return
         end
@@ -152,7 +155,7 @@ function Client:hexbatchmenu()
         else
             code = code .. input
         end
-        if code:len() > 262144 then
+        if #code > 262144 then
             self:writeln("your code is too large.")
             return
         end
@@ -184,7 +187,7 @@ function Client:highmenu()
         self:writeln("no highlevel api " .. num)
     else
         self.highlevel = api
-        self:writeln("highlevel api set to '" .. api .. '"')
+        self:writeln("highlevel api set to '" .. api .. "'")
     end
 end
 
@@ -270,7 +273,7 @@ function Client:info()
     self:writeln("-------------------------------------------------")
     self:writeln("Server Information")
     self:writeln("-------------------+-----------------------------")
-    self:writeln("uptime             | " .. (os.time() - stats.start_time) .. "s")
+    self:writeln("uptime             | " .. string.format("%ds", real_time() / 1000))
     self:writeln("cpu usage          | " .. os.clock() .. "s")
     self:writeln("memory             | " .. string.format("%d", collectgarbage("count")) .. "kb")
     self:writeln("traffic            | " .. server_get_traffic())
@@ -437,10 +440,10 @@ end
 function ServerMain()
     scroller_add("Welcome to " .. GAME_NAME .. "!")
                         
-    local info_time = game_info()
+    local info_time = game_time()
     while true do
-        if game_info() > info_time + 10000 then
-           info_time = game_info() 
+        if game_time() > info_time + 10000 then
+           info_time = game_time() 
            if join_info and join_info ~= "" then
                scroller_add(join_info)
            end

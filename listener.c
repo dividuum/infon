@@ -91,35 +91,31 @@ error:
     event_add(cb_event, NULL);
 }
 
-int listener_init() {
+void listener_shutdown() {
+    if (listenfd == -1) 
+        return;
+
+    event_del(&listener_event);
+    close(listenfd);
+    listenfd = -1;
+}
+
+int listener_init(const char *listenaddr, int port) {
     struct sockaddr_in addr;
     static const int one = 1;
 
-    lua_pushliteral(L, "listenport");  
-    lua_rawget(L, LUA_GLOBALSINDEX);
-    
-    if (!lua_isnumber(L, -1)) {
-        fprintf(stderr, "listenport not defined\n");
-        lua_pop(L, 1);
-        goto error;
-    }
+    /* Alten Listener, falls vorhanden, schliessen */
+    listener_shutdown();
 
-    lua_pushliteral(L, "listenaddr");  
-    lua_rawget(L, LUA_GLOBALSINDEX);
-
-    if (!lua_isstring(L, -1)) {
-        fprintf(stderr, "listaddr not defined\n");
-        lua_pop(L, 2);
-        goto error;
-    }
+    /* Keinen neuen starten? */
+    if (strlen(listenaddr) == 0)
+        return 1;
 
     /* Adressstruktur füllen */
     memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family        = AF_INET;
-    addr.sin_addr.s_addr   = inet_addr(lua_tostring(L, -1));
-    addr.sin_port          = htons((int)lua_tonumber(L, -2));
-
-    lua_pop(L, 2); 
+    addr.sin_addr.s_addr   = inet_addr(listenaddr);
+    addr.sin_port          = htons(port);
 
     /* Socket erzeugen */
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -167,15 +163,5 @@ error:
         close(listenfd);
         listenfd = -1;
     }
-    fprintf(stderr, "cannot setup listen socket\n");
     return 0;
 }
-
-void listener_shutdown() {
-    if (listenfd != -1) {
-        event_del(&listener_event);
-        close(listenfd);
-        listenfd = -1;
-    }
-}
-

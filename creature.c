@@ -1021,9 +1021,7 @@ void creature_init() {
         creature_t *creature = &creatures[i];
         creature->player = NULL;
     }
-}
 
-void creature_game_start() {
     next_free_vm_id = 0;
 }
 

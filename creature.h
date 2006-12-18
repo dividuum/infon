@@ -101,7 +101,6 @@ void        creature_send_initial_update(client_t *client);
 void        creature_to_network(creature_t *creature, int dirtymask, client_t *client);
 
 void        creature_init();
-void        creature_game_start();
 void        creature_shutdown();
 
 #endif
