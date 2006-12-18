@@ -30,7 +30,6 @@ stats  = {
     num_players     = 0;
     num_maps        = 0;
     num_exec        = 0;
-    start_time      = os.time();
 }
 
 -----------------------------------------------------------
@@ -211,11 +210,12 @@ function Client:kill()
 end
 
 function Client:execute(code, name)
-    if self:get_player() then
+    local playerno = self:get_player()
+    if playerno then
         stats.num_exec = stats.num_exec + 1
-        client_execute(self.fd, code, self.local_output, name)
+        player_execute(playerno, self.local_output and self.fd or nil, code, name)
     else
-        self:writeln("no player to execute the code. sorry")
+        self:writeln("you do not have a player. cannot execute your code.")
     end
 end
 
@@ -228,9 +228,9 @@ function Client:writeln(line)
 end
 
 function Client:rate_limit(action, every)
-    local time, last = game_time(), self.last_action[action]
-    if not last or time < last or time > last + every then 
-        self.last_action[action] = game_time()
+    local time, last = real_time(), self.last_action[action]
+    if not last or time > last + every then 
+        self.last_action[action] = real_time()
         return true
     else
         self:writeln(string.format("%s too fast. please wait %.1fs...", 
@@ -292,22 +292,70 @@ function on_client_close(fd, reason)
     clients[fd] = nil
 end
 
-function server_new_game()
-    server_tick = coroutine.wrap(ServerMain)
-end
-
-function server_tick()
-end
-
 -----------------------------------------------------------
 -- Game C Callbacks
 -----------------------------------------------------------
 
-function new_game_started()
+function on_game_started()
+    -- Demos starten?
     if type(demo) == "string" then
-        server_start_demo(string.format("%s-%08X.demo", demo, os.time()));
+        server_start_writer(string.format("%s-%08X.demo", demo, os.time()), true, true);
     elseif type(demo) == "function" then
-        server_start_demo(demo())
+        server_start_writer(demo(), true, true)
+    end
+
+    -- Message
+    scroller_add("Started map " .. map)
+    -- wall("Started map " .. map)
+
+    -- server_tick anlegen
+    server_tick = coroutine.wrap(ServerMain)
+
+    -- Handler fuer Dinge, welche nur beim ersten Spiel aufgerufen werden sollen
+    if not first_game then
+        first_game = true
+
+        -- competition?
+        if competition then
+            set_realtime(false)
+            competition_done_setup = true
+            competition_rounds     = #maps
+            disable_joining = "competition mode"
+            for _, code in pairs(competition_bots) do
+                appendline(competition_log, string.format("joining '%s' as %d", code, start_bot(code)))
+            end
+        end
+
+        -- Nach dem Starten des ersten Spiels einmalig Funktion autoexec aufrufen
+        if autoexec then pcall(autoexec) end
+    end
+
+    -- Mapchange
+    if competition then
+        appendline(competition_log, string.format("%d starting on map '%s'", os.time(), map))
+    end
+end
+
+function on_game_ended()
+    -- competition?
+    if competition then
+        for pno in each_player() do 
+            appendline(competition_log, string.format("%d: score %d, creatures %d", 
+                                                      pno, player_score(pno), player_num_creatures(pno)))
+        end
+        appendline(competition_log, string.format("%d completed", os.time()))
+        competition_rounds = competition_rounds - 1
+        if competition_rounds == 0 then 
+            shutdown()
+        end
+    end
+
+    -- kill all creatures
+    killall()
+
+    -- reset score
+    for pno in each_player() do 
+        player_set_score(pno, 0)
     end
 end
 
@@ -363,7 +411,7 @@ function world_load(map)
         world_make_border = world_make_border;
         world_fill_all    = world_fill_all;
         world_tile_center = world_tile_center;
-        game_info         = game_info;
+        game_time         = game_time;
 
         level_spawn_point = world_find_digged_worldcoord;
 
@@ -542,6 +590,13 @@ function isnumber(var)
     return tostring(tonumber(var)) == var
 end
 
+function appendline(filename, line)
+    if not filename then return end
+    local file = assert(io.open(filename, "a+"))
+    file:write(string.format("%s\n", line))
+    file:close()
+end
+
 function kick(fd, msg)
     msg = msg or "kicked"
     clients[fd]:disconnect(msg)
@@ -559,12 +614,6 @@ function killall()
 end
 
 function reset()
-    killall()
-    for pno in each_player() do 
-        player_set_score(pno, 0)
-    end
-    scroller_add("About to restart on map " .. map)
-    wall("About to restart on map " .. map)
     game_end()
 end
 
@@ -603,8 +652,46 @@ function acllist()
     end
 end
 
+function start_listener() 
+    assert(setup_listener(listenaddr, listenport), 
+           string.format("cannot setup listener on %s:%d", listenaddr, listenport))
+end
+
+function stop_listener()
+    setup_listener("", 0)
+end
+
+function start_bot(botcode, logfile, highlevelcode)
+    local highlevelcode = highlevelcode or highlevel[1]
+    local password  = tostring(math.random(100000, 999999))
+    local botfile   = assert(io.open(botcode, "rb"))
+    local botsource = botfile:read("*a")
+    botfile:close()
+    local playerno = player_create(password, highlevelcode)
+    if not playerno then
+        error("cannot create new player")
+    end
+    cprint(string.format("player %d - %s (%s) joined with password '%s'", playerno, name or botcode, botcode, password))
+    player_set_no_client_kick_time(playerno, 0)
+    local _, _, name = botcode:find("([^/\\]+)\.lua")
+    player_set_name(playerno, name or botcode)
+    if logfile then
+        local ok, logclient = pcall(server_start_writer, logfile, false, false)
+        if ok then 
+            client_attach_to_player(logclient, playerno, password)
+        else
+            cprint("cannot start log writer: " .. logclient)
+        end
+    end
+    player_execute(playerno, nil, botsource, botcode)
+    return playerno
+end
+
 -----------------------------------------------------------
 -- Clienthandler laden
 -----------------------------------------------------------
 
 assert(loadfile(PREFIX .. "server.lua"))()
+
+-- setup listen socket
+if listenaddr and listenport then start_listener() end 

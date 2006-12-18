@@ -2065,12 +2065,12 @@ function level_init()
             n = 0,
         }
     }
-    last_food = game_info()
+    last_food = game_time()
 end
 
 function level_tick()
     for n, spawner in pairs(food_spawner) do
-        if game_info() > spawner.n then 
+        if game_time() > spawner.n then 
             world_add_food(spawner.x + math.random(spawner.r * 2 + 1) - spawner.r,
                            spawner.y + math.random(spawner.r * 2 + 1) - spawner.r,
                            spawner.a)

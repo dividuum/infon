@@ -199,7 +199,7 @@ end
 
 infon = InfonDemo.new(ARGV[0])
 while infon.tick 
-    #print "%2d:%02d " % [infon.time / 1000 / 60, infon.time / 1000 % 60]
+    print "%2d:%02d " % [infon.time / 1000 / 60, infon.time / 1000 % 60]
     #puts "%d %d" % [infon.players.size, infon.creatures.size]
     20.times do |i|
         if creature = infon.creatures[i]

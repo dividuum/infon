@@ -21,7 +21,7 @@
 #ifndef LISTENER_H
 #define LISTENER_H
 
-int  listener_init();
+int  listener_init(const char *addr, int port);
 void listener_shutdown();
 
 #endif

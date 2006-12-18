@@ -32,13 +32,14 @@
 #include "misc.h"
 
 static int            should_end_game = 0;
-static struct timeval start;
+static struct timeval server_start, game_start;
 static char           intermission[256] = {0};
+static int            realtime = 1;
 
-static int get_tick() {
-    static struct timeval now;
+static int get_tick(const struct timeval *ref) {
+    struct timeval now;
     gettimeofday(&now , NULL);
-    return (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
+    return (now.tv_sec - ref->tv_sec) * 1000 + (now.tv_usec - ref->tv_usec) / 1000;
 }
 
 void game_send_info(client_t *client) {
@@ -84,15 +85,13 @@ static int luaGameEnd(lua_State *L) {
     return 0;
 }
 
-static int luaGameInfo(lua_State *L) {
-    lua_pushnumber(L, game_time);
-    lua_pushnumber(L, world_width());
-    lua_pushnumber(L, world_height());
-    return 3;
-}
-
 static int luaGameTime(lua_State *L) {
     lua_pushnumber(L, game_time);
+    return 1;
+}
+
+static int luaRealTime(lua_State *L) {
+    lua_pushnumber(L, real_time);
     return 1;
 }
 
@@ -103,6 +102,11 @@ static int luaScrollerAdd(lua_State *L) {
 
 static int luaShutdown(lua_State *L) {
     game_exit = 1;
+    return 0;
+}
+
+static int luaSetRealtime(lua_State *L) {
+    realtime = lua_toboolean(L, 1);
     return 0;
 }
 
@@ -146,30 +150,32 @@ static int luaHexDecode(lua_State *L) {
 }
 
 void game_init() {
+    gettimeofday(&server_start, NULL);
+
     lua_register(L, "game_end",         luaGameEnd);
-    lua_register(L, "game_info",        luaGameInfo);
     lua_register(L, "game_time",        luaGameTime);
+    lua_register(L, "real_time",        luaRealTime);
 
     lua_register(L, "set_intermission", luaGameIntermission);
 
     lua_register(L, "scroller_add",     luaScrollerAdd);
     
     lua_register(L, "hex_decode",       luaHexDecode);
+    lua_register(L, "set_realtime",     luaSetRealtime);
     lua_register(L, "shutdown",         luaShutdown);
 
-    lua_pushnumber(L, MAXPLAYERS);
-    lua_setglobal(L, "MAXPLAYERS");
-
-    lua_pushliteral(L, GAME_NAME);
-    lua_setglobal(L,  "GAME_NAME");
+    lua_register_constant       (L, MAXPLAYERS);
+    lua_register_string_constant(L, GAME_NAME);
 }
 
 void game_one_game() {
     should_end_game = 0;
     game_time       = 0;
     
+    // Zeitinfo an Client
     game_send_info(SEND_BROADCAST);
 
+    // Regeln laden
     lua_pushliteral(L, "rules_init");
     lua_rawget(L, LUA_GLOBALSINDEX);
     if (lua_pcall(L, 0, 0, 0) != 0) {
@@ -177,7 +183,10 @@ void game_one_game() {
         lua_pop(L, 1);
     }
 
+    // Karte laden
     world_init();
+
+    // Alle Viecher tot. vm_id = 0
     creature_init();
 
     // Initialer Worldtick. ruft level_init und ersten level_tick auf.
@@ -185,17 +194,16 @@ void game_one_game() {
 
     // Beginn der Zeitrechnung...
     int lasttick = 0;
-    gettimeofday(&start, NULL);
+    gettimeofday(&game_start, NULL);
 
-    creature_game_start();
-    server_game_start();
+    // onPlayerCreated Event an Rules, PLAYER_CREATED an VM
     player_game_start();
 
     // Spiel gestartet
-    lua_pushliteral(L, "new_game_started");
+    lua_pushliteral(L, "on_game_started");
     lua_rawget(L, LUA_GLOBALSINDEX);
     if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling new_game_started: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "error calling on_game_started: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     } 
 
@@ -203,19 +211,25 @@ void game_one_game() {
     game_call_rule_handler("onNewGame", 0);
 
     while (!game_exit && !should_end_game) {
-        int tick  = get_tick();
-        int delta = tick - lasttick;
-
-        if (delta < 0 || delta > 200) {
-            // Timewarp?
-            lasttick = tick;
-            continue;
-        } else if (delta < 100) {
-            usleep(max(95000 - delta * 1000, 1000));
-            continue;
+        int tick = get_tick(&game_start);
+        int delta;
+        if (realtime) {
+            delta = tick - lasttick;
+            if (delta < 0 || delta > 200) {
+                // Timewarp?
+                lasttick = tick;
+                continue;
+            } else if (delta < 100) {
+                usleep(max(95000 - delta * 1000, 1000));
+                continue;
+            }
+        } else {
+            delta = 100;
         }
-
         lasttick = tick;
+
+        // Realtime update
+        real_time = get_tick(&server_start);
         
         // GC
         lua_gc(L, LUA_GCSTEP, 1);
@@ -243,6 +257,14 @@ void game_one_game() {
         // IO Lesen/Schreiben
         server_tick();
     }
+
+    // Spiel beendet
+    lua_pushliteral(L, "on_game_ended");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    if (lua_pcall(L, 0, 0, 0) != 0) {
+        fprintf(stderr, "error calling on_game_ended: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    } 
 
     server_game_end();
     

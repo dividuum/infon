@@ -25,6 +25,7 @@
 
 extern lua_State *L;
 
+extern int real_time;
 extern int game_time;
 extern int game_paused;
 extern int game_exit;

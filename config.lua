@@ -49,3 +49,14 @@ banner = [[
               ~~`---'             /               |
                                ,-'              _/'
 ]] -- von http://www.asciiworld.com/animals_birds.html
+
+-- competition = true
+-- competition_log  = "competition.log"
+-- competition_bots = { "bot1.lua", "bot2.lua" }
+-- time_limit       = 10 * 60 * 1000
+-- maps             = { "foo", "foo", "foo" }
+-- listenaddr       = nil
+
+-- function autoexec()
+--    start_bot("bot1.lua")
+-- end

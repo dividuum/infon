@@ -71,8 +71,8 @@ client_t *server_accept(int fd, const char *address) {
     memset(&clients[fd], 0, sizeof(client_t));
     client_t *client = &clients[fd];
 
-    // Demo Dumper wird leicht unterschiedlich behandelt
-    client->is_demo_dumper = strstr(address, "special:demodumper") == address;
+    // File Writer wird leicht unterschiedlich behandelt
+    client->is_file_writer = strstr(address, "special:file") == address;
 
     // Non Blocking setzen 
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
@@ -130,7 +130,7 @@ client_t *server_accept(int fd, const char *address) {
         lua_pop(L, 1);
     }
 
-    if (!client->is_demo_dumper)
+    if (!client->is_file_writer)
         event_add(&client->rd_event, NULL);
 
     return client;
@@ -225,7 +225,7 @@ void server_start_compression(client_t *client) {
 
     // Demos sind immer unkomprimiert. Eine Kompression ueber 
     // die erstellte Datei macht wesentlich mehr Sinn.
-    if (client->is_demo_dumper)
+    if (client->is_file_writer)
         return; 
 
     client->strm.zalloc = Z_NULL;
@@ -246,7 +246,7 @@ void server_writeto(client_t *client, const void *data, size_t size) {
     if (size == 0) 
         return;
     traffic += size;
-    if (client->is_demo_dumper) {
+    if (client->is_file_writer) {
         write(client_num(client), data, size);
         return;
     }
@@ -314,7 +314,7 @@ void server_destroy(client_t *client, const char *reason) {
         evbuffer_add(client->out_buf, "\r\n", 2);
     }
 
-    if (!client->is_demo_dumper) 
+    if (!client->is_file_writer) 
         evbuffer_write(client->out_buf, fd);
 
     evbuffer_free(client->in_buf);
@@ -383,16 +383,13 @@ static void client_turn_into_gui_client(client_t *client) {
     initial_update(client);
 }
 
-client_t *server_start_demo_writer(const char *demoname, int one_game) {
-    int server_demo_fd = open(demoname, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, S_IRUSR|S_IWUSR);
-    if (server_demo_fd < 0)
+client_t *server_start_file_writer(const char *filename) {
+    int fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, S_IRUSR|S_IWUSR);
+    if (fd < 0)
         return NULL;
     static char address[512];
-    snprintf(address, sizeof(address), "special:demodumper:%s", demoname);
-    client_t *demowriter = server_accept(server_demo_fd, address);
-    client_turn_into_gui_client(demowriter);
-    demowriter->kick_at_end_of_game = one_game;
-    return demowriter;
+    snprintf(address, sizeof(address), "special:file:%s", filename);
+    return server_accept(fd, address);
 }
 
 client_t *client_get_checked_lua(lua_State *L, int idx) {
@@ -405,12 +402,18 @@ client_t *client_get_checked_lua(lua_State *L, int idx) {
     return client;
 }
 
-static int luaStartDemoWriter(lua_State *L) {
-    const char *demofile = luaL_checkstring(L, 1);
+static int luaStartFileWriter(lua_State *L) {
+    const char *file     = luaL_checkstring(L, 1);
     int         one_game = lua_isboolean(L, 2) ? lua_toboolean(L, 2) : 1;
-    client_t *demowriter = server_start_demo_writer(demofile, one_game);
-    if (!demowriter) luaL_error(L, "cannot start demo %s", demofile);
-    lua_pushnumber(L, client_num(demowriter));
+    int    is_gui_client = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : 1;
+    client_t *filewriter = server_start_file_writer(file);
+    if (!filewriter) 
+        luaL_error(L, "cannot start file %s", file);
+    if (is_gui_client) 
+        client_turn_into_gui_client(filewriter);
+    if (one_game)      
+        filewriter->kick_at_end_of_game = one_game;
+    lua_pushnumber(L, client_num(filewriter));
     return 1;
 }
 
@@ -444,17 +447,6 @@ static int luaClientMakeGuiClient(lua_State *L) {
 static int luaClientIsGuiClient(lua_State *L) {
     lua_pushboolean(L, client_get_checked_lua(L, 1)->is_gui_client);
     return 1;
-}
-
-static int luaClientExecute(lua_State *L) {
-    client_t *client = client_get_checked_lua(L, 1);
-    size_t codelen; const char *code = luaL_checklstring(L, 2, &codelen);
-    int client_local_output = lua_toboolean(L, 3);
-    const char *name = luaL_checkstring(L, 4);
-    if (!client->player) 
-        luaL_error(L, "client %d has no player", client_num(client));
-    player_execute_client_lua(client_local_output ? client : NULL, client->player, code, codelen, name);
-    return 0;
 }
 
 static int luaClientPlayerNumber(lua_State *L) {
@@ -508,6 +500,11 @@ static int luaGetTraffic(lua_State *L) {
     return 1;
 }
 
+static int luaSetupListener(lua_State *L) {
+    lua_pushboolean(L, listener_init(luaL_checkstring(L, 1), luaL_checklong(L, 2)));
+    return 1;
+}
+
 void server_tick() {
     lua_set_cycles(L, 0xFFFFFF);
     
@@ -542,36 +539,20 @@ void server_init() {
 
     event_init();
 
-    if (!listener_init()) 
-        die("error initializing listener");
-
     memset(clients, 0, sizeof(clients));
     lua_register(L, "client_write",             luaClientWrite);
     lua_register(L, "client_attach_to_player",  luaClientAttachToPlayer);
     lua_register(L, "client_detach_from_player",luaClientDetachFromPlayer);
-    lua_register(L, "client_execute",           luaClientExecute);
     lua_register(L, "client_make_guiclient",    luaClientMakeGuiClient);
     lua_register(L, "client_is_gui_client",     luaClientIsGuiClient);
     lua_register(L, "client_player_number",     luaClientPlayerNumber);
     lua_register(L, "client_disconnect",        luaClientDisconnect);
     lua_register(L, "client_print",             luaClientPrint);
     lua_register(L, "cprint",                   luaClientPrint);
-    lua_register(L, "server_start_demo",        luaStartDemoWriter);
+    lua_register(L, "server_start_writer",      luaStartFileWriter);
     lua_register(L, "server_get_traffic",       luaGetTraffic);
+    lua_register(L, "setup_listener",           luaSetupListener);
 
-    // XXX: HACK: stdin client starten
-#ifndef NO_CONSOLE_CLIENT    
-    server_accept(STDIN_FILENO, "special:console"); 
-#endif
-}
-
-void server_game_start() {
-    lua_pushliteral(L, "server_new_game");
-    lua_rawget(L, LUA_GLOBALSINDEX);
-    if (lua_pcall(L, 0, 0, 0) != 0) {
-        fprintf(stderr, "error calling server_new_game: %s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
 }
 
 void server_game_end() {

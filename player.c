@@ -150,7 +150,7 @@ void player_on_all_dead(player_t *player) {
 void player_on_created(player_t *player) {
     // Zeiten zuruecksetzen
     player->all_dead_time         = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
-    player->all_disconnected_time = game_time;
+    player->all_disconnected_time = real_time;
     player->spawn_time            = game_time;
 
     // Event eintragen
@@ -575,11 +575,13 @@ player_t *player_create(const char *pass, const char *highlevel) {
     snprintf(player->name, sizeof(player->name), "player%d", playerno);
     snprintf(player->pass, sizeof(player->pass), "%s", pass);
 
-    player->max_mem     = LUA_MAX_MEM;
-    player->mem_enforce = 0;
-    
-    player->max_cycles = LUA_MAX_CPU;
+    player->max_mem             = LUA_MAX_MEM;
+    player->mem_enforce         = 0;
 
+    player->max_cycles          = LUA_MAX_CPU;
+
+    player->no_client_kick_time = NO_CLIENT_KICK_TIME;
+    
     player->L = lua_newstate(player_allocator, player);
     luaL_openlibs(player->L);
 
@@ -789,7 +791,7 @@ int player_detach_client(client_t *client, player_t *player) {
     assert(player->num_clients >= 0);
 
     if (player->num_clients == 0)
-        player->all_disconnected_time = game_time;
+        player->all_disconnected_time = real_time;
 
     client->player = NULL;
     
@@ -811,7 +813,7 @@ int player_detach_client(client_t *client, player_t *player) {
     return 1;
 }
 
-void player_execute_client_lua(client_t *output_client, player_t *player, const char *code, size_t codelen, const char *where) {
+void player_execute_code(player_t *player, client_t *output_client, const char *code, size_t codelen, const char *where) {
     player->output_client = output_client;
     if (luaL_loadbuffer(player->L, code, codelen, where) == 0) {
         player_call_user_lua("during interactive execution", player, 0);
@@ -862,9 +864,9 @@ void player_think() {
             continue;
         }
 
-        // Kein Client mehr da?
-        if (player->num_clients == 0 && 
-            player->all_disconnected_time + NO_CLIENT_KICK_TIME < game_time) 
+        // Kein Client mehr da & soll in diesem Fall gekickt werden?
+        if (player->num_clients == 0 && player->no_client_kick_time &&
+            player->all_disconnected_time + player->no_client_kick_time < real_time) 
         {
             player_destroy(player);
             continue;
@@ -1098,6 +1100,16 @@ out:
     return 1;
 }
 
+static int luaPlayerSetNoClientKickTime(lua_State *L) {
+    player_get_checked_lua(L, 1)->no_client_kick_time = luaL_checklong(L, 2);
+    return 0;
+}
+
+static int luaPlayerGetNoClientKickTime(lua_State *L) {
+    lua_pushnumber(L, player_get_checked_lua(L, 1)->no_client_kick_time);
+    return 1;
+}
+
 static int luaPlayerIterator(lua_State *L) {
     if (lua_gettop(L) == 0) {
         lua_pushcfunction(L, luaPlayerIterator);
@@ -1115,45 +1127,57 @@ static int luaPlayerIterator(lua_State *L) {
     return 0;
 }
 
+static int luaPlayerExecute(lua_State *L) {
+    player_t *player = player_get_checked_lua(L, 1);
+    client_t *client = lua_isnumber(L, 2) ? client_get_checked_lua(L, 2) : NULL;
+    size_t codelen; const char *code = luaL_checklstring(L, 3, &codelen);
+    const char *name = luaL_checkstring(L, 4);
+    player_execute_code(player, client, code, codelen, name);
+    return 0;
+}
+
 void player_init() {
     memset(players, 0, sizeof(players));
 
-    lua_register(L, "player_create",                luaPlayerCreate);
-    lua_register(L, "player_num_clients",           luaPlayerNumClients);
-    lua_register(L, "player_num_creatures",         luaPlayerNumCreatures);
-    lua_register(L, "player_kill",                  luaPlayerKill);
-    lua_register(L, "player_set_color",             luaPlayerSetColor);
-    lua_register(L, "player_set_name",              luaPlayerSetName);
-    lua_register(L, "player_get_name",              luaPlayerGetName);
-    lua_register(L, "player_set_score",             luaPlayerSetScore);
-    lua_register(L, "player_kill_all_creatures",    luaPlayerKillAllCreatures);
-    lua_register(L, "player_score",                 luaPlayerScore);
-    lua_register(L, "player_exists",                luaPlayerExists);
-    lua_register(L, "player_spawntime",             luaPlayerSpawnTime);
-    lua_register(L, "player_change_score",          luaPlayerChangeScore);
-    lua_register(L, "player_get_used_mem",          luaPlayerGetUsedMem);
-    lua_register(L, "player_get_used_cpu",          luaPlayerGetCPUUsage);
-    lua_register(L, "player_set_output_client",     luaPlayerSetOutputClient);
+    lua_register(L, "player_create",                 luaPlayerCreate);
+    lua_register(L, "player_num_clients",            luaPlayerNumClients);
+    lua_register(L, "player_num_creatures",          luaPlayerNumCreatures);
+    lua_register(L, "player_kill",                   luaPlayerKill);
+    lua_register(L, "player_set_color",              luaPlayerSetColor);
+    lua_register(L, "player_set_name",               luaPlayerSetName);
+    lua_register(L, "player_get_name",               luaPlayerGetName);
+    lua_register(L, "player_set_score",              luaPlayerSetScore);
+    lua_register(L, "player_kill_all_creatures",     luaPlayerKillAllCreatures);
+    lua_register(L, "player_score",                  luaPlayerScore);
+    lua_register(L, "player_exists",                 luaPlayerExists);
+    lua_register(L, "player_spawntime",              luaPlayerSpawnTime);
+    lua_register(L, "player_change_score",           luaPlayerChangeScore);
+    lua_register(L, "player_get_used_mem",           luaPlayerGetUsedMem);
+    lua_register(L, "player_get_used_cpu",           luaPlayerGetCPUUsage);
+    lua_register(L, "player_set_output_client",      luaPlayerSetOutputClient);
+    lua_register(L, "player_set_no_client_kick_time",luaPlayerSetNoClientKickTime);
+    lua_register(L, "player_get_no_client_kick_time",luaPlayerGetNoClientKickTime);
+    lua_register(L, "player_execute",                luaPlayerExecute);
 
-    lua_register(L, "each_player",                  luaPlayerIterator);
+    lua_register(L, "each_player",                   luaPlayerIterator);
 
-    lua_register(L, "creature_spawn",               luaCreatureSpawn);
-    lua_register(L, "creature_get_pos",             luaCreatureGetPos);
-    lua_register(L, "creature_get_state",           luaCreatureGetState);
-    lua_register(L, "creature_get_nearest_enemy",   luaCreatureGetNearestEnemy);
-    lua_register(L, "creature_get_type",            luaCreatureGetType);
-    lua_register(L, "creature_get_food",            luaCreatureGetFood);
-    lua_register(L, "creature_get_health",          luaCreatureGetHealth);
-    lua_register(L, "creature_get_speed",           luaCreatureGetSpeed);
-    lua_register(L, "creature_get_tile_food",       luaCreatureGetTileFood);
-    lua_register(L, "creature_get_max_food",        luaCreatureGetMaxFood);
-    lua_register(L, "creature_get_distance",        luaCreatureGetDistance);
-    lua_register(L, "creature_get_hitpoints",       luaCreatureGetHitpoints);
-    lua_register(L, "creature_get_attack_distance", luaCreatureGetAttackDistance);
-    lua_register(L, "creature_get_player",          luaCreatureGetPlayer);
+    lua_register(L, "creature_spawn",                luaCreatureSpawn);
+    lua_register(L, "creature_get_pos",              luaCreatureGetPos);
+    lua_register(L, "creature_get_state",            luaCreatureGetState);
+    lua_register(L, "creature_get_nearest_enemy",    luaCreatureGetNearestEnemy);
+    lua_register(L, "creature_get_type",             luaCreatureGetType);
+    lua_register(L, "creature_get_food",             luaCreatureGetFood);
+    lua_register(L, "creature_get_health",           luaCreatureGetHealth);
+    lua_register(L, "creature_get_speed",            luaCreatureGetSpeed);
+    lua_register(L, "creature_get_tile_food",        luaCreatureGetTileFood);
+    lua_register(L, "creature_get_max_food",         luaCreatureGetMaxFood);
+    lua_register(L, "creature_get_distance",         luaCreatureGetDistance);
+    lua_register(L, "creature_get_hitpoints",        luaCreatureGetHitpoints);
+    lua_register(L, "creature_get_attack_distance",  luaCreatureGetAttackDistance);
+    lua_register(L, "creature_get_player",           luaCreatureGetPlayer);
 
-    lua_register(L, "creature_set_food",            luaCreatureSetFood);
-    lua_register(L, "creature_set_type",            luaCreatureSetType);
+    lua_register(L, "creature_set_food",             luaCreatureSetFood);
+    lua_register(L, "creature_set_type",             luaCreatureSetType);
 
     lua_register_constant(L, CREATURE_SMALL);
     lua_register_constant(L, CREATURE_BIG);
