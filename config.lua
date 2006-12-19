@@ -57,6 +57,19 @@ banner = [[
 -- maps             = { "foo", "foo", "foo" }
 -- listenaddr       = nil
 
+
+-- Things to do once after the first game started
+--
 -- function autoexec()
 --    start_bot("bot1.lua")
 -- end
+
+-- function checking user/password combinations.
+-- if pass is nil, return a boolean to indicate
+-- if the username requires a password. If password
+-- is set, return true if the password is correct.
+--
+-- function check_name_password(user, pass)
+-- end
+
+

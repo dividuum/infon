@@ -30,22 +30,34 @@
 #include "global.h"
 
 void die(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
 #ifdef WIN32
     char buf[1024];
-    va_list ap;
-    va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
     MessageBoxA(GetActiveWindow(), buf, "Fatal Error", MB_ICONSTOP);
 #else
-    va_list ap;
-    va_start(ap, fmt);
     printf("--[ FATAL ERROR ]-----------\n");
     vprintf(fmt, ap);
     printf("\n----------------------------\n");
-    va_end(ap);
 #endif
+    va_end(ap);
     exit(1);
+}
+
+void info(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+#ifdef WIN32
+    char buf[1024];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    MessageBoxA(GetActiveWindow(), buf, "Info", MB_ICONINFO);
+#else
+    printf("--[ Info ]--------------------\n");
+    vprintf(fmt, ap);
+    printf("\n----------------------------\n");
+#endif
+    va_end(ap);
 }
 
 int yesno(const char *fmt, ...) {

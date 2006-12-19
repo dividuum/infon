@@ -129,7 +129,7 @@ static void client_handle_packet(packet_t *packet) {
             client_creature_from_network(packet);
             break;
         case PACKET_QUIT_MSG:
-            fprintf(stderr, "server wants us to disconnect: %.*s\n",
+            info("Server wants us to disconnect:\n%.*s",
                     packet->len, packet->data);
             client_destroy("done");
             break;
