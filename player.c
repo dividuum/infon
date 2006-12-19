@@ -558,7 +558,7 @@ static void player_set_color(player_t *player, int color) {
      lua_pushcclosure((p)->L, f, 1), \
      lua_settable((p)->L, LUA_GLOBALSINDEX))    
 
-player_t *player_create(const char *pass, const char *highlevel) {
+player_t *player_create(const char *name, const char *pass, const char *highlevel) {
     int playerno;
 
     for (playerno = 0; playerno < MAXPLAYERS; playerno++) {
@@ -572,7 +572,12 @@ player_t *player_create(const char *pass, const char *highlevel) {
     player_t *player = &players[playerno];
     memset(player, 0, sizeof(player_t));
 
-    snprintf(player->name, sizeof(player->name), "player%d", playerno);
+    if (name) {
+        snprintf(player->name, sizeof(player->name), "%s", name);
+    } else {
+        snprintf(player->name, sizeof(player->name), "player%d", playerno);
+    }
+
     snprintf(player->pass, sizeof(player->pass), "%s", pass);
 
     player->max_mem             = LUA_MAX_MEM;
@@ -1004,8 +1009,9 @@ static int luaPlayerSpawnTime(lua_State *L) {
 }
 
 static int luaPlayerCreate(lua_State *L) {
-    player_t *player = player_create(luaL_checkstring(L, 1), 
-                                     luaL_checkstring(L, 2));
+    player_t *player = player_create(lua_isstring(L, 1) ? luaL_checkstring(L, 1) : NULL,
+                                     luaL_checkstring(L, 2), 
+                                     luaL_checkstring(L, 3));
     
     if (player) {
         lua_pushnumber(L, player_num(player));

@@ -57,7 +57,7 @@ function Client:joinmenu()
             return
         end
     
-        playerno = player_create(password, self.highlevel)
+        playerno = player_create(nil, password, self.highlevel)
         if playerno == nil then 
             self:writeln("cannot join: full?")
             return

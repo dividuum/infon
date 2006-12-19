@@ -179,10 +179,20 @@ function Client:get_player()
     return client_player_number(self.fd)
 end
 
+function Client:check_name(name)
+    if check_name_password and check_name_password(name, nil) then 
+        self:write("Name '" .. name .. "' requires a password: ")
+        return check_name_password(name, self:readln())
+    else
+        return true
+    end
+end
+
 function Client:set_name(name)
     local playerno = self:get_player()
     if playerno and player_get_name(playerno) ~= name and name ~= '' then
         local oldname = player_get_name(playerno)
+        if not self:check_name(name) then return false end
         player_set_name(playerno, name)
         local newname = player_get_name(playerno)
         scroller_add(oldname .. " renamed to " .. newname)
@@ -642,8 +652,22 @@ end
 
 function clientlist()
     table.foreach(clients, function (fd, client)
-        cprint(string.format("%4d - %s", fd, client.addr))
+        cprint(string.format("%4d %s - %s", fd, client_is_gui_client(fd) and "*" or " ", client.addr))
     end)
+end
+
+function batch()
+    cprint("enter lua code. '.' ends input.")
+    local code = ""
+    while true do 
+        local input = coroutine.yield() -- read next line
+        if input == "." then
+            break
+        else
+            code = code .. input .. "\n"
+        end
+    end
+    assert(loadstring(code))()
 end
 
 function acllist()
@@ -667,14 +691,13 @@ function start_bot(botcode, logfile, highlevelcode)
     local botfile   = assert(io.open(botcode, "rb"))
     local botsource = botfile:read("*a")
     botfile:close()
-    local playerno = player_create(password, highlevelcode)
+    local _, _, name = botcode:find("([^/\\]+)\.lua")
+    local playerno = player_create(name or botcode, password, highlevelcode)
     if not playerno then
         error("cannot create new player")
     end
     cprint(string.format("player %d - %s (%s) joined with password '%s'", playerno, name or botcode, botcode, password))
     player_set_no_client_kick_time(playerno, 0)
-    local _, _, name = botcode:find("([^/\\]+)\.lua")
-    player_set_name(playerno, name or botcode)
     if logfile then
         local ok, logclient = pcall(server_start_writer, logfile, false, false)
         if ok then 

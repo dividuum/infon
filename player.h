@@ -85,7 +85,7 @@ void        player_on_creature_attacked(player_t *player, struct creature_s *vic
 void        player_writeto(player_t *player, const void *data, size_t size);
 
 void        player_set_name(player_t *player, const char *name);
-player_t   *player_create(const char *pass, const char *highlevel);
+player_t   *player_create(const char *name, const char *pass, const char *highlevel);
 
 void        player_think();
 

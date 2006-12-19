@@ -181,6 +181,24 @@ static void server_readable(int fd, short event, void *arg) {
     }
 }
 
+static void server_flush_compression(client_t *client) {
+    if (!client->compress)
+        return;
+
+    char buf[1024];
+    client->strm.next_in  = NULL;
+    client->strm.avail_in = 0;
+    do {
+        client->strm.next_out  = (unsigned char*)buf;
+        client->strm.avail_out = sizeof(buf);
+        if (deflate(&client->strm, Z_SYNC_FLUSH) != Z_OK) {
+            fprintf(stderr, "urgh. deflate (Z_SYNC_FLUSH) didn't return Z_OK");
+            // XXX: handle
+        }
+        evbuffer_add(client->out_buf, buf, sizeof(buf) - client->strm.avail_out);
+    } while (client->strm.avail_out == 0);
+}
+
 static void server_writable(int fd, short event, void *arg) {
     struct event  *cb_event = arg;
     client_t *client = &clients[fd];
@@ -192,21 +210,9 @@ static void server_writable(int fd, short event, void *arg) {
 #endif
 
     // Kompressionsrest flushen
-    if (client->compress) {
-        char buf[1024];
-        client->strm.next_in  = NULL;
-        client->strm.avail_in = 0;
-        do {
-            client->strm.next_out  = (unsigned char*)buf;
-            client->strm.avail_out = sizeof(buf);
-            if (deflate(&client->strm, Z_SYNC_FLUSH) != Z_OK) {
-                fprintf(stderr, "urgh. deflate (Z_SYNC_FLUSH) didn't return Z_OK");
-                // XXX: handle
-            }
-            evbuffer_add(client->out_buf, buf, sizeof(buf) - client->strm.avail_out);
-        } while (client->strm.avail_out == 0);
-    }
+    server_flush_compression(client);
 
+    // Schreiben
     int ret = evbuffer_write(client->out_buf, fd);
     if (ret < 0) {
         server_destroy(client, strerror(errno));
@@ -246,12 +252,16 @@ void server_writeto(client_t *client, const void *data, size_t size) {
     if (size == 0) 
         return;
     traffic += size;
+
+    // Fileclients werden direkt ueber abgewickelt.
     if (client->is_file_writer) {
         write(client_num(client), data, size);
         return;
     }
+    
     if (EVBUFFER_LENGTH(client->out_buf) > 1024*1024)
         return;
+    
     if (client->compress) {
         char buf[1024];
         client->strm.next_in  = (void*)data; // not const?
@@ -269,6 +279,7 @@ void server_writeto(client_t *client, const void *data, size_t size) {
     } else {
         evbuffer_add(client->out_buf, (void*)data, size);
     }
+
     event_add(&client->wr_event, NULL);
 }
 
@@ -300,20 +311,24 @@ void server_destroy(client_t *client, const char *reason) {
         lua_pop(L, 1);
     }
 
-    // Versuchen, den Rest rauszuschreiben.
+    // Quitmeldung senden
     if (client->is_gui_client) {
         packet_t packet;
         packet_init(&packet, PACKET_QUIT_MSG);
         packet_writeXX(&packet, reason, strlen(reason));
         server_send_packet(&packet, client);
-        // TODO: funktioniert momentan nicht, da kein 
-        // FULL_FLUSH vor evbuffer_write
     } else {
-        evbuffer_add(client->out_buf, "connection terminating: ", 25);
-        evbuffer_add(client->out_buf, (char*)reason, strlen(reason));
-        evbuffer_add(client->out_buf, "\r\n", 2);
+        server_writeto(client, "connection terminating: ", 25);
+        server_writeto(client, reason, strlen(reason));
+        server_writeto(client, "\r\n", 2);
     }
 
+    // Kompressionsrest flushen
+    server_flush_compression(client);
+
+    // Rest rausschreiben (hier keine Fehlerbehandlung mehr, da eh egal).
+    // Bei Filewritern muss nichts geschrieben werden, da deren Daten
+    // immer direkt rausgeschrieben werden.
     if (!client->is_file_writer) 
         evbuffer_write(client->out_buf, fd);
 
