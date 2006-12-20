@@ -1,11 +1,14 @@
 function onNewGame()
     round_end_text = nil
     round_end_time = nil
+
+    king_player = nil
+    king_time   = 0
 end
 
 function onRound()
     local time_limit = get_time_limit()
-    if not round_end_text and time_limit and game_time() > get_time_limit() then
+    if not round_end_text and time_limit and game_time() > time_limit then
         local maxscore   = -1000000
         local winner     = nil
         local num_winner = 0
@@ -94,7 +97,8 @@ function onPlayerCreated(player)
     if x and y then creature_spawn(player, nil, x, y, CREATURE_SMALL) end
 end
 
-function onPlayerAllCreaturesDied(player)
+function onPlayerAllCreaturesDead(player, time)
+    if time < 2000 then return end
     local x, y = world_get_spawn_point(player)
     if x and y then creature_spawn(player, nil, x, y, CREATURE_SMALL) end
     local x, y = world_get_spawn_point(player)
@@ -106,4 +110,21 @@ function onPlayerScoreChange(player, score, reason)
     if not round_end_text and score_limit and score >= score_limit then
         round_end_text = "player " .. player_get_name(player) .. " wins the game!"
     end 
+end
+
+function onKingPlayer(player, delta)
+    if player ~= king_player then
+        king_player = player
+        king_time   = 0
+    end
+    king_time = king_time + delta
+    if king_time > 10000 then
+        player_change_score(player, 30, "King of the Hill!")
+        king_time = king_time - 10000
+    end
+end
+
+function onNoKing()
+    king_player = nil
+    king_time   = 0
 end

@@ -22,7 +22,7 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
-assert(loadfile(PREFIX .. "config.lua"))()
+assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua")))()
 
 stats  = {
     num_clients     = 0;

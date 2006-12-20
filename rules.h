@@ -21,9 +21,6 @@
 #ifndef RULES_H
 #define RULES_H
 
-#define PLAYER_CREATURE_RESPAWN_DELAY 2000
-#define CREATURE_KOTH_POINTS             5
-
 #define RESTRICTIVE                      0
 
 #define NO_CLIENT_KICK_TIME    (120 * 1000)
@@ -31,5 +28,7 @@
 
 #define LUA_MAX_MEM              (4 * 1024)
 #define LUA_MAX_CPU                  450000
+
+#define LUA_MAX_REAL_CPU_SECONDS         1
 
 #endif
