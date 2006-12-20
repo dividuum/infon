@@ -22,6 +22,8 @@
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <sys/time.h>
 
 #include <lauxlib.h>
 #include <lualib.h>
@@ -42,7 +44,7 @@
 static player_t players[MAXPLAYERS];
 static player_t *king_player   = NULL;
 
-void player_score(player_t *player, int scoredelta, const char *reason) {
+void player_change_score(player_t *player, int scoredelta, const char *reason) {
     char buf[1024];
     snprintf(buf, sizeof(buf), "%s %s %d point%s: %s",
                                player->name, 
@@ -141,15 +143,16 @@ void player_on_creature_attacked(player_t *player, creature_t *victim, creature_
     player_add_event(player, CREATURE_ATTACKED, 2);
 }
 
-void player_on_all_dead(player_t *player) {
+void player_on_all_dead(player_t *player, int time) {
     // Rule Handler aufrufen
     lua_pushnumber(L, player_num(player));
-    game_call_rule_handler("onPlayerAllCreaturesDied", 1);
+    lua_pushnumber(L, time);
+    game_call_rule_handler("onPlayerAllCreaturesDead", 2);
 }
 
 void player_on_created(player_t *player) {
     // Zeiten zuruecksetzen
-    player->all_dead_time         = game_time - PLAYER_CREATURE_RESPAWN_DELAY;
+    player->all_dead_time         = game_time;
     player->all_disconnected_time = real_time;
     player->spawn_time            = game_time;
 
@@ -168,20 +171,9 @@ static int player_at_panic(lua_State *L) {
     return 0; // never reached
 }
 
-static int player_at_cpu_exceeded(lua_State *L) {
-    lua_pushliteral(L, "cpu limit exceeded at ");
-    lua_pushliteral(L, "traceback");
-    lua_rawget(L, LUA_REGISTRYINDEX);
-    lua_call(L, 0, 1);
-    lua_concat(L, 2);
-    return 1;
-}
-
 static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
     player_t *player = (player_t*)ud;
     (void)osize;  /* not used */
-
-    // printf("alloc %p, o=%d, n=%d\n", ptr, osize, nsize);
 
     if (nsize == 0) {
         free(ptr);
@@ -195,6 +187,31 @@ static void *player_allocator(void *ud, void *ptr, size_t osize, size_t nsize) {
     }
 }
 
+static const char *exceeded_message = NULL;
+
+static int player_at_cpu_exceeded(lua_State *L) {
+    lua_pushstring(L, exceeded_message);
+    lua_pushliteral(L, "traceback");
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    lua_call(L, 0, 1);
+    lua_concat(L, 2);
+    return 1;
+}
+
+static player_t *alarm_player = NULL;
+static struct itimerval timer;
+
+static void alarm_signal(int sig) {
+    assert(sig == SIGVTALRM);
+    assert(alarm_player);
+
+    // Cycles auf 0 => Bei naechster Anweisung wird die Ausfuehrung beendet.
+    exceeded_message = "cpu time exceeded at ";
+    lua_set_cycles(alarm_player->L, 0);
+  
+    // Spieler kicken. Es riecht nach DOS.
+    alarm_player->kill_me = "player killed: used excessive amount of cpu. what are you doing?";
+} 
 
 // Erwartet Funktion sowie params Parameter auf dem Stack
 static int player_call_user_lua(const char *where, player_t *player, int params) {
@@ -205,7 +222,31 @@ static int player_call_user_lua(const char *where, player_t *player, int params)
     // XXX: Geht davon aus, das vor dem installieren des Errorhandlers (setjmp, etc..) 
     //      kein Speicherbedingter Fehler auftritt.
     player->mem_enforce = 1;
+
+    // Notfallzeitbeschraenkung einbauen. Kann auftreten, falls sehr viele
+    // teure Lua Funktionen aufgerufen werden.
+    alarm_player              = player;
+    timer.it_interval.tv_sec  = 0;
+    timer.it_interval.tv_usec = 0;
+    timer.it_value.tv_sec     = LUA_MAX_REAL_CPU_SECONDS;
+    timer.it_value.tv_usec    = 0;
+    signal(SIGVTALRM, alarm_signal);
+    setitimer(ITIMER_VIRTUAL, &timer, NULL);
+
+    // Normalerweise liegt ein "cpu exceeded" Fehler an Ueberschreitung der lua VM Cycles.
+    // Nur im CPU Rechenzeit-Fall wird diese Meldung entsprechend angepasst.
+    exceeded_message = "lua vm cycles exceeded at ";
+    
+    // Usercode aufrufen
     int ret = lua_pcall(player->L, params, 0, -2 - params);
+
+    // Alarm aufheben
+    timer.it_value.tv_sec     = 0;
+    timer.it_value.tv_usec    = 0;
+    setitimer(ITIMER_VIRTUAL, &timer, NULL);
+    alarm_player              = NULL;
+
+    // Keine Speicherbeschraenkung mehr (ab hier wird die VM wieder von infon gesteuert)
     player->mem_enforce = 0;
 
     // Ausfuehrung geklappt. Aufraeumen & raus.
@@ -518,9 +559,9 @@ static int luaPlayerScore(lua_State *L) {
 }
 
 static int luaPlayerChangeScore(lua_State *L) {
-    player_score(player_get_checked_lua(L, 1), 
-                 luaL_checklong(L, 2),
-                 luaL_checkstring(L, 3));
+    player_change_score(player_get_checked_lua(L, 1), 
+                        luaL_checklong(L, 2),
+                        luaL_checkstring(L, 3));
     return 0;
 }
 
@@ -848,16 +889,14 @@ void player_think() {
         // Incremental Garbage Collection
         lua_gc(player->L, LUA_GCSTEP, 1);
 
-        // Alle Viecher tot? neu spawnen.
-        if (player->num_creatures == 0 && 
-            game_time > player->all_dead_time + PLAYER_CREATURE_RESPAWN_DELAY) 
-        {
-            player_on_all_dead(player);
-        }
+        // Alle Viecher tot? 
+        if (player->num_creatures == 0) 
+            player_on_all_dead(player, game_time - player->all_dead_time);
         
         // Killen?
         if (player->kill_me) {
-            player_writeto(player, "player was killed\r\n", 19);
+            player_writeto(player, player->kill_me, strlen(player->kill_me));
+            player_writeto(player, "\r\n", 2);
             player_destroy(player);
             continue;
         }
@@ -918,14 +957,11 @@ void player_send_king_update(client_t *client) {
 
 void player_is_king_of_the_hill(player_t *player, int delta) {
     player_t *old_king = king_player;
-
     king_player = player;
-    player->last_koth_time = game_time;
-    player->koth_time += delta;
-    while (player->koth_time >= 2000) {
-        player_score(player, CREATURE_KOTH_POINTS, "King of the Hill!");
-        player->koth_time -= 2000;
-    }
+    
+    lua_pushnumber(L, player_num(player));
+    lua_pushnumber(L, delta);
+    game_call_rule_handler("onKingPlayer", 2);
 
     if (king_player != old_king)
         player_send_king_update(SEND_BROADCAST);
@@ -934,6 +970,8 @@ void player_is_king_of_the_hill(player_t *player, int delta) {
 void player_there_is_no_king() {
     player_t *old_king = king_player;
     king_player = NULL;
+
+    game_call_rule_handler("onNoKing", 0);
 
     if (old_king) 
         player_send_king_update(SEND_BROADCAST);
@@ -986,7 +1024,7 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
 
 static int luaPlayerKill(lua_State *L) {
     player_t *player = player_get_checked_lua(L, 1); 
-    player->kill_me = 1;
+    player->kill_me = "player was killed";
     return 0;
 }
 
@@ -1057,7 +1095,7 @@ static int luaPlayerSetScore(lua_State *L) {
     int diff = newscore - player->score;
     char buf[128];
     snprintf(buf, sizeof(buf), "set to %d", newscore);
-    player_score(player, diff, buf);
+    player_change_score(player, diff, buf);
     return 0;
 }
 

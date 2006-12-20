@@ -43,8 +43,6 @@ typedef struct player_s {
     client_t     *bot_output_client; // output client used during botcode execution
 
     int           score;
-    int           koth_time;
-    int           last_koth_time;
     int           spawn_time;
 
     int           all_dead_time;
@@ -57,7 +55,7 @@ typedef struct player_s {
     int           max_mem;
     int           mem_enforce;
 
-    int           kill_me;
+    const char   *kill_me;
 
     unsigned char dirtymask;
 } player_t;

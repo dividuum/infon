@@ -29,17 +29,17 @@ save_in_registry = nil
 -- save traceback function
 _TRACEBACK = debug.traceback
 
--- new dofile function uses defined PREFIX
 do
+    local type, error, print = type, error, print
+
+    -- new dofile function uses defined PREFIX
     local PREFIX, orig_dofile = PREFIX, dofile
     function dofile(file)
         return orig_dofile(PREFIX .. file .. ".lua")
     end
-end
 
--- limit strings accepted by loadstring to 16k
-do
-    local orig_loadstring, error = loadstring, error
+    -- limit strings accepted by loadstring to 16k
+    local orig_loadstring = loadstring
     function loadstring(code, name)
         if #code > 16384 then
             error("code too large")
@@ -47,14 +47,20 @@ do
             return orig_loadstring(code, name)
         end
     end
-end
 
--- provide thread tracing function
-do
-    local sethook = debug.sethook
-    local getinfo = debug.getinfo
-    local type, error, print = type, error, print
-    thread_trace = function(thread, text)
+    -- limit string.rep
+    local orig_string_rep = string.rep
+    function string.rep(s, n)
+        if n > 10000 then
+            error("string.rep's n is limited to 10000")
+        else
+            return orig_string_rep(s, n)
+        end
+    end
+
+    -- provide thread tracing function
+    local sethook, getinfo = debug.sethook, debug.getinfo
+    function thread_trace(thread, text)
         if type(thread) ~= "thread" then
             error("arg #1 is not a thread")
         end
@@ -66,7 +72,8 @@ do
         end
         sethook(thread, hook, "l")
     end
-    thread_untrace = function(thread)
+    
+    function thread_untrace(thread)
         if type(thread) ~= "thread" then
             error("arg #1 is not a thread")
         end
@@ -147,6 +154,6 @@ end
 
 dofile(...)
 dofile = function(what) 
-    print("cannot 'dofile(\"" .. what .. "\")'. upload it using the batch (b) command.")
+    print(_TRACEBACK("cannot 'dofile(\"" .. what .. "\")'. upload it using the batch (b) command."))
 end
 
