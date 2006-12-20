@@ -30,7 +30,7 @@ save_in_registry = nil
 _TRACEBACK = debug.traceback
 
 do
-    local type, error, print = type, error, print
+    local assert, type, print = assert, type, print
 
     -- new dofile function uses defined PREFIX
     local PREFIX, orig_dofile = PREFIX, dofile
@@ -41,29 +41,21 @@ do
     -- limit strings accepted by loadstring to 16k
     local orig_loadstring = loadstring
     function loadstring(code, name)
-        if #code > 16384 then
-            error("code too large")
-        else
-            return orig_loadstring(code, name)
-        end
+        assert(#code <= 16384, "code too large")
+        return orig_loadstring(code, name)
     end
 
     -- limit string.rep
     local orig_string_rep = string.rep
     function string.rep(s, n)
-        if n > 10000 then
-            error("string.rep's n is limited to 10000")
-        else
-            return orig_string_rep(s, n)
-        end
+        assert(n < 10000, "string.rep's n is limited to 10000")
+        return orig_string_rep(s, n)
     end
 
     -- provide thread tracing function
     local sethook, getinfo = debug.sethook, debug.getinfo
     function thread_trace(thread, text)
-        if type(thread) ~= "thread" then
-            error("arg #1 is not a thread")
-        end
+        assert(type(thread) == "thread", "arg #1 is not a thread")
         local dumper = type(text) == "function" and text or function(info)
             print(text .. ":" .. info.source .. ":" .. info.currentline)
         end
@@ -74,9 +66,7 @@ do
     end
     
     function thread_untrace(thread)
-        if type(thread) ~= "thread" then
-            error("arg #1 is not a thread")
-        end
+        assert(type(thread) == "thread", "arg #1 is not a thread")
         sethook(thread)
     end
 end
