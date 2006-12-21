@@ -51,7 +51,7 @@ void infomsg(const char *fmt, ...) {
 #ifdef WIN32
     char buf[1024];
     vsnprintf(buf, sizeof(buf), fmt, ap);
-    MessageBoxA(GetActiveWindow(), buf, "Info", MB_ICONINFO);
+    MessageBoxA(GetActiveWindow(), buf, "Info", MB_ICONINFORMATION);
 #else
     printf("--[ Info ]--------------------\n");
     vprintf(fmt, ap);
