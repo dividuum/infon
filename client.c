@@ -129,7 +129,7 @@ static void client_handle_packet(packet_t *packet) {
             client_creature_from_network(packet);
             break;
         case PACKET_QUIT_MSG:
-            info("Server wants us to disconnect:\n%.*s",
+            infomsg("Server wants us to disconnect:\n%.*s",
                     packet->len, packet->data);
             client_destroy("done");
             break;
@@ -295,7 +295,7 @@ void file_loop(int delta) {
 
             // more data needed?
             case 1: 
-                ret = evbuffer_read(in_buf, clientfd, 4096);
+                ret = evbuffer_read(in_buf, clientfd, 64);
 
                 if (ret < 0) {
                     client_destroy(strerror(errno));

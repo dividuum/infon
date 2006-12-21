@@ -331,8 +331,8 @@ function on_game_started()
             competition_done_setup = true
             competition_rounds     = #maps
             disable_joining = "competition mode"
-            for _, code in pairs(competition_bots) do
-                appendline(competition_log, string.format("joining '%s' as %d", code, start_bot(code)))
+            for _, bot in pairs(competition_bots) do
+                appendline(competition_log, string.format("joining '%s' as %d", bot.source, start_bot(bot.source, bot.log)))
             end
         end
 

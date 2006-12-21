@@ -374,7 +374,6 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 #define cpu_exceeded_grace_cycles 16
 
 static void cpu_limit_exceeded(lua_State *L) {
-    lua_assert(G(L)->cpu_exceeded);
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
     lua_assert(L->ci->top <= L->stack_last);
@@ -386,7 +385,6 @@ static void cpu_limit_exceeded(lua_State *L) {
         lua_pushliteral(L, "cycles exceeded");
     lua_set_cycles(L, cpu_exceeded_grace_cycles);
     lua_error(L);
-    abort();
 }
 
 int luaV_execute (lua_State *L) {

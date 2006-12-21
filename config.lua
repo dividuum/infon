@@ -52,7 +52,7 @@ banner = [[
 
 -- competition = true
 -- competition_log  = "competition.log"
--- competition_bots = { "bot1.lua", "bot2.lua" }
+-- competition_bots = { { source = "bot1.lua" }, { source = "bot2.lua", log = "bot2.log"} }
 -- time_limit       = 10 * 60 * 1000
 -- maps             = { "foo", "foo", "foo" }
 -- listenaddr       = nil

@@ -48,7 +48,7 @@ do
     -- limit string.rep
     local orig_string_rep = string.rep
     function string.rep(s, n)
-        assert(n < 10000, "string.rep's n is limited to 10000")
+        assert(n <= 10000, "string.rep's n is limited to 10000")
         return orig_string_rep(s, n)
     end
 

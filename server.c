@@ -161,7 +161,11 @@ static void server_readable(int fd, short event, void *arg) {
             lua_pushnumber(L, fd);               
             lua_pushstring(L, line);
             free(line);
+
+            // Cycles fuer die Verarbeitung hochsetzen
+            lua_set_cycles(L, 0xFFFFFF);
                 
+            // Input verarbeiten
             output_client = client;
             if (lua_pcall(L, 2, 0, 0) != 0) {
                 fprintf(stderr, "error calling on_client_input: %s\n", lua_tostring(L, -1));
@@ -318,7 +322,7 @@ void server_destroy(client_t *client, const char *reason) {
         packet_writeXX(&packet, reason, strlen(reason));
         server_send_packet(&packet, client);
     } else {
-        server_writeto(client, "connection terminating: ", 25);
+        server_writeto(client, "connection terminating: ", 24);
         server_writeto(client, reason, strlen(reason));
         server_writeto(client, "\r\n", 2);
     }
