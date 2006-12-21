@@ -23,7 +23,7 @@
 
 void die(const char *fmt, ...);
 int yesno(const char *fmt, ...);
-void info(const char *fmt, ...);
+void infomsg(const char *fmt, ...);
 #ifdef WIN32
 const char *ErrorString(int error);
 #endif

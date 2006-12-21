@@ -32,7 +32,7 @@ static void null_close() {
 }
 
 static void null_tick(int gt, int delta) {
-    printf("tick %d\n", delta);
+    printf("tick %d %d\n", delta, infon->get_traffic());
 }
 
 static void  null_world_info_changed(const client_world_info_t *info) {

@@ -26,6 +26,8 @@ function onRound()
             round_end_text = "Timelimit hit"
         elseif num_winner == 1 then
             round_end_text = "Timelimit hit. " .. player_get_name(winner) .. " wins the game!"
+        else
+            round_end_text = "Timelimit hit. The game is a draw."
         end
     end
     

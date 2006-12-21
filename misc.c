@@ -45,7 +45,7 @@ void die(const char *fmt, ...) {
     exit(1);
 }
 
-void info(const char *fmt, ...) {
+void infomsg(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 #ifdef WIN32
