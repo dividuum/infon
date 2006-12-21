@@ -403,7 +403,7 @@ static void client_turn_into_gui_client(client_t *client) {
 }
 
 client_t *server_start_file_writer(const char *filename) {
-    int fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, S_IRUSR|S_IWUSR);
+    int fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, S_IRUSR|S_IRGRP);
     if (fd < 0)
         return NULL;
     static char address[512];
