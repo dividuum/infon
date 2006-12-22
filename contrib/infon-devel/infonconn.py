@@ -223,7 +223,7 @@ class InfonConn(gobject.GObject):
         return True
 
     creature_re = re.compile("^<creature (\d+) ")
-    line_re     = re.compile('input from client \d+"]:(\d+):')
+    line_re     = re.compile('from client \d+"]:(\d+):')
     def parse_backtrace(self,bt):
         lines = bt.splitlines()
         self.bt = []
