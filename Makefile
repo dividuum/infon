@@ -85,8 +85,14 @@ ifdef NULL_INFON
 $(INFON_EXECUTABLE) : CFLAGS   += -DNO_EXTERNAL_RENDERER -DBUILTIN_RENDERER=null_gui
 $(INFON_EXECUTABLE) : null_gui.o
 else
+ifdef SDL_INFON
+$(INFON_EXECUTABLE) : CFLAGS   += -DNO_EXTERNAL_RENDERER -DBUILTIN_RENDERER=sdl_gui -I$(SDLDIR)/include/SDL 
+$(INFON_EXECUTABLE) : LDFLAGS  += -lSDL -lSDL_image -lSGE -lSDL_gfx 
+$(INFON_EXECUTABLE) : sdl_video.o sdl_sprite.o sdl_gui.o
+else
 $(INFON_EXECUTABLE) : LDFLAGS  += -ldl
 misc.o              : CFLAGS   += -fPIC
+endif
 endif
 
 $(INFOND_EXECUTABLE): CFLAGS   += -Ilua-5.1.1/src/ # -DCHEATS
