@@ -206,7 +206,7 @@ class InfonDevel:
         dialog.set_name("Infon Devel")
         dialog.set_website("http://infon.dividuum.de/")
         dialog.set_website_label("http://infon.dividuum.de/")
-        dialog.set_version("0.0")
+#        dialog.set_version("0.0")
         dialog.run()
         dialog.destroy()
 

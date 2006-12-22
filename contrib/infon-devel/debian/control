@@ -9,6 +9,8 @@ XS-Vcs-Svn: http://infon.dividuum.de/svn/infon/trunk/contrib/infon-devel
 
 Package: infon-devel
 Architecture: all
+Suggests: infon-server
+Recommends: infon-viewer
 Depends: ${python:Depends}, python-gnome2-desktop
 XB-Python-Version: ${python:Versions}
 Description: Develop bots for the infon game
