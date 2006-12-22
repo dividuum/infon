@@ -1,6 +1,6 @@
 infond	usr/bin
 level/  usr/share/infon-server/
-infond.lua player.lua player-default.lua server.lua usr/share/infon-server/
+infond.lua player.lua player-default.lua player-highlevel.lua server.lua usr/share/infon-server/
 rules/	etc/infond/
 config.lua	etc/infond/
 
