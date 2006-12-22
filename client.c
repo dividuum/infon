@@ -283,35 +283,28 @@ int  client_is_connected() {
 }
 
 void file_loop(int delta) {
-    int ret;
-
     next_packet_countdown -= delta;
     
     while (next_packet_countdown <= 0) {
-        switch (client_parse_in_buf()) {
-            // error -> disconnected
-            case 0: 
-                return;
+        int status = client_parse_in_buf();
 
-            // more data needed?
-            case 1: 
-                ret = evbuffer_read(in_buf, clientfd, 64);
+        if (status == 0 || // error -> disconnected
+            status == 2)   // call again later
+            return;
+            
+        char buf[64];
+        int  ret = read(clientfd, buf, sizeof(buf));
 
-                if (ret < 0) {
-                    client_destroy(strerror(errno));
-                    return;
-                } else if (ret == 0) { 
-                    client_destroy("eof");
-                    return;
-                }
-                
-                traffic += ret;
-                break;
-                
-            // call again later
-            case 2: 
-                return;
+        if (ret < 0) {
+            client_destroy(strerror(errno));
+            return;
+        } else if (ret == 0) { 
+            client_destroy("eof");
+            return;
         }
+
+        evbuffer_add(in_buf, buf, ret);
+        traffic += ret;
     }
 }
 
