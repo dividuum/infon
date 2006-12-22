@@ -3,4 +3,5 @@ infon-wrapper	usr/share/infon-viewer
 gfx/theme.png	usr/share/infon-viewer/gfx
 gfx/5x7.fnt	usr/share/infon-viewer/gfx
 gfx/font.png	usr/share/infon-viewer/gfx
+*_gui.so	usr/lib/infon-viewer
 

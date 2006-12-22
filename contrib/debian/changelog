@@ -1,3 +1,20 @@
+infon (0~r139-1) unstable; urgency=low
+
+  * New upstream release
+  * Dropping patches/20-quieten-infond.dpatch, upstream supports a flag for
+    that
+  * Upload to unstable, since etch is frozen.
+  * Sponsored by http://www.aiti-kace.com.gh/
+
+ -- Joachim Breitner <nomeata@debian.org>  Fri, 22 Dec 2006 16:35:26 +0000
+
+infon (0~r99-2) experimental; urgency=low
+
+  * missing build-dep on dpatch (Closes: #402608)
+    (I thought I had checked it in pbuilder. I thought wrongly)
+
+ -- Joachim Breitner <nomeata@debian.org>  Mon, 11 Dec 2006 18:02:29 +0000
+
 infon (0~r99-1) experimental; urgency=low
 
   * New upstream version
