@@ -1,5 +1,6 @@
-infon-devel (0~r105-1) experimental; urgency=low
+infon-devel (0~r142-1) unstable; urgency=low
 
   * Initial Release
+  * Sponsored by http://www.aiti-kace.com.gh/
 
- -- Joachim Breitner <nomeata@debian.org>  Mon, 27 Nov 2006 18:11:58 +0000
+ -- Joachim Breitner <nomeata@debian.org>  Fri, 22 Dec 2006 16:53:10 +0000
