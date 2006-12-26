@@ -115,7 +115,7 @@ function Creature:suicide()
 end
 
 function Creature:nearest_enemy()
-    return nearest_enemy(self.id)
+    return get_nearest_enemy(self.id)
 end
 
 function Creature:set_path(x, y)
