@@ -668,7 +668,6 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
     lua_register(player->L,     "world_size",           luaWorldSize);
     lua_register(player->L,     "game_time",            luaGameTime);
     lua_register(player->L,     "get_koth_pos",         luaGetKothPos);
-    lua_register(player->L,     "exists",               luaCreatureExists);
     lua_register(player->L,     "creature_exists",      luaCreatureExists);
     lua_register(player->L,     "creature_player",      luaCreatureGetPlayer);
     lua_register(player->L,     "player_exists",        luaPlayerExists);

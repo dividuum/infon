@@ -138,6 +138,12 @@ function nearest_enemy(...)
     return get_nearest_enemy(...)
 end
 
+function exists(...)
+    print(_TRACEBACK("calling 'exists' is deprecated. use 'creature_exists' instead.", 2))
+    exists = creature_exists
+    return creature_exists(...)
+end
+
 ------------------------------------------------------------------------
 -- Load Highlevel API
 ------------------------------------------------------------------------
