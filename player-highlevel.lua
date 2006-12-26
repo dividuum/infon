@@ -27,18 +27,17 @@ Creature = {}
 function Creature:moveto(tx, ty)
     local x, y = self:pos()
     if x == tx and y == ty then
-        -- Um Endlosschleifen mit einer einzelnen 
-        -- moveto Anweisung zu verhindern.
-        self:wait_for_next_round() 
         return true
     end
     
     if not self:set_path(tx, ty) then
-        self:wait_for_next_round() 
         return false
     end
 
-    self:begin_walk_path()
+    if not self:begin_walk_path() then
+        return false
+    end
+
     local review = game_time()
     while self:is_walking() do
         self:wait_for_next_round()
@@ -53,44 +52,58 @@ function Creature:moveto(tx, ty)
 end
 
 function Creature:heal() 
-    self:begin_healing()
+    if not self:begin_healing() then
+        return false
+    end
     while self:is_healing() do
         self:wait_for_next_round()
     end
+    return true
 end
 
 function Creature:eat()
-    self:begin_eating()
+    if not self:begin_eating() then
+        return false
+    end
     while self:is_eating() do
         self:wait_for_next_round()
     end
+    return true
 end
 
 function Creature:feed(target)
     if not self:set_target(target) then
-        return
+        return false
     end
-    self:begin_feeding()
+    if not self:begin_feeding() then
+        return false
+    end
     while self:is_feeding() do
         self:wait_for_next_round()
     end
+    return true
 end
 
 function Creature:attack(target) 
     if not self:set_target(target) then
-        return
+        return false
     end
-    self:begin_attacking()
+    if not self:begin_attacking() then
+        return false
+    end
     while self:is_attacking() do
         self:wait_for_next_round()
     end
+    return true
 end
 
 function Creature:convert(to_type)
     if not self:set_conversion(to_type) then
         return false
     end
-    self:begin_converting()
+    if not self:begin_converting() then 
+        return false
+    end
     while self:is_converting() do
         self:wait_for_next_round()
     end
@@ -219,7 +232,7 @@ end
 
 function Creature:sleep(msec)
     local time = game_time()
-    while time + msec >= game_time() do
+    while time + msec > game_time() do
         self:wait_for_next_round()
     end
 end
