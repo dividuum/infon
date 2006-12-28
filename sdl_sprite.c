@@ -132,6 +132,11 @@ static void sprite_load_images() {
                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
     SDL_Rect lrect = { 0, 410, 170, 80};
     SDL_BlitSurface(gfx, &lrect, sprites[SPRITE_LOGO], NULL);
+
+    sprites[SPRITE_HALO] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 32, 32,
+                                                32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
+    SDL_Rect hrect = {16, 48, 32, 32};
+    SDL_BlitSurface(gfx, &hrect, sprites[SPRITE_HALO], NULL);
 }
 
 SDL_Surface *sprite_get(int i) {
