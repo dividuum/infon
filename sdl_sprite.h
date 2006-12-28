@@ -88,7 +88,7 @@
 
 // Logo
 #define SPRITE_LOGO             (SPRITE_CROWN + SPRITE_NUM_CROWN)
-#define SPRITE_NUM_LOGO         1
+#define SPRITE_HALO             (SPRITE_LOGO + 1)
 
 #define SPRITE_CREATURE         512
 

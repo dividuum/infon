@@ -51,6 +51,8 @@ static int          rand_table[256];
 
 static int          debug = 0;
 
+static int          highlight_player = -1;
+
 static void recenter() {
     const client_world_info_t *info = infon->get_world_info();
     if (!info) return;
@@ -69,6 +71,14 @@ static void handle_events() {
                             video_fullscreen_toggle();
                         break;
                     case SDLK_F12: debug ^= 1; break;
+                    case SDLK_F9:  
+                        if (--highlight_player < -1)
+                            highlight_player = infon->max_players;
+                        break;
+                    case SDLK_F10:  
+                        if (++highlight_player >= infon->max_players)
+                            highlight_player = -1;
+                        break;
                     case SDLK_1: video_resize( 640,  480); break;
                     case SDLK_2: video_resize( 800,  600); break;
                     case SDLK_3: video_resize(1024,  768); break;
@@ -151,6 +161,9 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
                                            
     if (hw != 15) video_rect(x + hw, y - 2, x + 15, y,     0xFF, 0x00, 0x00, 0xB0);
     if (hw !=  0) video_rect(x,      y - 2, x + hw, y,     0x00, 0xFF, 0x00, 0xB0);
+
+    if (creature->player == highlight_player)
+        video_draw(x - 8, y - 8, sprite_get(SPRITE_HALO));
 
     video_draw(x, y, sprite_get(CREATURE_SPRITE(creature->player,
                                                 creature->type,
@@ -243,12 +256,23 @@ static void draw_player_row() {
         }
         
         // Rotierendes Vieh
-        video_draw(player_displayed * 128,
-                   video_height() - 32, 
-                   sprite_get(CREATURE_SPRITE(player->num,
-                                              0, 
-                                              (render_real_time /  64) % CREATURE_DIRECTIONS,
-                                              (render_real_time / 128) % 2)));
+        if (player->num == highlight_player) {
+            video_draw(player_displayed * 128 - 8, 
+                       video_height() - 40 - 8, sprite_get(SPRITE_HALO));
+            video_draw(player_displayed * 128,
+                       video_height() - 40, 
+                       sprite_get(CREATURE_SPRITE(player->num,
+                                                  0, 
+                                                  (render_real_time /  64) % CREATURE_DIRECTIONS,
+                                                  (render_real_time / 128) % 2)));
+        } else {
+            video_draw(player_displayed * 128,
+                       video_height() - 32, 
+                       sprite_get(CREATURE_SPRITE(player->num,
+                                                  0, 
+                                                  (render_real_time /  64) % CREATURE_DIRECTIONS,
+                                                  (render_real_time / 128) % 2)));
+        }
         // CPU Auslastung Anzeigen
         const int cpu = 80 * player->cpu_usage / 100;
         video_rect(player_displayed * 128 + 16, 
