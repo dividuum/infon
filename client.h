@@ -25,6 +25,7 @@ void  client_tick(int delta);
 int   client_is_connected();
 
 int   client_traffic();
+void  client_printf(const char *fmt, ...);
 
 void  client_init(char *source);
 void  client_shutdown();
