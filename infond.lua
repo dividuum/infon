@@ -685,13 +685,15 @@ function stop_listener()
     setup_listener("", 0)
 end
 
-function start_bot(botcode, logfile, highlevelcode)
+function start_bot(botcode, logfile, name, highlevelcode)
     local highlevelcode = highlevelcode or highlevel[1]
     local password  = tostring(math.random(100000, 999999))
     local botfile   = assert(io.open(botcode, "rb"))
     local botsource = botfile:read("*a")
     botfile:close()
-    local _, _, name = botcode:find("([^/\\]+)\.lua")
+    if not name then 
+        name = select(3, botcode:find("([^/\\]+)\.lua"))
+    end
     local playerno = player_create(name or botcode, password, highlevelcode)
     if not playerno then
         error("cannot create new player")
