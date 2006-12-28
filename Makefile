@@ -1,3 +1,5 @@
+all: targets
+
 ifndef REVISION
 REVISION := $(shell svnversion . || echo 'exported')
 endif
@@ -125,7 +127,7 @@ endif
 # Go Go Go!
 ############################################################
 
-all: infond $(GUI_EXECUTABLE) $(RENDERER)
+targets: infond $(INFON_EXECUTABLE) $(RENDERER)
 
 dist:
 	$(MAKE) source-dist
