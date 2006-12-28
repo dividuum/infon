@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -277,6 +278,15 @@ void client_writeto(const void *data, size_t size) {
         return;
     evbuffer_add(out_buf, (void*)data, size);
     event_add(&wr_event, NULL);
+}
+
+void client_printf(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    char buf[4096];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    client_writeto(buf, strlen(buf));
 }
 
 int  client_is_connected() {

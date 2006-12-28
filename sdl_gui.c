@@ -49,8 +49,8 @@ static int          offset_y;
 static struct evbuffer *scrollbuffer;
 static int          rand_table[256];
 
-static int          debug = 0;
-
+static int          debug            = 0;
+static int          send_events      = 0;
 static int          highlight_player = -1;
 
 static void recenter() {
@@ -58,6 +58,15 @@ static void recenter() {
     if (!info) return;
     center_x = info->width  * SPRITE_TILE_SIZE / 2;
     center_y = info->height * SPRITE_TILE_SIZE / 2;
+}
+
+static void sdl_scroll_message(const char *msg) {
+    // Zuviel insgesamt?
+    if (EVBUFFER_LENGTH(scrollbuffer) > 10000)
+        return;
+
+    evbuffer_add(scrollbuffer, (char*)msg, strlen(msg));
+    evbuffer_add(scrollbuffer, "  -  ", 5);
 }
 
 static void handle_events() {
@@ -70,7 +79,6 @@ static void handle_events() {
                         if (event.key.keysym.mod & KMOD_ALT)
                             video_fullscreen_toggle();
                         break;
-                    case SDLK_F12: debug ^= 1; break;
                     case SDLK_F9:  
                         if (--highlight_player < -1)
                             highlight_player = infon->max_players;
@@ -79,6 +87,11 @@ static void handle_events() {
                         if (++highlight_player >= infon->max_players)
                             highlight_player = -1;
                         break;
+                    case SDLK_F11: send_events ^= 1; 
+                                   sdl_scroll_message(send_events ? "Forwarding input" 
+                                                                  : "Stopped forwarding input"); 
+                                   break;
+                    case SDLK_F12: debug       ^= 1; break;
                     case SDLK_1: video_resize( 640,  480); break;
                     case SDLK_2: video_resize( 800,  600); break;
                     case SDLK_3: video_resize(1024,  768); break;
@@ -90,7 +103,25 @@ static void handle_events() {
                     case SDLK_ESCAPE:
                         infon->shutdown();
                         break;
-                    default: ;
+                    default: 
+                        break;
+                }
+                if (send_events)
+                    infon->printf("K%d\n", event.key.keysym.sym);
+                break;
+           case SDL_KEYUP:
+                if (send_events)
+                    infon->printf("k%d\n", event.key.keysym.sym);
+                break;
+           case SDL_MOUSEBUTTONDOWN:
+           case SDL_MOUSEBUTTONUP:
+                if (send_events) {
+                    int x = (event.button.x - offset_x) * TILE_WIDTH  / SPRITE_TILE_SIZE;
+                    int y = (event.button.y - offset_y) * TILE_HEIGHT / SPRITE_TILE_SIZE;
+                    infon->printf("%c%d,%d,%d\n", 
+                                  event.type == SDL_MOUSEBUTTONDOWN ? 'M' : 'm',
+                                  event.button.button,
+                                  x, y);
                 }
                 break;
            case SDL_MOUSEMOTION: 
@@ -476,16 +507,6 @@ static void sdl_player_changed(const client_player_t *player, int changed) {
     }
 }
 
-static void sdl_scroll_message(const char *msg) {
-    // Zuviel insgesamt?
-    if (EVBUFFER_LENGTH(scrollbuffer) > 10000)
-        return;
-
-    evbuffer_add(scrollbuffer, (char*)msg, strlen(msg));
-    evbuffer_add(scrollbuffer, "  -  ", 5);
-}
-
-
 static void sdl_tick(int gt, int delta) {
     static Uint32 frames    = 0;
     static int    last_net  = 0;
@@ -533,6 +554,9 @@ static void sdl_tick(int gt, int delta) {
 
     if (stall > 2) 
         video_write(4, 4, "connection stalled?");
+
+    if (send_events)
+        video_write(video_width() - 148, 4, "Input forwarding enabled");
 
     video_flip();
     frames++;

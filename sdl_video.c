@@ -70,7 +70,7 @@ void video_init(int w, int h, int fs) {
         SetClassLong(hwnd, GCL_HICON, (LONG) icon);
     }
 #endif
-    //SDL_EnableUNICODE(1);
+    // SDL_EnableUNICODE(1);
 
     font = sge_BF_OpenFont(PREFIX "gfx/font.png", SGE_BFTRANSP|SGE_BFPALETTE);
     if(!font)

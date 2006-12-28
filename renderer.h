@@ -122,6 +122,9 @@ typedef struct {
 
     /* tell the infon client to shutdown. */
     void                       (*shutdown)();
+
+    /* write a string to the server */
+    void                       (*printf)(const char *fmt, ...);
 } infon_api_t;
 
 /* the function called after loading the renderer. it receives the infon api and must
