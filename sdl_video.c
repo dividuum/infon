@@ -46,7 +46,7 @@ void video_init(int w, int h, int fs) {
     const SDL_VideoInfo *vi = SDL_GetVideoInfo();
 
     if (!vi)
-        die("SDL_getVideoInfo() failed");
+        die("SDL_getVideoInfo() failed: %s", SDL_GetError());
 
     if (!(vi->vfmt->BitsPerPixel == 16 || vi->vfmt->BitsPerPixel == 32))
         die("insufficient color depth");
