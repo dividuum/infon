@@ -82,10 +82,10 @@ typedef struct {
     const char *version;
     
     /* maximum number of players. */
-    int  max_players;
+    int max_players;
 
     /* maximum number of creatures. */
-    int  max_creatures;
+    int max_creatures;
 
     /* calls function 'callback' for each creature in the game. opaque is passed to the callback function. */
     void (*each_creature)(void (*callback)(const client_creature_t *creature, void *opaque), void *opaque);
@@ -125,6 +125,9 @@ typedef struct {
 
     /* write a string to the server */
     void                       (*printf)(const char *fmt, ...);
+
+    /* Is it a demo replay? */
+    int                        (*is_demo)();
 } infon_api_t;
 
 /* the function called after loading the renderer. it receives the infon api and must

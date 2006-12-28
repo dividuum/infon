@@ -76,6 +76,7 @@ static const infon_api_t infon_api = {
     .get_traffic        = client_traffic,
     .shutdown           = renderer_set_shutdown,
     .printf             = client_printf,
+    .is_demo            = client_is_file_source,
 };
 
 int renderer_init_from_pointer(render_loader loader) {

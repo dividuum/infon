@@ -153,8 +153,7 @@ static void client_handle_packet(packet_t *packet) {
             client_game_intermission_from_network(packet);
             break;
         case PACKET_WELCOME_MSG:    
-            if (!is_file_source)
-                client_writeto("guiclient\n", 10);
+            client_writeto("guiclient\n", 10);
             break;
         case PACKET_START_COMPRESS:
             client_start_compression();
@@ -272,12 +271,18 @@ static void client_writable(int fd, short event, void *arg) {
 }
 
 void client_writeto(const void *data, size_t size) {
+    if (is_file_source)
+        return;
     if (size == 0) 
         return;
     if (EVBUFFER_LENGTH(in_buf) > 1024*1024)
         return;
     evbuffer_add(out_buf, (void*)data, size);
     event_add(&wr_event, NULL);
+}
+
+int client_is_file_source() {
+    return is_file_source;
 }
 
 void client_printf(const char *fmt, ...) {

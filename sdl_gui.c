@@ -558,6 +558,9 @@ static void sdl_tick(int gt, int delta) {
     if (send_events)
         video_write(video_width() - 148, 4, "Input forwarding enabled");
 
+    if (infon->is_demo() && (render_real_time % 1000) < 500)
+        video_write(4, video_height() - 48, "Replay");
+
     video_flip();
     frames++;
 }
