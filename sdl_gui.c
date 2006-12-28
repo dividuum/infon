@@ -181,9 +181,11 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
     if (debug) {
         char tmp[128];
         snprintf(tmp, sizeof(tmp), "%d(%d) p%d", creature->vm_id, creature->num, creature->player); 
-        video_tiny(x, y + 20, tmp);
+        video_tiny(x, y + 22, tmp);
         snprintf(tmp, sizeof(tmp), "f=%d h=%d", creature->food, creature->health); 
-        video_tiny(x, y + 28, tmp);
+        video_tiny(x, y + 30, tmp);
+        snprintf(tmp, sizeof(tmp), "s=%d", creature->speed); 
+        video_tiny(x, y + 38, tmp);
     }
         
     if (creature->state == CREATURE_ATTACK) {
