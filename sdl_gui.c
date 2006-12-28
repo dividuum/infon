@@ -307,6 +307,8 @@ static void draw_scores(int xcenter, int y) {
 
     for (n = 0; n < num_players; n++) {
         const client_player_t *player = sorted[n];
+        if (player->num == highlight_player)
+            video_draw(xcenter - 48 - 8, y + 14 * n - 8, sprite_get(SPRITE_HALO));
         video_draw(xcenter - 48,
                    y + 14 * n,
                    sprite_get(CREATURE_SPRITE(player->num,
