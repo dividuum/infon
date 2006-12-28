@@ -26,6 +26,7 @@ int   client_is_connected();
 
 int   client_traffic();
 void  client_printf(const char *fmt, ...);
+int   client_is_file_source();
 
 void  client_init(char *source);
 void  client_shutdown();
