@@ -49,7 +49,7 @@ typedef struct maptile_s {
     mapgfx_e    gfx;
 } maptile_t;
 
-static maptile_t *map;
+static maptile_t *map = NULL;
 
 #define MAPTILE(x, y) (map[(y) * world_w + (x)])
 
@@ -236,7 +236,11 @@ void world_tick() {
     }
 }
 
+#define check_world_initialized() \
+    do { if (!map) luaL_error(L, "world not yet initialized"); } while (0)
+
 static int luaWorldSetType(lua_State *L) {
+    check_world_initialized();
     lua_pushboolean(L, world_set_type(luaL_checklong(L, 1), 
                                       luaL_checklong(L, 2),
                                       luaL_checklong(L, 3)));
@@ -244,6 +248,7 @@ static int luaWorldSetType(lua_State *L) {
 }
 
 static int luaWorldGetType(lua_State *L) {
+    check_world_initialized();
     int x = luaL_checklong(L, 1);
     int y = luaL_checklong(L, 2);
     if (!world_is_on_map(x, y))
@@ -253,6 +258,7 @@ static int luaWorldGetType(lua_State *L) {
 }
 
 static int luaWorldSetGfx(lua_State *L) {
+    check_world_initialized();
     lua_pushboolean(L, world_set_gfx(luaL_checklong(L, 1), 
                                      luaL_checklong(L, 2),
                                      luaL_checklong(L, 3)));
@@ -260,6 +266,7 @@ static int luaWorldSetGfx(lua_State *L) {
 }
 
 static int luaWorldGetGfx(lua_State *L) {
+    check_world_initialized();
     int x = luaL_checklong(L, 1);
     int y = luaL_checklong(L, 2);
     if (!world_is_on_map(x, y))
@@ -269,6 +276,7 @@ static int luaWorldGetGfx(lua_State *L) {
 }
 
 static int luaWorldAddFood(lua_State *L) {
+    check_world_initialized();
     lua_pushnumber(L, world_add_food(luaL_checklong(L, 1), 
                                      luaL_checklong(L, 2), 
                                      luaL_checklong(L, 3)));
@@ -276,11 +284,13 @@ static int luaWorldAddFood(lua_State *L) {
 }
 
 static int luaWorldWalkable(lua_State *L) {
+    check_world_initialized();
     lua_pushboolean(L, world_walkable(luaL_checklong(L, 1), luaL_checklong(L, 2)));
     return 1;
 }
 
 static int luaWorldFindDigged(lua_State *L) {
+    check_world_initialized();
     int x, y;
     if (!world_find_plain(&x, &y)) 
         return 0;
@@ -355,6 +365,7 @@ void world_init() {
 void world_shutdown() {
     finder_shutdown(&finder);
     free(map);
+    map = NULL;
     map_free(walkmap);
 }
 
