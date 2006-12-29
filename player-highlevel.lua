@@ -110,6 +110,16 @@ function Creature:convert(to_type)
     return self:type() == to_type
 end
 
+function Creature:spawn()
+    if not self:begin_spawning() then
+        return false
+    end
+    while self:is_spawning() do
+        self:wait_for_next_round()
+    end
+    return true
+end
+
 function Creature:suicide()
     suicide(self.id)
 end
