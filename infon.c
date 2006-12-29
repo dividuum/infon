@@ -108,18 +108,6 @@ int main(int argc, char *argv[]) {
         if (nowticks < lastticks || nowticks > lastticks + 1000) {
             // Timewarp?
             lastticks = nowticks;
-#ifdef WIN32
-            Sleep(2);
-#else
-            usleep(5000);
-#endif
-            continue;
-        } else if (delta < 20) {
-#ifdef WIN32
-            Sleep(2);
-#else
-            usleep(5000);
-#endif
             continue;
         }
         lastticks = nowticks;

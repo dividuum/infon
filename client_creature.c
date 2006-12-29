@@ -96,6 +96,9 @@ static void client_creature_kill(client_creature_t *creature) {
 }
 
 void client_creature_move(int delta) {
+    if (delta == 0)
+        return;
+
     client_creature_t *creature = &creatures[0];
     for (int i = 0; i < MAXCREATURES; i++, creature++) {
 

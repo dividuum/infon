@@ -129,6 +129,11 @@ static void handle_events() {
                     center_x -= event.motion.xrel;
                     center_y -= event.motion.yrel;
                 }
+                if (send_events && event.motion.state) {
+                    int x = (event.motion.x - offset_x) * TILE_WIDTH  / SPRITE_TILE_SIZE;
+                    int y = (event.motion.y - offset_y) * TILE_HEIGHT / SPRITE_TILE_SIZE;
+                    infon->printf("D%d,%d,%d\n", event.motion.state, x, y);
+                }
                 break;
            case SDL_VIDEORESIZE:
                 video_resize(event.resize.w, event.resize.h);
@@ -563,6 +568,13 @@ static void sdl_tick(int gt, int delta) {
 
     video_flip();
     frames++;
+
+#ifdef WIN32
+    Sleep(20);
+#else
+    usleep(4000);
+#endif
+
 }
 
 static int sdl_open(int w, int h, int fs) {

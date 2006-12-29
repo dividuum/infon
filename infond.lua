@@ -695,9 +695,7 @@ function start_bot(botcode, logfile, name, highlevelcode)
         name = select(3, botcode:find("([^/\\]+)\.lua"))
     end
     local playerno = player_create(name or botcode, password, highlevelcode)
-    if not playerno then
-        error("cannot create new player")
-    end
+    assert(playerno, "cannot create new player")
     cprint(string.format("player %d - %s (%s) joined with password '%s'", playerno, name or botcode, botcode, password))
     player_set_no_client_kick_time(playerno, 0)
     if logfile then
