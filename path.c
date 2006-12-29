@@ -61,28 +61,23 @@ void finder_openset_moveup(open_t *set, int curidx) {
     }
 }
 
-void finder_openset_add(pathfinder_t *finder, portal_t *portal, 
-                        int side, int cost) 
-{
+void finder_openset_add(pathfinder_t *finder, portal_t *portal, int side, int cost) {
+    if (finder->numopen >= finder->maxopen)
+        return;
+
     open_t *set = finder->openset;
 
     // Neues open_t fuellen
     set[finder->numopen].portal     = portal;
     set[finder->numopen].fromside   = side;
     set[finder->numopen].cost       = cost;
-
-    int added_idx = finder->numopen;
+    
+    finder_openset_moveup(set, finder->numopen);
 
     finder->numopen++;
-
-    assert(finder->numopen < finder->maxopen); // XXX
-
-    finder_openset_moveup(set, added_idx);
 }
 
-void finder_openset_update(pathfinder_t *finder, int idx, 
-                        int side, int cost) 
-{
+void finder_openset_update(pathfinder_t *finder, int idx, int side, int cost) {
     open_t *set = finder->openset;
 
     set[idx].fromside   = side;
@@ -132,32 +127,13 @@ int finder_openset_find(pathfinder_t *finder, portal_t *portal) {
     return -1;
 }
 
-void path_print(pathnode_t *path) {
-    while (path) {
-        printf("%d,%d\n", path->x, path->y);
-        path = path->next;
-    }
-}
-
-char *path_as_string(pathnode_t *path) {
-    // XXX: unsicher
-    static char buf[2000];
-    char *pos = buf;
-    while (path) {
-        pos += sprintf(pos, "%d,%d|", path->x, path->y);
-        path = path->next;
-    }
-    sprintf(pos, "0,0");
-    return buf;
-}
-
 pathfinder_t *finder_alloc() {
     return (pathfinder_t*)malloc(sizeof(pathfinder_t));
 }
 
 void finder_init(pathfinder_t *finder) {
     finder->path_id = 0;
-    finder->maxopen = 4096;
+    finder->maxopen = 16384;
     finder->openset = (open_t*)malloc(finder->maxopen * sizeof(open_t));
 
     finder->randcnt = 0;
@@ -235,13 +211,16 @@ pathnode_t *finder_find(pathfinder_t *finder, map_t *map, int sx, int sy, int ex
 
     portal_t *pathportal = NULL;
     
-    while (finder->numopen > 0) {
+    while (1) {
+        // Nichts gefunden?
+        if (finder->numopen == 0)
+            return NULL;
+        
         // Openset Element mit den geringsten Kosten holen
         open_t *open     = finder->openset;
 
         portal_t *portal = open->portal;
         int       side   = open->fromside;
-        // int       costs  = open->cost; XXX: Wofuer war das da?
 
         // Von aktuellem Portal aus ist das StartArea erreichbar?
         if (portal->sides[0]->area == sarea ||
@@ -318,8 +297,6 @@ pathnode_t *finder_find(pathfinder_t *finder, map_t *map, int sx, int sy, int ex
         } while (cur != first);
     }
 
-    assert(finder->numopen > 0);
-
     // von pathportal zu pathportal vom pfandanfang zum
     // pfadende durchhangeln und dabei Ergebnispfad 
     // zusammenbauen
@@ -355,18 +332,4 @@ void path_delete(pathnode_t *path) {
         path = path->next;
         free(tmp);
     }
-}
-
-int map_visited(pathfinder_t *finder, map_t *map, int x, int y) {
-    area_t *area = MAP_TILE(map, x, y)->area;
-    if (!area)
-        return 0;
-    portalside_t *f, *c;
-    f = c = area->portals;
-    if (c) do {
-        if (c->portal->path_id == finder->path_id)
-            return 1;
-        c = c->next;
-    } while (c != f);
-    return 0;
 }
