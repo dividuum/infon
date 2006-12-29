@@ -1,11 +1,6 @@
 -- Mapname: Stripe Slice
 -- Author: Dunedan
--- Version: 0.1
-
-kothX = 1
-kothY = 1
-mapsizeX = 1
-mapsizeY = 1
+-- Version: 0.3
 
 function maplayout()
 
@@ -27,10 +22,10 @@ function maplayout()
 	m[2] = 	"WWWWWWWWWWWWWWWWWUUUUUTTUUUUUUUTTUUUUUUUUWWWWWWWWWWWWWWWWW";
 	m[3] = 	"WWWWWWWWWWWWWWUUUUUUUUUUUUUUUUTTTUUUUSSSSSSSWWWWWWWWWWWWWW";
 	m[4] = 	"WWWWWWWWWWWUUUUUUUUUUUUUUTTUUUUTUUUUSSSUUUSSSUUWWWWWWWWWWW";
- 	m[5] = 	"WWWWWWWWTTTTUUUUUUUUUTTTTTUUUUUUUUUUSSSUUUUUUUUUUUWWWWWWWW";
+	m[5] = 	"WWWWWWWWTTTTUUUUUUUUUTTTTTUUUUUUUUUUSSSUUUUUUUUUUUWWWWWWWW";
 	m[6] = 	"WWWWWWUUTTUUUUUUUUUUPTTTTTUUUUUUUUUUUUUUUUUUSSUUUUUUWWWWWW";
 	m[7] = 	"WWWWUUUUUUUUUUTTTUPPPTTTTTTTUUUUUSSSSUUUUPPSSSPPUUUTTTWWWW";
- 	m[8] = 	"WWUUUUUPPPUUPPTTTPPPPPTTPPPPPPPPPSSSSSPPPPPPPPPPPPPTTTTPWW";
+	m[8] = 	"WWUUUUUPPPUUPPTTTPPPPPTTPPPPPPPPPSSSSSPPPPPPPPPPPPPTTTTPWW";
 	m[9] = 	"WSSPPPPPPPPPPPPPTPPPPPPSSPPPPPPPPPPPPPPPPPPPPPPPPPPTTTPPPW";
 	m[10] = "SSSPPPPPPPPPPPPPPPPPPPPSSSPPPPPPPPPPSSSSSPPPPPPPPPPPPPPPPP";
 	m[11] = "PPSSPPPPPPSSSPPPPPPPPPPSSPPPPPPPPPPPPPSSPPPPPPPPPSSPPPPPPP";
@@ -41,7 +36,7 @@ function maplayout()
 	m[16] = "DDDDDDDDDSSDDDDSSSDDDDSSDDDDDDDDDDDDSSDDDDDDSSDDDDDDDDDDSS";
 	m[17] = "DDDDDDDDDSSDDDDDDDDDDDDDDDDSSSSSDPPPSSSSDDDDDDDDDDDDDSSSSS";
 	m[18] = "PPPLLDDSSSDDPPPPPPPPPPPPPSSSSSSDDPPPPSSPPPPPPPPPPPPPPPSSSS";
- 	m[19] = "PPLLLPPPPSSSPPPPPPPPPPPPPPPSSPPPPPPPPSSPPPTTPPPPPPSSSSSSSS";
+	m[19] = "PPLLLPPPPSSSPPPPPPPPPPPPPPPSSPPPPPPPPSSPPPTTPPPPPPSSSSSSSS";
 	m[20] = "PPLLLPPPPSSSSPPPPPPPPPPPPPPPPPPPPPPPPSPPPTTTPPPPSSSSSSSPPP";
 	m[21] = "WPPPPPPPPPSSSPPPPPTTTTTPPPPPPPPPTTPPPSSPPTTTPPPPPSSSPPPPPW";
 	m[22] = "WWPPPPPPPPTTPPPPPPPTTTTPPPPPPPTTTTPPPPPPPPTTPPPPUUSSPPPPWW";
@@ -52,10 +47,31 @@ function maplayout()
 	m[27] = "WWWWWWWWWWWWWWUUUUUUUUUTTTTTTTTTUUUUUTTTUUUUWWWWWWWWWWWWWW";
 	m[28] = "WWWWWWWWWWWWWWWWWUUUUUUUUUUUUUUUUUUUUUTTUWWWWWWWWWWWWWWWWW";
 	m[29] = "WWWWWWWWWWWWWWWWWWWWTTUUUUUUUUUUUUUUUUWWWWWWWWWWWWWWWWWWWW";
+end
 
 
+function level_size()
+
+	local mapsizeX = 1
+	local mapsizeY = 1
+	maplayout()
 	arraySize = table.getn(m);
-	--mapsizeX = 1
+	for i=1, arraySize, 1 do
+		if string.len(m[i]) > mapsizeX then
+			mapsizeX = string.len(m[i])
+		end
+	end
+	mapsizeY = arraySize
+	return mapsizeX+2, mapsizeY+2
+end
+
+
+function level_koth_pos()
+
+	local kothX = 1
+	local kothY = 1
+	maplayout()
+	arraySize = table.getn(m);
 	for i=1, arraySize, 1 do
 		for j=1, string.len(m[i]), 1 do
 			k = string.upper(string.sub(m[i],j,j))
@@ -63,29 +79,8 @@ function maplayout()
 				kothX = j
 				kothY = i
 			end
-			if k == "P" or k == "U" or k == "D" or k == "K" then
-				world_set_type(j,i, TILE_PLAIN)
-			end
-			world_set_gfx(j,i, tile[k])
 		end
-	--	if string.len(m[i]) > mapsizeX then
-	--		mapsizeX = string.len(m[i])
-	--	end
 	end
-	--mapsizeY = arraySize
-	world_make_border(TILE_GFX_WATER)
-
-end
-
-
-function level_size()
-	--maplayout()
-	--return mapsizeX+2, mapsizeY+2
-	return 60, 31
-end
-
-function level_koth_pos()
-	maplayout()
 	return kothX, kothY
 end
 
@@ -100,6 +95,17 @@ end
 function level_init()
 
 	maplayout()
+	arraySize = table.getn(m);
+	for i=1, arraySize, 1 do
+		for j=1, string.len(m[i]), 1 do
+			k = string.upper(string.sub(m[i],j,j))
+			if k == "P" or k == "U" or k == "D" or k == "K" then
+				world_set_type(j,i, TILE_PLAIN)
+			end
+			world_set_gfx(j,i, tile[k])
+		end
+	end
+	world_make_border(TILE_GFX_WATER)
 
 	food_spawner = {}
 	for s = 0, 15 do
