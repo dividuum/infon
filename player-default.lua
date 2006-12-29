@@ -28,7 +28,7 @@ function Creature:onRestart()
 end
 
 
--- Called after beeing killed. Since the creature is already 
+-- Called after being killed. Since the creature is already 
 -- dead, self.id cannot be used to call the Lowlevel API.
 function Creature:onKilled(killer)
     if killer == self.id then
