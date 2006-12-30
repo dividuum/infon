@@ -51,6 +51,7 @@ static int          rand_table[256];
 
 static int          debug            = 0;
 static int          send_events      = 0;
+static int          show_scores      = 0;
 static int          highlight_player = -1;
 
 static void recenter() {
@@ -92,6 +93,7 @@ static void handle_events() {
                                                                   : "Stopped forwarding input"); 
                                    break;
                     case SDLK_F12: debug       ^= 1; break;
+                    case SDLK_TAB: show_scores  = 1; break;
                     case SDLK_1: video_resize( 640,  480); break;
                     case SDLK_2: video_resize( 800,  600); break;
                     case SDLK_3: video_resize(1024,  768); break;
@@ -110,6 +112,11 @@ static void handle_events() {
                     infon->printf("K%d\n", event.key.keysym.sym);
                 break;
            case SDL_KEYUP:
+                switch (event.key.keysym.sym) {
+                    case SDLK_TAB: show_scores  = 0; break;
+                    default:
+                       break;
+                }
                 if (send_events)
                     infon->printf("k%d\n", event.key.keysym.sym);
                 break;
@@ -524,6 +531,9 @@ static void sdl_tick(int gt, int delta) {
     handle_events();
 
     const char *intermission = infon->get_intermission();
+
+    if (show_scores)
+        intermission = "Scores";
     
     if (strlen(intermission) > 0) {
         int y = max(video_height() / 2 - 150, 20);
