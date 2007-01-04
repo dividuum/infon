@@ -52,11 +52,11 @@ banner = [[
 
 -- competition = true
 -- competition_log  = "competition.log"
--- competition_bots = { { source = "bot1.lua" }, { source = "bot2.lua", log = "bot2.log"} }
+-- competition_bots = { { source = "bot1.lua" }, { source = "bot2.lua", log = "bot2.log", name = "2ndbot" } }
 -- time_limit       = 10 * 60 * 1000
+-- score_limit      = nil
 -- maps             = { "foo", "foo", "foo" }
 -- listenaddr       = nil
-
 
 -- Things to do once after the first game started
 --
