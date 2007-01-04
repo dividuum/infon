@@ -105,7 +105,7 @@ function createCreature(id, parent)
             end
         end
 
-        function call_event(print_warning, event, ...)
+        function call_event(event, ...)
             if not _G[event] then return end
             local function handle_state_change(ok, state, ...) 
                 if not ok then
