@@ -332,7 +332,7 @@ function on_game_started()
             competition_rounds     = #maps
             disable_joining = "competition mode"
             for _, bot in pairs(competition_bots) do
-                appendline(competition_log, string.format("joining '%s' as %d", bot.source, start_bot(bot.source, bot.log)))
+                appendline(competition_log, string.format("joining '%s' as %d", bot.source, start_bot(bot.source, bot.log, bot.name)))
             end
         end
 
@@ -691,9 +691,7 @@ function start_bot(botcode, logfile, name, highlevelcode)
     local botfile   = assert(io.open(botcode, "rb"))
     local botsource = botfile:read("*a")
     botfile:close()
-    if not name then 
-        name = select(3, botcode:find("([^/\\]+)\.lua"))
-    end
+    name = name or select(3, botcode:find("([^/\\]+)\.lua"))
     local playerno = player_create(name or botcode, password, highlevelcode)
     assert(playerno, "cannot create new player")
     cprint(string.format("player %d - %s (%s) joined with password '%s'", playerno, name or botcode, botcode, password))
