@@ -239,34 +239,25 @@ restart:
 }
 
 static void client_readable(int fd, short event, void *arg) {
-    struct event  *cb_event = arg;
-
     int ret = evbuffer_read(in_buf, fd, 8192);
     if (ret < 0) {
         client_destroy(strerror(errno));
-        return;
     } else if (ret == 0) {
         client_destroy("eof reached");
-        return;
+    } else {
+        traffic += ret;
+        client_parse_in_buf();
     }
-    
-    traffic += ret;
-
-    if (client_parse_in_buf()) 
-        event_add(cb_event, NULL);
 }
 
 static void client_writable(int fd, short event, void *arg) {
-    struct event  *cb_event = arg;
-
     int ret = evbuffer_write(out_buf, fd);
     if (ret < 0) {
         client_destroy(strerror(errno));
     } else if (ret == 0) {
         client_destroy("null write?");
-    } else {
-        if (EVBUFFER_LENGTH(out_buf) > 0) 
-            event_add(cb_event, NULL);
+    } else if (EVBUFFER_LENGTH(out_buf) > 0) {
+        event_add(&wr_event, NULL);
     }
 }
 
@@ -430,8 +421,8 @@ void client_init(char *source) {
 
         event_init();
 
-        event_set(&rd_event, clientfd, EV_READ,  client_readable, &rd_event);
-        event_set(&wr_event, clientfd, EV_WRITE, client_writable, &wr_event);
+        event_set(&rd_event, clientfd, EV_READ | EV_PERSIST,  client_readable, &rd_event);
+        event_set(&wr_event, clientfd, EV_WRITE,              client_writable, &wr_event);
 
         event_add(&rd_event, NULL);
     } else {

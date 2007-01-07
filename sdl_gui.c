@@ -531,6 +531,11 @@ static void sdl_tick(int gt, int delta) {
     handle_events();
 
     const char *intermission = infon->get_intermission();
+    
+    // char buf[20];
+    // snprintf(buf, sizeof(buf), "%4d:%02d", 
+    //         render_game_time / (60 * 1000),
+    //         render_game_time % (60 * 1000) / 1000);
 
     if (show_scores)
         intermission = "Scores";
@@ -543,6 +548,7 @@ static void sdl_tick(int gt, int delta) {
                     y, 
                     intermission);
         draw_scores(video_width() / 2, y + 30);
+        // video_write(video_width() - 46, video_height() - 30, buf);
     } else {
         draw_world();
         infon->each_creature(draw_creature, NULL);

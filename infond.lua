@@ -332,12 +332,17 @@ function on_game_started()
             competition_rounds     = #maps
             disable_joining = "competition mode"
             for _, bot in pairs(competition_bots) do
-                appendline(competition_log, string.format("joining '%s' as %d", bot.source, start_bot(bot.source, bot.log, bot.name)))
+                appendline(competition_log, string.format("joining '%s' as %d", bot.source, start_bot(bot)))
             end
         end
 
         -- Nach dem Starten des ersten Spiels einmalig Funktion autoexec aufrufen
-        if autoexec then pcall(autoexec) end
+        if autoexec then 
+            local ok, msg = epcall(debug.traceback, autoexec) 
+            if not ok then 
+                print(msg)
+            end
+        end
     end
 
     -- Mapchange
@@ -685,26 +690,34 @@ function stop_listener()
     setup_listener("", 0)
 end
 
-function start_bot(botcode, logfile, name, highlevelcode)
-    local highlevelcode = highlevelcode or highlevel[1]
-    local password  = tostring(math.random(100000, 999999))
-    local botfile   = assert(io.open(botcode, "rb"))
+-- Options:
+-- source   - bot source code
+-- log      - log file
+-- api      - highlevel api
+-- name     - bot name
+-- password - password
+
+function start_bot(options)
+    assert(type(options) == "table", "start_bot needs an options table")
+    local highlevel = options.api or highlevel[1]
+    local password  = options.password or tostring(math.random(100000, 999999))
+    local botfile   = assert(io.open(options.source, "rb"))
     local botsource = botfile:read("*a")
     botfile:close()
-    name = name or select(3, botcode:find("([^/\\]+)\.lua"))
-    local playerno = player_create(name or botcode, password, highlevelcode)
+    local name = options.name or select(3, options.source:find("([^/\\]+)\.lua")) or options.source
+    local playerno = player_create(name, password, highlevel)
     assert(playerno, "cannot create new player")
-    cprint(string.format("player %d - %s (%s) joined with password '%s'", playerno, name or botcode, botcode, password))
+    cprint(string.format("player %d - %s (%s) joined with password '%s'", playerno, name, options.source, password))
     player_set_no_client_kick_time(playerno, 0)
-    if logfile then
-        local ok, logclient = pcall(server_start_writer, logfile, false, false)
+    if options.log then
+        local ok, logclient = pcall(server_start_writer, options.log, false, false)
         if ok then 
             client_attach_to_player(logclient, playerno, password)
         else
             cprint("cannot start log writer: " .. logclient)
         end
     end
-    player_execute(playerno, nil, botsource, botcode)
+    player_execute(playerno, nil, botsource, options.source)
     return playerno
 end
 

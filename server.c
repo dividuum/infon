@@ -81,9 +81,9 @@ client_t *server_accept(int fd, const char *address) {
     }
 
     // Soll Verbindung angenommen werden?
-    lua_pushliteral(L, "on_new_client");/* funcname */
-    lua_rawget(L, LUA_GLOBALSINDEX);    /* func     */
-    lua_pushstring(L, address);         /* addr     */
+    lua_pushliteral(L, "on_new_client");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    lua_pushstring(L, address);
 
     if (lua_pcall(L, 1, 2, 0) != 0) {
         fprintf(stderr, "error calling on_new_client: %s\n", lua_tostring(L, -1));
@@ -101,16 +101,16 @@ client_t *server_accept(int fd, const char *address) {
     lua_pop(L, 2);
 
     // Libevent aktivieren
-    event_set(&client->rd_event, fd, EV_READ,  server_readable, &client->rd_event);
-    event_set(&client->wr_event, fd, EV_WRITE, server_writable, &client->wr_event);
+    event_set(&client->rd_event, fd, EV_READ | EV_PERSIST, server_readable, &client->rd_event);
+    event_set(&client->wr_event, fd, EV_WRITE            , server_writable, &client->wr_event);
     
-    client->in_buf    = evbuffer_new();
-    client->out_buf   = evbuffer_new();
+    client->in_buf  = evbuffer_new();
+    client->out_buf = evbuffer_new();
 
     client->compress = 0;
 
-    client->kill_me  = NULL;
-    client->player   = NULL;
+    client->kill_me = NULL;
+    client->player  = NULL;
 
     client->next = NULL;
     client->prev = NULL;
@@ -137,7 +137,6 @@ client_t *server_accept(int fd, const char *address) {
 }
 
 static void server_readable(int fd, short event, void *arg) {
-    struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
     // Der Client wurde 'extern' gekickt, allerdings noch
@@ -181,7 +180,6 @@ static void server_readable(int fd, short event, void *arg) {
                 return;
             }
         }
-        event_add(cb_event, NULL);
     }
 }
 
@@ -204,7 +202,6 @@ static void server_flush_compression(client_t *client) {
 }
 
 static void server_writable(int fd, short event, void *arg) {
-    struct event  *cb_event = arg;
     client_t *client = &clients[fd];
 
 #ifndef NO_CONSOLE_CLIENT    
@@ -224,7 +221,7 @@ static void server_writable(int fd, short event, void *arg) {
         server_destroy(client, "null write?");
     } else {
         if (EVBUFFER_LENGTH(client->out_buf) > 0) 
-            event_add(cb_event, NULL);
+            event_add(&client->wr_event, NULL);
     }
 }
 
@@ -403,7 +400,7 @@ static void client_turn_into_gui_client(client_t *client) {
 }
 
 client_t *server_start_file_writer(const char *filename) {
-    int fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, S_IRUSR|S_IRGRP);
+    int fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, 0644);
     if (fd < 0)
         return NULL;
     static char address[512];
@@ -494,9 +491,8 @@ static int luaClientPrint(lua_State *L) {
         return 0;
 
     int n=lua_gettop(L);
-    int i;
-    for (i=1; i<=n; i++) {
-        if (i>1) server_writeto(output_client, "\t", 1);
+    for (int i=1; i <= n; i++) {
+        if (i > 1) server_writeto(output_client, "\t", 1);
         if (lua_isstring(L,i))
             server_writeto(output_client, lua_tostring(L,i), lua_strlen(L, i));
         else if (lua_isnil(L,i))
@@ -506,7 +502,7 @@ static int luaClientPrint(lua_State *L) {
                                  server_writeto(output_client, "false", 5);
         else {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "%s:%p",lua_typename(L,lua_type(L,i)),lua_topointer(L,i));
+            snprintf(buffer, sizeof(buffer), "%s:%p", lua_typename(L,lua_type(L,i)), lua_topointer(L,i));
             server_writeto(output_client, buffer, strlen(buffer));
         }
     }

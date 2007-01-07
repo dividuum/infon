@@ -19,15 +19,25 @@
 ]]--
 
 ------------------------------------------------------------------------
--- Unsicheres Zeugs weg
+-- load config.lua
 ------------------------------------------------------------------------
 
--- save in registry for usage within 'out of cycles' handler
+local config = {}
+setfenv(assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua"))), config)()
+
+------------------------------------------------------------------------
+-- save traceback in registry for usage within 'out of cycles' handler
+------------------------------------------------------------------------
+
 save_in_registry('traceback', debug.traceback)
 save_in_registry = nil
 
 -- save traceback function
 _TRACEBACK = debug.traceback
+
+------------------------------------------------------------------------
+-- Prevent high cpu usage by limiting some functions
+------------------------------------------------------------------------
 
 do
     local assert, type, print = assert, type, print
@@ -71,6 +81,10 @@ do
     end
 end
 
+------------------------------------------------------------------------
+-- Disable dangerous functions
+------------------------------------------------------------------------
+
 PREFIX          = nil   -- no need to know
 debug           = nil   -- no debugging functions
 load            = nil   -- not needed
@@ -86,7 +100,7 @@ module          = nil   -- module support not needed
 collectgarbage  = nil   -- no access to the garbage collector
 
 ------------------------------------------------------------------------
--- praktisches
+-- 'pretty'-print function
 ------------------------------------------------------------------------
 
 function p(x) 
@@ -102,7 +116,7 @@ function p(x)
 end
 
 ------------------------------------------------------------------------
--- Von Telnet ueber r/i aufrufbare Funktionen
+-- Functions called by the 'r' and 'i' commands
 ------------------------------------------------------------------------
 
 function restart()
@@ -129,7 +143,7 @@ function info()
 end
 
 ------------------------------------------------------------------------
--- compatibility
+-- Compatibility
 ------------------------------------------------------------------------
 
 function nearest_enemy(...)
@@ -148,8 +162,53 @@ end
 -- Load Highlevel API
 ------------------------------------------------------------------------
 
-dofile(...)
-dofile = function(what) 
-    print(_TRACEBACK("cannot 'dofile(\"" .. what .. "\")'. upload it using the batch (b) command."))
+do
+    local api = (...)
+
+    -- Load API
+    dofile("api/" .. api)
+
+    -- Load Default Code for API
+    dofile("api/" .. api .. "-default")
+
+    function needs_api(needed)
+        assert(needed == api, "This Bot need the API '" .. needed .. "' but '" .. api .. "' is loaded")
+    end
 end
 
+------------------------------------------------------------------------
+-- Modify dofile to only load allowed files once.
+------------------------------------------------------------------------
+
+do
+    local orig_dofile, assert, type, pairs = dofile, assert, type, pairs
+
+    local loaded = {}
+
+    function dofile(file) 
+        assert(type(file) == "string", "filename must be string")
+
+        -- already loaded into this vm?
+        if loaded[file] then
+            return
+        end
+
+        -- no allowed to load this file?
+        if not config.dofile_allowed[file] then
+            print(_TRACEBACK("dofile('" .. file .. "') denied. upload it using the batch (b) command"))
+            return
+        end
+
+        loaded[file] = true
+        return orig_dofile("libs/" .. file)
+    end
+
+    function dofile_list()
+        print("You can load the following files:")
+        print("-----------------------------------------------")
+        for name, help in pairs(config.dofile_allowed) do
+            print(string.format("%-10s - %s", name, help))
+        end
+        print("-----------------------------------------------")
+    end
+end
