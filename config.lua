@@ -21,7 +21,7 @@ rules      = "default"
 time_limit = nil 
 
 -- score limit for each map
-score_limit= 500 
+score_limit = 500 
 
 -- access control list. default is to allow connections 
 -- from all clients. 
@@ -31,24 +31,29 @@ acl        = {{ pattern = "^ip:127\.0\..*"             },
               { pattern = ".*", deny = "access denied" }}
 
 -- available highlevel apis
-highlevel  =  { 'player-highlevel' }
+highlevel  =  { 'oo', 'state' }
 
 -- show banner?              
 banner = [[
-                     .___             `.
-        ___              `~\\           |               \\
-      o~   `.               |         /'                |
-    .----._ `|             ,'       /'              _./'
-    `o     `\\|___       __,|----'~~~~T-----,__  _,'~
-          /~~o   `~>-/|~ '   ' ,   '      '   ~~\\_
-         |_      <~   |   ' ,   ' '   '  ' , '     \\
-           `-...-'~\./' '     '     '   '   '  , '  >
-                     `-, __'  ,  '  '  , ' ,   '_,'-'
-                       /'   `~~~~~~~|`--------~~\\
-                     /'            ,'            `.
-              ~~`---'             /               |
-                               ,-'              _/'
-]] -- von http://www.asciiworld.com/animals_birds.html
+                    .--..-.
+                   /   / \ \'-.  _
+                  /   /  _( o)_ ; \
+                  O  O  /      ' -.\
+                        \___;_/-.  ;)
+                          __/    '//.
+                         ; /     //  \
+                         ' (INFON  )  )
+                          \(       )  )
+                           '      /  /
+                            '.__.- -'
+                          _ \\   // _
+                         (_'_/   \_'_)
+]]                
+
+-- allowed files for dofile
+dofile_allowed = { 
+    menu = "Botcode Menu System";
+}
 
 -- competition = true
 -- competition_log  = "competition.log"
@@ -61,7 +66,10 @@ banner = [[
 -- Things to do once after the first game started
 --
 -- function autoexec()
---    start_bot("bot1.lua")
+--     start_bot{ source   = "bots/easybot.lua",
+--                name     = "foo",
+--                password = "secret",
+--                api      = "state" }
 -- end
 
 -- function checking user/password combinations.

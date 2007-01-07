@@ -240,6 +240,10 @@ function Creature:is_feeding()
     return get_state(self.id) == CREATURE_FEED
 end
 
+function Creature:distance(other)
+    return get_distance(self.id, other)
+end
+
 function Creature:sleep(msec)
     local time = game_time()
     while time + msec > game_time() do
@@ -408,8 +412,3 @@ function player_think(events)
         end
     end
 end
-
-------------------------------------------------------------------------
--- Load default BotCode
-------------------------------------------------------------------------
-dofile('player-default')

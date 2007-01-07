@@ -310,10 +310,9 @@ static int luaSaveInRegistry(lua_State *L) {
 
 static int luaPrint(lua_State *L) {
     get_player();
-    int n=lua_gettop(L);
-    int i;
-    for (i=1; i<=n; i++) {
-        if (i>1) player_writeto(player, "\t", 1);
+    int n = lua_gettop(L);
+    for (int i = 1; i <= n; i++) {
+        if (i > 1) player_writeto(player, "\t", 1);
         if (lua_isstring(L,i))
             player_writeto(player, lua_tostring(L,i), lua_strlen(L, i));
         else if (lua_isnil(L,i))
@@ -323,7 +322,7 @@ static int luaPrint(lua_State *L) {
                                  player_writeto(player, "false", 5);
         else {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "%s:%p",lua_typename(L,lua_type(L,i)),lua_topointer(L,i));
+            snprintf(buffer, sizeof(buffer), "%s:%p", lua_typename(L,lua_type(L,i)), lua_topointer(L,i));
             player_writeto(player, buffer, strlen(buffer));
         }
     }
