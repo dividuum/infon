@@ -19,7 +19,7 @@
 ]]--
 
 ------------------------------------------------------------------------
--- Creature Klasse
+-- Creature Class
 ------------------------------------------------------------------------
 
 Creature = {}
@@ -265,7 +265,6 @@ end
 function Creature:restart()
     set_state(self.id, CREATURE_IDLE)
     self.thread = coroutine.create(self.main_restarter)
- -- self.thread = coroutine.create(function(self) self:main_restarter() end)
     if self.onRestart then
         local ok, msg = pcall(self.onRestart, self)
         if not ok then 
@@ -277,14 +276,8 @@ function Creature:restart()
 end
 
 function Creature:wait_for_next_round()
-    if can_yield then
-        coroutine.yield()
-    else
-        print("-----------------------------------------------------------")
-        print("Error: A called function wanted to wait_for_next_round().")
-        print("-----------------------------------------------------------")
-        error("cannot continue")
-    end
+    assert(can_yield, "you cannot wait_for_next_round() in interactive mode")
+    coroutine.yield()
 end
 
 ------------------------------------------------------------------------
@@ -292,13 +285,13 @@ end
 ------------------------------------------------------------------------
 function this_function_call_fails_if_cpu_limit_exceeded() end
 
--- Globales Array alle Kreaturen
+-- global table containing all your creatures
 creatures = creatures or {}
 
 function player_think(events)
     can_yield = false
 
-    -- Events abarbeiten
+    -- Handle the events since the last round.
     for n, event in ipairs(events) do 
         if event.type == CREATURE_SPAWNED then
             local id     = event.id
@@ -365,7 +358,7 @@ function player_think(events)
         end
     end
 
-    -- Vor jeder Runde eventuell vorhandene Funktion onRoundStart aufrufen
+    -- If onRoundStart is available, call it now.
     if onRoundStart then
         local ok, msg = pcall(onRoundStart)
         if not ok then
@@ -375,7 +368,7 @@ function player_think(events)
     
     can_yield = true
 
-    -- Vorhandene Kreaturen durchlaufen
+    -- Iterate all creatures and execute their code by resuming the creatures coroutine
     for id, creature in pairs(creatures) do
         if type(creature.thread) ~= 'thread' then
             creature.message = 'uuh. self.thread is not a coroutine.'
@@ -392,11 +385,12 @@ function player_think(events)
             local ok, msg = coroutine.resume(creature.thread, creature)
             if not ok then
                 creature.message = msg
-                -- Falls die Coroutine abgebrochen wurde, weil zuviel
-                -- CPU benutzt wurde, so triggert folgender Funktions-
-                -- aufruf den Abbruch von player_think. Um zu ermitteln,
-                -- wo zuviel CPU gebraucht wurde, kann der Traceback
-                -- in creature.message mittels 'i' angezeigt werden.
+                -- If the coroutine was interrupted for using too much
+                -- CPU, the following function call will abort the
+                -- player_think function (since no more function calls
+                -- are possible at this point). The code that caused 
+                -- too much CPU can be seen by inspecting the traceback 
+                -- that was saved in creature.message. Use 'i' in the client.
                 this_function_call_fails_if_cpu_limit_exceeded()
             end
         end
@@ -404,7 +398,7 @@ function player_think(events)
 
     can_yield = false
 
-    -- Nach jeder Runde eventuell vorhandene Funktion onRoundEnd aufrufen
+    -- If onRoundEnd is available, call it now.
     if onRoundEnd then
         local ok, msg = pcall(onRoundEnd)
         if not ok then

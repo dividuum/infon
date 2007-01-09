@@ -254,7 +254,7 @@ void server_writeto(client_t *client, const void *data, size_t size) {
         return;
     traffic += size;
 
-    // Fileclients werden direkt ueber abgewickelt.
+    // Fileclients werden direkt ueber write abgewickelt.
     if (client->is_file_writer) {
         write(client_num(client), data, size);
         return;
@@ -319,7 +319,7 @@ void server_destroy(client_t *client, const char *reason) {
         packet_writeXX(&packet, reason, strlen(reason));
         server_send_packet(&packet, client);
     } else {
-        server_writeto(client, "connection terminating: ", 24);
+        server_writeto(client, "connection terminated: ", 23);
         server_writeto(client, reason, strlen(reason));
         server_writeto(client, "\r\n", 2);
     }
@@ -336,8 +336,7 @@ void server_destroy(client_t *client, const char *reason) {
     evbuffer_free(client->in_buf);
     evbuffer_free(client->out_buf);
 
-    if (client->kill_me)
-        free(client->kill_me);
+    free(client->kill_me);
 
     if (client->compress)
         deflateEnd(&client->strm);
@@ -479,8 +478,7 @@ static int luaClientPlayerNumber(lua_State *L) {
 static int luaClientDisconnect(lua_State *L) {
     client_t *client = client_get_checked_lua(L, 1);
     const char *reason = luaL_checkstring(L, 2);
-    if (client->kill_me) 
-        free(client->kill_me);
+    free(client->kill_me);
     client->kill_me = strdup(reason);
     return 0;
 }

@@ -65,7 +65,7 @@ function Client.check_accept(addr)
         elseif string.match(addr, rule.pattern) then
             if rule.deny then
                 stats.num_refused = stats.num_refused + 1
-                return false, "refusing connection " .. addr .. ": " .. rule.deny .. "\r\n"
+                return false, "infon refused your connection from " .. addr .. ": " .. rule.deny .. "\r\n"
             else
                 return true
             end
@@ -171,7 +171,7 @@ function Client:detach()
     if playerno then
         client_detach_from_player(self.fd, playerno)
     else
-        self:writeln("you cannot detach since you are not attached")
+        self:writeln("you cannot detach since you are not attached.")
     end
 end
 
@@ -195,7 +195,7 @@ function Client:set_name(name)
         if not self:check_name(name) then return false end
         player_set_name(playerno, name)
         local newname = player_get_name(playerno)
-        scroller_add(oldname .. " renamed to " .. newname)
+        scroller_add(oldname .. " renamed to " .. newname .. ".")
         return true
     else
         return false
@@ -212,10 +212,11 @@ function Client:set_color(color)
 end
 
 function Client:kill()
-    if self:get_player() then
-        player_kill(self:get_player())
+    local playerno = self:get_player()
+    if playerno then
+        player_kill(playerno, player_get_name(playerno) .. " removed from the game.")
     else
-        self:writeln("no need to kill. you have no player")
+        self:writeln("no need to kill. you have no player!")
     end
 end
 
@@ -266,19 +267,6 @@ function Client:welcome(msg)
     self:write("  \r\n" .. msg .. string.rep(" ", 28 - msglen) .. "\r\n")
 end
 
-function Client.write_all(line)
-    table.foreach(clients, function (fd, obj)
-                               obj:write(line)
-                           end)
-end
-
-function Client.writeln_all(line)
-    table.foreach(clients, function (fd, obj)
-                               obj:writeln(line)
-                           end)
-end
-
-wall = Client.writeln_all
 
 -----------------------------------------------------------
 -- Server C Callbacks
@@ -605,44 +593,6 @@ function isnumber(var)
     return tostring(tonumber(var)) == var
 end
 
-function appendline(filename, line)
-    if not filename then return end
-    local file = assert(io.open(filename, "a+"))
-    file:write(string.format("%s\n", line))
-    file:close()
-end
-
-function kick(fd, msg)
-    msg = msg or "kicked"
-    clients[fd]:disconnect(msg)
-end
-
-function kickban(fd, msg)
-    msg = msg or "kickbanned"
-    clients[fd]:kick_ban(msg)
-end
-
-function killall()
-    for pno in each_player() do 
-        player_kill_all_creatures(pno)
-    end
-end
-
-function reset()
-    game_end()
-end
-
-function changemap(next_map)
-    map = next_map
-    reset()
-end
-
-function kickall()
-    table.foreach(clients, function (fd, client)
-        clients[fd]:disconnect("kicked")
-    end)
-end
-
 function p(x) 
     if type(x) == "table" then
         cprint("+--- Table: " .. tostring(x))
@@ -655,10 +605,79 @@ function p(x)
     end
 end
 
+function admin_help()
+    cprint("-------------------------------------------------")
+    cprint("Admin functions")
+    cprint("-------------------------------------------------")
+    cprint("acllist()                 - lists acl")
+    cprint("aclrm(num)                - removes acl rule")
+    cprint("batch()                   - starts admin batch")
+    cprint("changemap(map)            - changes to new map")
+    cprint("clientlist()              - lists all clients")
+    cprint("kick(cno, [msg])          - kicks client cno")
+    cprint("kick_player(pno, [msg])   - kicks a player")
+    cprint("kickall()                 - kicks all clients")
+    cprint("kickban(cno, [msg], time) - kicks and bans")
+    cprint("killall()                 - kills all creatures")
+    cprint("reset()                   - restarts current map")
+    cprint("shutdown()                - shutdown the server")
+    cprint("wall(msg)                 - writes to all clients")
+    cprint("-------------------------------------------------")
+end
+
+function appendline(filename, line)
+    if not filename then return end
+    local file = assert(io.open(filename, "a+"))
+    file:write(string.format("%s\n", line))
+    file:close()
+end
+
+function kick(fd, msg)
+    clients[fd]:disconnect(msg or "kicked")
+end
+
+function kickban(fd, msg, time)
+    clients[fd]:kick_ban(msg or "kickbanned", time)
+end
+
+function killall()
+    for pno in each_player() do 
+        player_kill_all_creatures(pno)
+    end
+end
+
+function kick_player(pno, msg)
+    player_kill(pno, msg or "kicked")
+end
+
+function reset()
+    game_end()
+end
+
+function changemap(next_map)
+    map = next_map
+    reset()
+end
+
+function kickall(msg)
+    for fd, client in pairs(clients) do 
+        client:disconnect(msg or "kicked")
+    end
+end
+
 function clientlist()
-    table.foreach(clients, function (fd, client)
+    for fd, client in pairs(clients) do 
         cprint(string.format("%4d %s - %s", fd, client_is_gui_client(fd) and "*" or " ", client.addr))
-    end)
+    end
+end
+
+function wall(msg)
+    for fd, client in pairs(clients) do 
+        client:writeln()
+        client:writeln("-[ Message from Admin ]-------")
+        client:writeln(msg)
+        client:writeln("------------------------------")
+    end
 end
 
 function batch()
@@ -679,6 +698,11 @@ function acllist()
     for n, rule in ipairs(acl) do
         cprint(string.format("%2d: %-30s - %9d - %s", n, rule.pattern, rule.time and rule.time - os.time() or -1, rule.deny or "accept"))
     end
+end
+
+function aclrm(num)
+    assert(acl[num], "rule " .. num .. " does not exist")
+    table.remove(acl, num)
 end
 
 function start_listener() 

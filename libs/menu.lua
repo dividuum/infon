@@ -114,12 +114,9 @@ do
   -- Now the actual menu methods.
   -- add(label, id)
   function curriedMethod:add(name, id)
-    return put(self, name, function() return id end)
+    return put(self, name, type(id) == "function" and id or function() return id end)
   end
   
-  -- I personally would use functions instead of ids
-  curriedMethod.addf = put
-
   -- create and open a submenu with the given name
   function curriedMethod:sub(name)
     local submenu = newmenu(self.name .. " / " .. name, self)
@@ -179,19 +176,3 @@ do
     return menu
   end
 end
-
---[[
-menu "Menu"
- .sub "Bot Functions"
-     .addf("Print Information", info)
-     .addf("Restart",           restart)
-     .addf("Suicide",           function ()
-                                    for id, creature in pairs(creatures) do 
-                                        suicide(id)
-                                    end
-                                end)
-     .super
- .sep
- .addf("Error", function () error("Example error") end)
- .addf("About", function () print("Example menu!") end)
-]]--
