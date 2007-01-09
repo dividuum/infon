@@ -433,8 +433,9 @@ function Client:telnet_mode()
 end
 
 function Client:www_mode()
+    --[[
     self:writeln()
-    self:writeln("This is not a webserver but an infon game server.")
+    self:writeln("This is an infon game server, not a webserver.")
     self:writeln("You'll need a telnet client to access this game.")
     self:writeln("See http://infon.dividuum.de for more information")
     self:writeln()
@@ -444,6 +445,7 @@ function Client:www_mode()
     self:showscores() 
     self:writeln()
     self:writeln()
+    ]]--
     self:disconnect("please use telnet")
 end
 
