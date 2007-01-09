@@ -55,7 +55,7 @@ typedef struct player_s {
     int           max_mem;
     int           mem_enforce;
 
-    const char   *kill_me;
+    char         *kill_me;
 
     unsigned char dirtymask;
 } player_t;

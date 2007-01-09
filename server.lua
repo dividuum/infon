@@ -208,25 +208,28 @@ function Client:shell()
     if ok then 
         self.authorized = true
         while true do
-            self:write("debug("..self.fd..")> ")
+            self:write("admin("..self.fd..")> ")
             local code = self:readln() 
             if code == "" then 
                 break
-            end
-            local chunk, msg = loadstring(code, "input from client '" .. self.addr .. "'")
-            if not chunk then
-                self:writeln(msg)
+            elseif code == "?" then
+                admin_help()
             else
-                local ok, msg = xpcall(chunk, debug.traceback)
-                if not ok then 
-                    self:writeln(msg)
+                local chunk, msg = loadstring(code, "input from client '" .. self.addr .. "'")
+                if not chunk then
+                    self:writeln(msg .. ". use '?' for help")
+                else
+                    local ok, msg = xpcall(chunk, debug.traceback)
+                    if not ok then 
+                        self:writeln(msg)
+                    end
                 end
             end
         end
     else
         self.failed_shell = self.failed_shell + 1
         if     self.failed_shell  > 5 then 
-            self:kick_ban("you tried to hack the shell. banning 5 minutes", 5 * 60)
+            self:kick_ban("you tried to hack the shell. banning 5 minutes.", 5 * 60)
         elseif self.failed_shell == 5 then
             self:writeln("don't try again or you will be banned!")
         else
@@ -410,23 +413,14 @@ function Client:mainmenu()
     end
 end
 
-function Client:gui_client_menu()
+function Client:gui_mode()
+    self:turn_into_guiclient()
     while true do 
         self:readln()
     end
 end
 
-function Client:handler()
-    if self.addr == "special:console" then 
-        self.authorized = true
-        self:writeln("")
-    else
-        self:welcome("Press <enter>")
-        if self:readln() == "guiclient" then
-            self:turn_into_guiclient()
-            self:gui_client_menu()
-        end
-    end
+function Client:telnet_mode()
     self:centerln("Hello " .. self.addr .. "!")
     self:centerln("Welcome to " .. GAME_NAME)
     self:writeln("")
@@ -438,6 +432,38 @@ function Client:handler()
     self:mainmenu()
 end
 
+function Client:www_mode()
+    self:writeln()
+    self:writeln("This is not a webserver but an infon game server.")
+    self:writeln("You'll need a telnet client to access this game.")
+    self:writeln("See http://infon.dividuum.de for more information")
+    self:writeln()
+    self:info()
+    self:writeln()
+    self:writeln()
+    self:showscores() 
+    self:writeln()
+    self:writeln()
+    self:disconnect("please use telnet")
+end
+
+function Client:handler()
+    if self.addr == "special:console" then 
+        self.authorized = true
+        self:writeln("")
+        self:telnet_mode()
+    else
+        self:welcome("Press <enter>")
+        local mode = self:readln()
+        if mode == "guiclient" then
+            self:gui_mode()
+        elseif mode:match("^GET") then
+            self:www_mode()
+        else
+            self:telnet_mode()
+        end
+    end
+end
 
 function ServerMain()
     scroller_add("Welcome to " .. GAME_NAME .. "!")

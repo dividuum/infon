@@ -81,7 +81,7 @@ void player_init_events(player_t *player) {
     lua_settable(player->L, LUA_REGISTRYINDEX);
 }
 
-// erwartet values x [key, value] paare
+// erwartet values [key, value] Paare
 void player_add_event(player_t *player, vm_event event, int values) {
     lua_pushliteral(player->L, "events");
     lua_rawget(player->L, LUA_REGISTRYINDEX);           // kv* _events        
@@ -210,7 +210,8 @@ static void alarm_signal(int sig) {
     lua_set_cycles(alarm_player->L, 0);
   
     // Spieler kicken. Es riecht nach DOS.
-    alarm_player->kill_me = "player killed: used excessive amount of cpu. what are you doing?";
+    free(alarm_player->kill_me);
+    alarm_player->kill_me = strdup("player killed: used excessive amount of cpu. what are you doing?");
 } 
 
 // Erwartet Funktion sowie params Parameter auf dem Stack
@@ -333,7 +334,6 @@ static int luaPrint(lua_State *L) {
 static int luaCreatureSuicide(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    // lua_consumecycles(L, 100);
     creature_suicide(creature);
     return 0;
 }
@@ -341,7 +341,6 @@ static int luaCreatureSuicide(lua_State *L) {
 static int luaCreatureSetPath(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    // lua_consumecycles(L, 500);
     lua_pushboolean(L, creature_set_path(creature, 
                                          luaL_checklong(L, 2), 
                                          luaL_checklong(L, 3)));
@@ -351,7 +350,6 @@ static int luaCreatureSetPath(lua_State *L) {
 static int luaCreatureSetTarget(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    // lua_consumecycles(L, 20);
     lua_pushboolean(L, creature_set_target(creature, 
                                            luaL_checklong(L, 2)));
     return 1;
@@ -360,7 +358,6 @@ static int luaCreatureSetTarget(lua_State *L) {
 static int luaCreatureSetConvert(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    // lua_consumecycles(L, 20);
     lua_pushboolean(L, creature_set_conversion_type(creature, 
                                                     luaL_checklong(L, 2)));
     return 1;
@@ -369,7 +366,6 @@ static int luaCreatureSetConvert(lua_State *L) {
 static int luaCreatureSetMessage(lua_State *L) {
     get_player_and_creature();
     assure_is_players_creature();
-    // lua_consumecycles(L, 500);
     creature_set_message(creature, luaL_checkstring(L, 2));
     return 0;
 }
@@ -377,7 +373,6 @@ static int luaCreatureSetMessage(lua_State *L) {
 static int luaCreatureGetNearestEnemy(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
-    // lua_consumecycles(L, 500);
     int mindist;
     const creature_t *nearest = creature_nearest_enemy(creature, &mindist);
     if (!nearest)
@@ -449,7 +444,6 @@ static int luaCreatureGetDistance(lua_State *L) {
     get_player_and_creature();
     if (RESTRICTIVE) assure_is_players_creature();
     const creature_t *target = creature_get_checked_lua(L, 2);
-    // lua_consumecycles(L, 100);
     lua_pushnumber(L, creature_dist(creature, target));
     return 1;
 }
@@ -508,7 +502,6 @@ static int luaCreatureSetState(lua_State *L) {
 
 static int luaGetCPUUsage(lua_State *L) { 
     get_player();
-    // lua_consumecycles(L, 1000);
     lua_pushnumber(L, player_get_cpu_usage(player));
     return 1;
 }
@@ -733,6 +726,8 @@ void player_destroy(player_t *player) {
         player_detach_client(client, player);
     };
 
+    free(player->kill_me);
+
     lua_close(player->L);
     player->L = NULL;
     
@@ -920,7 +915,7 @@ void player_think() {
         lua_pushliteral(player->L, "events");
         lua_rawget(player->L, LUA_REGISTRYINDEX);
         player->output_client = player->bot_output_client; 
-        player_call_user_lua("calling player_think", player, 1);
+        player_call_user_lua("during botcode execution", player, 1);
         player->output_client = NULL;
 
         // Events Strukur neu initialisieren
@@ -1022,7 +1017,8 @@ void player_to_network(player_t *player, int dirtymask, client_t *client) {
 
 static int luaPlayerKill(lua_State *L) {
     player_t *player = player_get_checked_lua(L, 1); 
-    player->kill_me = "player was killed";
+    free(player->kill_me);
+    player->kill_me = strdup(luaL_checkstring(L, 2));
     return 0;
 }
 

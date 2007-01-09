@@ -40,7 +40,7 @@ _TRACEBACK = debug.traceback
 ------------------------------------------------------------------------
 
 do
-    local assert, type, print = assert, type, print
+    local assert, type = assert, type
 
     -- new dofile function uses defined PREFIX
     local PREFIX, orig_dofile = PREFIX, dofile
@@ -194,7 +194,7 @@ do
         end
 
         -- no allowed to load this file?
-        if not config.dofile_allowed[file] then
+        if not config.dofile_allowed or not config.dofile_allowed[file] then
             print(_TRACEBACK("dofile('" .. file .. "') denied. upload it using the batch (b) command"))
             return
         end

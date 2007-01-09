@@ -42,8 +42,6 @@ static int listenfd = -1;
 static struct event listener_event;
 
 static void listener_cb(int fd, short event, void *arg) {
-    struct event *cb_event = arg;
-
     struct sockaddr_in peer;
     socklen_t addrlen = sizeof(struct sockaddr_in);
         
@@ -83,12 +81,10 @@ static void listener_cb(int fd, short event, void *arg) {
     if (!server_accept(clientfd, address))
         goto error; 
 
-    event_add(cb_event, NULL);
     return;
 error:
     if (clientfd != -1)
         close(clientfd);
-    event_add(cb_event, NULL);
 }
 
 void listener_shutdown() {
@@ -154,7 +150,7 @@ int listener_init(const char *listenaddr, int port) {
         goto error;
     }
 
-    event_set(&listener_event, listenfd, EV_READ, listener_cb, &listener_event);
+    event_set(&listener_event, listenfd, EV_READ | EV_PERSIST, listener_cb, &listener_event);
     event_add(&listener_event, NULL);
 
     return 1;

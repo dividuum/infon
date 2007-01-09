@@ -448,13 +448,13 @@ end
 
 function this_function_call_fails_if_cpu_limit_exceeded() end
 
--- Globales Array alle Kreaturen
+-- global table containing all your creatures
 creatures = creatures or {}
 
 function player_think(events)
     can_yield = false
 
-    -- Events abarbeiten
+    -- Handle the events since the last round.
     for n, event in ipairs(events) do 
         if event.type == CREATURE_SPAWNED then
             local id     = event.id
@@ -482,7 +482,7 @@ function player_think(events)
 
     can_yield = true
 
-    -- Vorhandene Kreaturen durchlaufen
+    -- Iterate all creatures and execute their code by resuming the creatures coroutine
     for id, creature in pairs(creatures) do
         if type(creature.thread) ~= 'thread' then
             creature.message = 'uuh. self.thread is not a coroutine.'
@@ -501,11 +501,12 @@ function player_think(events)
             local ok, msg = coroutine.resume(creature.thread)
             if not ok then
                 creature.message = msg
-                -- Falls die Coroutine abgebrochen wurde, weil zuviel
-                -- CPU benutzt wurde, so triggert folgender Funktions-
-                -- aufruf den Abbruch von player_think. Um zu ermitteln,
-                -- wo zuviel CPU gebraucht wurde, kann der Traceback
-                -- in creature.message mittels 'i' angezeigt werden.
+                -- If the coroutine was interrupted for using too much
+                -- CPU, the following function call will abort the
+                -- player_think function (since no more function calls
+                -- are possible at this point). The code that caused 
+                -- too much CPU can be seen by inspecting the traceback 
+                -- that was saved in creature.message. Use 'i' in the client.
                 this_function_call_fails_if_cpu_limit_exceeded()
             end
         end
