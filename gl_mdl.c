@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "gl_mdl.h"
+#include "misc.h"
 
 /* table of precalculated normals */
 vec3_t anorms_table[162] = {
@@ -305,7 +306,7 @@ int mdl_load(mdl_model_t *mdl, const char *filename) {
 
     fp = fopen(filename, "rb");
     if (!fp) {
-        fprintf (stderr, "error: couldn't open \"%s\"!\n", filename);
+        die("error: couldn't open '%s'", filename);
         return 0;
     }
 
@@ -316,6 +317,7 @@ int mdl_load(mdl_model_t *mdl, const char *filename) {
         (mdl->header.version != 6)) {
         /* error! */
         fclose (fp);
+        die("error: %s is not a mdl file", filename);
         return 0;
     }
 

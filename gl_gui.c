@@ -32,6 +32,7 @@
 
 #include "renderer.h"
 #include "map.h"
+#include "misc.h"
 
 #include "gl_video.h"
 #include "gl_mdl.h"
@@ -102,8 +103,8 @@ static void cam_tick(int msec) {
     GLfloat l1dir[] = { lookat.x - eye.x, lookat.y - eye.y, lookat.z - eye.z };
     glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, l1dir);
 
-    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 10);
-    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 60.0);
+    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.1);
+    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 120.0);
 }
 
 static void cam_screen_to_plane(int x, int y, float *zx, float *zy, int *inFront) {
@@ -179,8 +180,6 @@ static void cam_change_pos_rel(float dx, float dy) {
                   -dy * cos(direction * PIdiv180) -dx * sin(direction * PIdiv180));
 }
 
-
-
 static void cam_init() {
     eye.x = 30000;
     eye.y = 30000;
@@ -191,6 +190,15 @@ static void cam_init() {
     cam_set_pos(3000, 3000);
     cam_update_eye_dest();
 }
+
+static void cam_recenter() {
+    const client_world_info_t *info = infon->get_world_info();
+    if (!info) return;
+    cam_set_pos(info->width  * 256 / 2, info->height * 256 / 2);
+    cam_set_height(7000);
+    cam_set_direction(180);
+}
+
 
 static void cam_free() {
 }
@@ -208,7 +216,7 @@ typedef struct {
 static void texture_load(Texture *texture, const char *filename, Uint32 key) {
     int has_transparent_key = key != 0xFFFFFFFF;
 
-    printf("loading %s\n", filename);
+    fprintf(stderr, "loading %s\n", filename);
 
     SDL_Surface *imageSurface = SDL_LoadBMP(filename);
     if (!imageSurface) 
@@ -294,15 +302,15 @@ static void texture_free(Texture *texture) {
 
 /* WALL */
 
-#define WALL_HEIGHT 100
+#define WALL_HEIGHT 30
 static GLint   wall_top;
 static Texture wall_top_texture;
 static GLint   wall_side;
 static Texture wall_side_texture;
 
 static void wall_init() {
-    texture_load(&wall_top_texture,  "gfx/rock006.bmp",  0xFFFFFFFF);
-    texture_load(&wall_side_texture, "gfx/brick032.bmp", 0xFFFFFFFF);
+    texture_load(&wall_top_texture,  "gfx/solid.bmp", 0xFFFFFFFF);
+    texture_load(&wall_side_texture, "gfx/solid.bmp", 0xFFFFFFFF);
     wall_top = glGenLists(1);
     wall_side= glGenLists(1);
 
@@ -364,7 +372,7 @@ static Texture plain_texture;
 static GLint   plain;
 
 static void plain_init() {
-    texture_load(&plain_texture,  "gfx/rock060.bmp",  0xFFFFFFFF);
+    texture_load(&plain_texture,  "gfx/plain.bmp",  0xFFFFFFFF);
     plain = glGenLists(1);
     glFrontFace(GL_CCW);
     glNewList(plain, GL_COMPILE);
@@ -387,6 +395,35 @@ static void plain_free() {
     texture_free(&plain_texture);
 }
 
+/* Koth */
+
+static Texture koth_texture;
+static GLint   koth;
+
+static void koth_init() {
+    texture_load(&koth_texture,  "gfx/koth.bmp",  0xFFFFFFFF);
+    koth = glGenLists(1);
+    glFrontFace(GL_CCW);
+    glNewList(koth, GL_COMPILE);
+        glBegin(GL_QUADS);
+            glNormal3f(0, 0, 1);
+            glTexCoord2f(0.0, 0.0); glVertex3f(0,           0,           0);
+            glTexCoord2f(0.0, 1.0); glVertex3f(0,           TILE_HEIGHT, 0);
+            glTexCoord2f(1.0, 1.0); glVertex3f(TILE_WIDTH,  TILE_HEIGHT, 0);
+            glTexCoord2f(1.0, 0.0); glVertex3f(TILE_WIDTH,  0,           0);
+        glEnd();
+    glEndList();
+}
+
+static void koth_draw() {
+    texture_activate(&koth_texture);
+    glCallList(koth);
+}
+
+static void koth_free() {
+    texture_free(&koth_texture);
+}
+
 /* World */
 
 static void world_draw() {
@@ -399,15 +436,31 @@ static void world_draw() {
         for (int x = 0; x < info->width; x++) {
             glPushMatrix();
                 glTranslatef(TILE_X1(x), TILE_Y1(y), 0.0);
+                if (tile->food != 0) {
+                    GLfloat diffuse[] = {0.0, (float)tile->food / 10.0, 0.0, 0};
+                    glLightfv(GL_LIGHT3, GL_DIFFUSE, diffuse);
+                    GLfloat amb[] = {0.0, (float)tile->food / 10.0, 0.0, 0};
+                    glLightfv(GL_LIGHT3, GL_AMBIENT, amb);
+                    glEnable(GL_LIGHT3);
+                }
                 switch (tile->type) {
                     case TILE_SOLID:
                         wall_draw();
                         break;
                     case TILE_PLAIN:
-                        plain_draw();
+                        if (tile->gfx == TILE_GFX_KOTH)
+                            koth_draw();
+                        else
+                            plain_draw();
                         break;
                     default:
                         break;
+                }
+                if (tile->food != 0) {
+                    static const GLfloat zero[] = { 0, 0, 0, 0 };
+                    glLightfv(GL_LIGHT3, GL_DIFFUSE, zero);
+                    glLightfv(GL_LIGHT3, GL_AMBIENT, zero);
+                    glDisable(GL_LIGHT3);
                 }
             glPopMatrix();
             tile++;
@@ -417,12 +470,19 @@ static void world_draw() {
 
 /* Creatures */
 
+typedef struct {
+    float dir;
+    int   animoffset;
+} CreatureInfo;
+
 mdl_model_t GLCreature[4];
 
 static void creature_init() {
-    mdl_load(&GLCreature[0], "gfx/2.mdl");
-    mdl_load(&GLCreature[1], "gfx/steg.mdl");
-    mdl_load(&GLCreature[2], "gfx/steg.mdl");
+    // XXX: 3 mal das gleich nehmen, solange 
+    // nichts besseres vorhanden ist.
+    mdl_load(&GLCreature[0], "gfx/creature.mdl");
+    mdl_load(&GLCreature[1], "gfx/creature.mdl");
+    mdl_load(&GLCreature[2], "gfx/creature.mdl");
 }
 
 static void creature_shutdown() {
@@ -431,8 +491,37 @@ static void creature_shutdown() {
     mdl_free(&GLCreature[2]);
 }
 
-static void creature_draw(const client_creature_t *creature, void *opaque) {
+static void creature_update_info(const client_creature_t *creature) {
+    CreatureInfo *info = (CreatureInfo*)creature->userdata;
+    float newdir = creature->dir * 360.0 / 32.0 - 90;
+    float dw = info->dir - newdir;
+    if (dw < -180) dw += 360;
+    if (dw >  180) dw -= 360;
 
+    if (dw < -1) {
+        info->dir += dw < -5 ? 2 : 1;
+    } else if (dw > 1) {
+        info->dir -= dw >  5 ? 2 : 1; 
+    } else {
+        info->dir = newdir;
+    }
+}
+
+
+static void *creature_spawned(const client_creature_t *creature) {
+    CreatureInfo *info = malloc(sizeof(CreatureInfo));
+    info->dir = 0.0;
+    info->animoffset = rand() % 1000;
+    return info;
+}
+
+static void creature_died(const client_creature_t *creature) {
+    free(creature->userdata);
+}
+
+static void creature_draw(const client_creature_t *creature, void *opaque) {
+    creature_update_info(creature);
+    CreatureInfo *info            = (CreatureInfo*)creature->userdata;
     const client_player_t *player = infon->get_player(creature->player);
     const mdl_model_t     *model  = &GLCreature[creature->type];
     
@@ -459,8 +548,6 @@ static void creature_draw(const client_creature_t *creature, void *opaque) {
     int hi = (player->color & 0xF0) >> 4;
     int lo = (player->color & 0x0F);
 
-    float dir = creature->dir * 360.0 / 32.0 - 90;
-
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT2);
 
@@ -473,97 +560,24 @@ static void creature_draw(const client_creature_t *creature, void *opaque) {
     glLightfv(GL_LIGHT2, GL_DIFFUSE, l2);
 
     glPushMatrix();
-        glTranslatef(creature->x, creature->y, creature->type == 2 ? 400 : 100);
-        glRotatef(dir, 0, 0, 1);
-        glScalef (2, 2, 2);
-        mdl_render_frame(model, 16 + (real_time>>5) % 16);
+        int scale1[] = {  3,   6,   1 };
+        int scale2[] = {  3,   6,   3 };
+        int      z[] = { 80, 160, 180 };
+        int  animb[] = { 26,  48,  0,  0,  0,  0,  0,  0 };
+        int  animl[] = {  6,  12,  1,  1,  1,  1,  1,  1 };
+        int  anims[] = {150,  50,  6,  6,  6,  6,  6,  6 };
+        glTranslatef(creature->x, creature->y, z[creature->type]);
+        glRotatef(info->dir, 0, 0, 1);
+        glScalef (scale1[creature->type], scale2[creature->type], scale1[creature->type]);
+        mdl_render_frame(model, ((real_time + info->animoffset) / anims[creature->state]) % animl[creature->state] + animb[creature->state]);
+        
+        //printf("%d\n",(real_time / 300) % 100);
+        //mdl_render_frame(model, (real_time / 300) % 100);
     glPopMatrix();
     
     glDisable(GL_LIGHT2);
     glDisable(GL_LIGHT0);
 }
-
-
-/*
-typedef struct {
-    Texture sprites[64];
-} GLCreature;
-
-static GLCreature creature_texture[4];
-
-static void creature_load(GLCreature *creature, const char *fmt, unsigned int trans) {
-    const char * const dirname[] = { "n", "ne", "e", "se", "s", "sw", "w", "nw" };
-    for (int dir = 0; dir < 8; dir++) {
-        for (int anim = 0; anim < 8; anim++) {
-            char buf[64];
-            sprintf(buf, fmt, dirname[dir], anim);
-            texture_load(&creature->sprites[dir * 8 + anim], buf, trans);
-        }
-    }
-}
-
-static void creature_free(GLCreature *creature) {
-    for (int s = 0; s < 64; s++) {
-        texture_free(&creature->sprites[s]);
-    }
-}
-
-static void creature_draw(const client_creature_t *creature, void *opaque) {
-
-    //glDepthMask(GL_FALSE);
-    glAlphaFunc(GL_GREATER, 0);
-    glEnable(GL_ALPHA_TEST);
-    glEnable(GL_BLEND);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    //glBlendFunc(GL_ONE, GL_ONE);
-
-    float sprite_direction = creature->dir * 360 / 32  - cam_direction();
-
-    sprite_direction += 22;
-    sprite_direction -= 180;
-    if (sprite_direction < 0)
-        sprite_direction += 360;
-    if (sprite_direction < 0)
-        sprite_direction += 360;
-    if (sprite_direction >= 360)
-        sprite_direction -= 360;
-                
-    glDisable(GL_CULL_FACE);
-
-    glPushMatrix();
-        texture_activate(&creature_texture[creature->type].sprites[
-                           (int)(sprite_direction / 360 * 8) * 8 + 
-                           (SDL_GetTicks() / 30) % 8]);
-
-        glTranslatef(creature->x, creature->y, creature->type == 2 ? 400 : 0);
-        glRotatef(cam_direction(), 0, 0, 1);
-        glBegin(GL_QUADS);
-            glNormal3f(0, -1, 0);
-            glTexCoord2f(.74, .74); glVertex3f(-128,  0, -26);
-            glTexCoord2f(.74, .05); glVertex3f(-128,  0, 230);
-            glTexCoord2f(.05, .05); glVertex3f( 128,  0, 230);
-            glTexCoord2f(.05, .74); glVertex3f( 128,  0, -26);
-        glEnd();
-    glPopMatrix();
-    glEnable(GL_CULL_FACE);
-
-    glDisable(GL_ALPHA_TEST);
-    glDisable(GL_BLEND);
-}
-
-void creature_init() {
-    creature_load(&creature_texture[0], "gfx/wasp/flying %s%04d.bmp",    0x002b4461);
-    creature_load(&creature_texture[1], "gfx/spider/walking %s%04d.bmp", 0x002b4461);
-    creature_load(&creature_texture[2], "gfx/pteri/flying %s%04d.bmp",   0x00808080);
-}
-
-static void creature_shutdown() {
-    creature_free(&creature_texture[0]);
-    creature_free(&creature_texture[1]);
-    creature_free(&creature_texture[2]);
-}
-*/
 
 /* Event */
 
@@ -583,7 +597,7 @@ static void handle_events() {
                     case SDLK_4: video_resize(1280, 1024); break;
                     case SDLK_5: video_resize(1600, 1200); break;
                     case SDLK_c:
-                        //recenter();
+                        cam_recenter();
                         break;
                     case SDLK_ESCAPE:
                         infon->shutdown();
@@ -628,15 +642,6 @@ static void gl_tick(int gt, int delta) {
     world_draw();
     infon->each_creature(creature_draw, NULL);
 
-    glEnable(GL_LIGHT0);
-    glPushMatrix();
-        glRotatef(45, 0, 0, 1);
-        glScalef (50, 50, 50);
-        //glTranslatef(0, 0, 20);
-        mdl_render_frame(&GLCreature[0], 0);
-    glPopMatrix();
-    glDisable(GL_LIGHT0);
-
     video_flip();
 }
 
@@ -645,13 +650,14 @@ static int gl_open(int w, int h, int fs) {
     cam_init();
     wall_init();
     plain_init();
-
+    koth_init();
     creature_init();
     return 1;
 }
 
 static void gl_close() {
     creature_shutdown();
+    koth_free();
     plain_free();
     wall_free();
     cam_free();
@@ -668,10 +674,10 @@ static const renderer_api_t gl_api = {
     .player_joined       = NULL,
     .player_changed      = NULL,
     .player_left         = NULL,
-    .creature_spawned    = NULL,
+    .creature_spawned    = creature_spawned,
     .creature_changed    = NULL,
-    .creature_died       = NULL,
+    .creature_died       = creature_died,
     .scroll_message      = NULL,
 };
 
-RENDERER_EXPORT(gl_api);
+RENDERER_EXPORT(gl_api)
