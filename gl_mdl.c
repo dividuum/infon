@@ -360,6 +360,7 @@ int mdl_load(mdl_model_t *mdl, const char *filename) {
         fread (&mdl->frames[i].frame.bboxmin, sizeof (mdl_vertex_t), 1, fp);
         fread (&mdl->frames[i].frame.bboxmax, sizeof (mdl_vertex_t), 1, fp);
         fread (mdl->frames[i].frame.name, sizeof (char), 16, fp);
+        // printf("%d %s\n", i, mdl->frames[i].frame.name);
         fread (mdl->frames[i].frame.verts, sizeof (mdl_vertex_t),
                 mdl->header.num_verts, fp);
     }

@@ -182,29 +182,21 @@ int renderer_search_and_load(const char *name) {
 
 #endif
 
-void renderer_init(const char *name) {
+int renderer_init(const char *name) {
 #ifndef NO_EXTERNAL_RENDERER
-    if (name && renderer_search_and_load(name))
-        return;
-
-#ifdef DEFAULT_RENDERER
-    fprintf(stderr, "trying default renderer '%s'\n", TOSTRING(DEFAULT_RENDERER));
-    if (renderer_search_and_load(TOSTRING(DEFAULT_RENDERER)))
-        return;
-#endif
-#else
-    fprintf(stderr, "this build cannot load external renderers\n");
+    if (renderer_search_and_load(name))
+        return 1;
 #endif
 
 #ifdef BUILTIN_RENDERER
-    fprintf(stderr, "using builtin renderer %s\n", TOSTRING(BUILTIN_RENDERER));
-    assert(renderer_init_from_pointer(RENDERER_SYM));
-    return;
-#else
-    fprintf(stderr, "this build contains no builtin renderer\n");
+    if (!strcmp(name, TOSTRING(BUILTIN_RENDERER))) {
+        fprintf(stderr, "using builtin renderer '%s'\n", TOSTRING(BUILTIN_RENDERER));
+        renderer_init_from_pointer(RENDERER_SYM);
+        return 1;
+    }
 #endif
 
-    die("could not open any renderer.");
+    return 0;
 }
 
 int renderer_open(int w, int h, int fs) {

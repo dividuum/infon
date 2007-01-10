@@ -39,6 +39,27 @@
 
 static Uint32 real_time;
 
+static const float colors[16][3] = {
+    {  1.0,  0.0,  0.0},
+    {  0.0,  1.0,  0.0},
+    {  0.0,  0.0,  1.0},
+    {  1.0,  1.0,  0.0},
+    {  0.0,  1.0,  1.0},
+    {  1.0,  0.0,  1.0},
+    {  1.0,  1.0,  1.0},
+    {  0.0,  0.0,  0.0},
+
+    {  1.0,  0.5,  0.5},
+    {  0.5,  1.0,  0.5},
+    {  0.5,  0.5,  1.0},
+    {  1.0,  1.0,  0.5},
+    {  0.5,  1.0,  1.0},
+    {  1.0,  0.5,  1.0},
+    {  0.5,  0.5,  0.5},
+    {  0.2,  0.8,  1.0},
+};
+
+
 typedef struct {
     float x;
     float y;
@@ -58,7 +79,6 @@ static float vec_interpolate(float val, float dest, float divisor) {
     return val + (dest - val) / divisor;
 }
 
-    
 void vec_moveto(Vec *vec, Vec *dest, float ox, float oy, float oz) {
     vec->x = vec_interpolate(vec->x, dest->x + ox, 30);
     vec->y = vec_interpolate(vec->y, dest->y + oy, 30);
@@ -88,25 +108,27 @@ static void cam_tick(int msec) {
 
     gluLookAt(eye.x, eye.y, eye.z, lookat.x, lookat.y, lookat.z, 0.0, 0.0, -1.0);
 
-    glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT2);
 
     static GLfloat l1amb[] = { 0, 0, 0, 1.0 };
-    glLightfv(GL_LIGHT1, GL_AMBIENT, l1amb);
+    glLightfv(GL_LIGHT2, GL_AMBIENT, l1amb);
     GLfloat l1diffuse[] = {1.0, 1.0, 1.0, 1.0};
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, l1diffuse);
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, l1diffuse);
     GLfloat l1specular [] = {1.0, 1.0, 1.0, 1.0};
-    glLightfv(GL_LIGHT1, GL_SPECULAR, l1specular);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, l1specular);
 
     GLfloat l1pos[] = { eye.x, eye.y, eye.z, 1.0 };
-    glLightfv(GL_LIGHT1, GL_POSITION, l1pos);
+    glLightfv(GL_LIGHT2, GL_POSITION, l1pos);
 
     GLfloat l1dir[] = { lookat.x - eye.x, lookat.y - eye.y, lookat.z - eye.z };
-    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, l1dir);
+    glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, l1dir);
 
-    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.1);
-    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 120.0);
+    glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 0.1);
+    glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 120.0);
 }
 
+/*
 static void cam_screen_to_plane(int x, int y, float *zx, float *zy, int *inFront) {
     double modelMatrix[16], projMatrix[16];
     int    viewport[4];
@@ -134,6 +156,7 @@ static float cam_direction() {
     if (w < 0) w += 360;
     return w;
 }
+*/
 
 static void cam_set_height(float height) {
     eye_dest.z = height;
@@ -180,29 +203,137 @@ static void cam_change_pos_rel(float dx, float dy) {
                   -dy * cos(direction * PIdiv180) -dx * sin(direction * PIdiv180));
 }
 
-static void cam_init() {
-    eye.x = 30000;
-    eye.y = 30000;
-    eye.z = 30000;
-
-    cam_set_height(3000);
-    cam_set_direction(135);
-    cam_set_pos(3000, 3000);
-    cam_update_eye_dest();
-}
-
 static void cam_recenter() {
     const client_world_info_t *info = infon->get_world_info();
     if (!info) return;
     cam_set_pos(info->width  * 256 / 2, info->height * 256 / 2);
     cam_set_height(7000);
     cam_set_direction(180);
+    cam_update_eye_dest();
 }
 
+static void cam_init() {
+    eye.x = 3000;
+    eye.y = 3000;
+    eye.z = 3000;
+    cam_set_pos(0, 0);
+    cam_set_height(3000);
+    cam_set_direction(90);
+
+    cam_update_eye_dest();
+}
 
 static void cam_free() {
 }
 
+/* Particle */
+
+typedef struct {
+    int used;
+    GLfloat orig[3];
+    GLfloat pos[3];
+    GLfloat time;
+    GLfloat vel[2];
+    GLfloat dir[2];
+    GLfloat color[4];
+    int disappear;
+} Particle;
+
+#define MAXPARTICLE 2000
+
+Particle particles[MAXPARTICLE] = {{0}};
+static int next = 0;
+
+static void particle_add_fountain(int x, int y, int z) {
+    float angle = (float)(rand() % 30 + 30) * M_PI / 180.0; 
+    float dir   = (float)(rand() % 360) * M_PI / 180.0; 
+    particles[next].orig[0] = x;
+    particles[next].orig[1] = y;
+    particles[next].orig[2] = z;
+    particles[next].color[0] = 1.0;
+    particles[next].color[1] = 1;
+    particles[next].color[2] = 1;
+    particles[next].color[3] = 1;
+    particles[next].time = real_time;
+    particles[next].dir[0] = cos(dir);
+    particles[next].dir[1] = sin(dir);
+    particles[next].vel[0] = cos(angle) * 10;
+    particles[next].vel[1] = sin(angle) * 100;
+    particles[next].used  = 1;
+    particles[next].disappear = 0;
+    if (++next >= MAXPARTICLE) next = 0;
+}
+
+static void particle_add_blood(int x, int y, int z) {
+    float angle = (float)(rand() % 30 + 30) * M_PI / 180.0; 
+    float dir   = (float)(rand() % 360) * M_PI / 180.0; 
+    particles[next].orig[0] = x;
+    particles[next].orig[1] = y;
+    particles[next].orig[2] = z;
+    particles[next].color[0] = 1.0;
+    particles[next].color[1] = 1;
+    particles[next].color[2] = 1;
+    particles[next].color[3] = 1;
+    particles[next].time = real_time;
+    particles[next].dir[0] = cos(dir);
+    particles[next].dir[1] = sin(dir);
+    particles[next].vel[0] = cos(angle) * (rand() % 40);
+    particles[next].vel[1] = sin(angle) * 40;
+    particles[next].used  = 1;
+    particles[next].disappear = 1;
+    if (++next >= MAXPARTICLE) next = 0;
+}
+
+static void particle_move(int delta) {
+    for (int i = 0; i < MAXPARTICLE; i++) {
+        if (!particles[i].used) continue;
+        float lifetime = (real_time - particles[i].time) / 100.0;
+        float distance = particles[i].vel[0] * lifetime;
+
+        /* X and Z */
+        particles[i].pos[0] = particles[i].orig[0] + particles[i].dir[0] * distance;
+        particles[i].pos[1] = particles[i].orig[1] + particles[i].dir[1] * distance;
+
+        /* Z */
+        particles[i].pos[2] = particles[i].orig[2] + (particles[i].vel[1]  - 9.81 * lifetime) * lifetime;
+        
+        if (particles[i].pos[2] < 5) switch (particles[i].disappear) {
+            case 0:
+                particles[i].vel[1] *= 0.6;
+                if (particles[i].vel[1] < 0.5) {
+                    particles[i].used = 0;
+                } else {
+                    particles[i].pos[2]  = 5;
+                    particles[i].orig[0] = particles[i].pos[0];
+                    particles[i].orig[1] = particles[i].pos[1];
+                    particles[i].orig[2] = particles[i].pos[2];
+                    particles[i].time    = real_time;
+                }
+                break;
+            case 1:
+                particles[i].pos[2]  = 5;
+                particles[i].orig[0] = particles[i].pos[0];
+                particles[i].orig[1] = particles[i].pos[1];
+                particles[i].orig[2] = particles[i].pos[2];
+                particles[i].vel[0] = particles[i].vel[1] = 0;
+                break;
+        }
+    }
+}
+
+static void particle_draw() {
+    glDisable(GL_LIGHTING);
+
+    glBegin(GL_TRIANGLES);
+    for (int i = 0; i < MAXPARTICLE; i++) {
+        if (!particles[i].used) continue;
+        glColor3fv(particles[i].color);
+        glVertex3f(particles[i].pos[0] + 14, particles[i].pos[1] + 14, particles[i].pos[2]); 
+        glVertex3fv(particles[i].pos); 
+        glVertex3f(particles[i].pos[0], particles[i].pos[1] + 14, particles[i].pos[2]);
+    }
+    glEnd();
+}
 
 /* Texture */
 
@@ -426,6 +557,10 @@ static void koth_free() {
 
 /* World */
 
+static void  gl_world_info_changed(const client_world_info_t *info) {
+    cam_recenter();
+}
+
 static void world_draw() {
     const client_world_info_t *info = infon->get_world_info();
     if (!info) return;
@@ -485,7 +620,7 @@ static void creature_init() {
     mdl_load(&GLCreature[2], "gfx/creature.mdl");
 }
 
-static void creature_shutdown() {
+static void creature_free() {
     mdl_free(&GLCreature[0]);
     mdl_free(&GLCreature[1]);
     mdl_free(&GLCreature[2]);
@@ -525,48 +660,29 @@ static void creature_draw(const client_creature_t *creature, void *opaque) {
     const client_player_t *player = infon->get_player(creature->player);
     const mdl_model_t     *model  = &GLCreature[creature->type];
     
-    float colors[16][3] = {
-        {  1.0, -1.0, -1.0 },
-        { -1.0,  1.0, -1.0 },
-        { -1.0, -1.0,  1.0 },
-        {  1.0,  1.0, -1.0 },
-        { -1.0,  1.0,  1.0 },
-        {  1.0, -1.0,  1.0 },
-        {  1.0,  1.0,  1.0 },
-        { -1.0, -1.0, -1.0 },
-
-        {  1.0,  0.5,  0.5 },
-        {  0.5,  1.0,  0.5 },
-        {  0.5,  0.5,  1.0 },
-        {  1.0,  1.0,  0.5 },
-        {  0.5,  1.0,  1.0 },
-        {  1.0,  0.5,  1.0 },
-        {  0.5,  0.5,  0.5 },
-        {  0.2,  0.8,  1.0 },
-    };
-
     int hi = (player->color & 0xF0) >> 4;
     int lo = (player->color & 0x0F);
 
-    glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT2);
+    //particle_add_fountain(creature->x, creature->y, 100);
 
-    GLfloat l1[] = { colors[hi][0] * 10, colors[hi][2] * 10, colors[hi][3] * 10, 1.0};
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+
+    GLfloat l1[] = { colors[hi][0] * 40 - 20, colors[hi][1] * 40 - 20, colors[hi][2] * 40 - 20, 1.0};
     glLightfv(GL_LIGHT0, GL_AMBIENT, l1);
 
-    GLfloat l1pos[] = { creature->x, creature->y, 500, 1.0 };
-    glLightfv(GL_LIGHT2, GL_POSITION, l1pos);
-    GLfloat l2[] = { colors[lo][0] * 10, colors[lo][2] * 10, colors[lo][3] * 10, 1.0};
-    glLightfv(GL_LIGHT2, GL_DIFFUSE, l2);
+    GLfloat l2[] = { colors[lo][0] * 40 - 20, colors[lo][1] * 40 - 20, colors[lo][2] * 40 - 20, 1.0};
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, l2);
 
     glPushMatrix();
         int scale1[] = {  3,   6,   1 };
         int scale2[] = {  3,   6,   3 };
         int      z[] = { 80, 160, 180 };
-        int  animb[] = { 26,  48,  0,  0,  0,  0,  0,  0 };
-        int  animl[] = {  6,  12,  1,  1,  1,  1,  1,  1 };
-        int  anims[] = {150,  50,  6,  6,  6,  6,  6,  6 };
+        int  animb[] = { 69,  48,  0, 69,  0,  0,  0, 60 };
+        int  animl[] = {  9,  12,  1,  3,  7,  1,  1,  9 };
+        int  anims[] = {100,  50, 60, 70, 60, 60, 60, 50 };
         glTranslatef(creature->x, creature->y, z[creature->type]);
+        // particle_add_blood(creature->x, creature->y, z[creature->type]);
         glRotatef(info->dir, 0, 0, 1);
         glScalef (scale1[creature->type], scale2[creature->type], scale1[creature->type]);
         mdl_render_frame(model, ((real_time + info->animoffset) / anims[creature->state]) % animl[creature->state] + animb[creature->state]);
@@ -575,8 +691,51 @@ static void creature_draw(const client_creature_t *creature, void *opaque) {
         //mdl_render_frame(model, (real_time / 300) % 100);
     glPopMatrix();
     
-    glDisable(GL_LIGHT2);
     glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHT1);
+}
+
+/* Init / Shutdown */
+
+static void gl_init_resources() {
+    wall_init();
+    plain_init();
+    koth_init();
+    creature_init();
+}
+
+static void gl_free_resources() {
+    creature_free();
+    koth_free();
+    plain_free();
+    wall_free();
+}
+
+static int gl_open(int w, int h, int fs) {
+    video_init(w, h, fs);
+    cam_init();
+    gl_init_resources();
+    return 1;
+}
+
+static void gl_close() {
+    gl_free_resources();
+    cam_free();
+    video_shutdown();
+}
+
+static void gl_resize(int w, int h) {
+    video_resize(w, h);
+#ifdef WIN32
+    /* 
+     * Der GL Context geht unter Windows beim resizen verloren.
+     * Daher muessen Texturen und Displaylisten neu gebaut werden.
+     * 
+     * http://www.libsdl.org/pipermail/sdl/2003-March/052962.html
+     */
+    gl_free_resources();
+    gl_init_resources();
+#endif
 }
 
 /* Event */
@@ -591,11 +750,11 @@ static void handle_events() {
                         if (event.key.keysym.mod & KMOD_ALT)
                             video_fullscreen_toggle();
                         break;
-                    case SDLK_1: video_resize( 640,  480); break;
-                    case SDLK_2: video_resize( 800,  600); break;
-                    case SDLK_3: video_resize(1024,  768); break;
-                    case SDLK_4: video_resize(1280, 1024); break;
-                    case SDLK_5: video_resize(1600, 1200); break;
+                    case SDLK_1: gl_resize( 640,  480); break;
+                    case SDLK_2: gl_resize( 800,  600); break;
+                    case SDLK_3: gl_resize(1024,  768); break;
+                    case SDLK_4: gl_resize(1280, 1024); break;
+                    case SDLK_5: gl_resize(1600, 1200); break;
                     case SDLK_c:
                         cam_recenter();
                         break;
@@ -617,7 +776,7 @@ static void handle_events() {
                 }
                 break;
            case SDL_VIDEORESIZE:
-                video_resize(event.resize.w, event.resize.h);
+                gl_resize(event.resize.w, event.resize.h);
                 break;
            case SDL_QUIT:
                 infon->shutdown();
@@ -638,30 +797,13 @@ static void gl_tick(int gt, int delta) {
 
     cam_tick(delta);
     //cam_screen_to_plane(m_mousex, m_mousey, m_mouseworldx, m_mouseworldy, m_mouseinfront);
+    // particle_move(delta);
 
     world_draw();
     infon->each_creature(creature_draw, NULL);
+    // particle_draw();
 
     video_flip();
-}
-
-static int gl_open(int w, int h, int fs) {
-    video_init(w, h, fs);
-    cam_init();
-    wall_init();
-    plain_init();
-    koth_init();
-    creature_init();
-    return 1;
-}
-
-static void gl_close() {
-    creature_shutdown();
-    koth_free();
-    plain_free();
-    wall_free();
-    cam_free();
-    video_shutdown();
 }
 
 static const renderer_api_t gl_api = {
@@ -669,7 +811,7 @@ static const renderer_api_t gl_api = {
     .open                = gl_open,
     .close               = gl_close,
     .tick                = gl_tick,
-    .world_info_changed  = NULL,
+    .world_info_changed  = gl_world_info_changed,
     .world_changed       = NULL,
     .player_joined       = NULL,
     .player_changed      = NULL,

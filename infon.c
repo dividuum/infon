@@ -45,43 +45,99 @@ static int get_tick() {
     return (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
 }
 
-void sighandler(int sig) {
+static void sighandler(int sig) {
     signal_received = 1;
 }
 
+static void info() {
+    fprintf(stdout, "%s built %s %s\n", 
+            GAME_NAME, __TIME__, __DATE__);
+#ifdef NO_EXTERNAL_RENDERER
+    fprintf(stdout, "Cannot load external renderers");
+#else
+    fprintf(stdout, "External renderers supported");
+#endif
+#ifdef BUILTIN_RENDERER
+    fprintf(stdout, ", builtin renderer '%s'", TOSTRING(BUILTIN_RENDERER));
+#endif
+#ifdef DEFAULT_RENDERER
+    fprintf(stdout, ", default renderer '%s'", TOSTRING(DEFAULT_RENDERER));
+#endif
+    fprintf(stdout, "\n");
+}
+
 int main(int argc, char *argv[]) {
-    int width = 800, height = 600, fullscreen = 0;
-    char *host = NULL;
+    char *host       = NULL;
+    char *renderer   = NULL;
+    int   width      = 800;
+    int   height     = 600;
+    int   fullscreen = 0;
+
 #ifdef EVENT_HOST
     host = EVENT_HOST;
-#else
+#endif
+
+#ifdef DEFAULT_RENDERER
+    renderer = TOSTRING(DEFAULT_RENDERER);
+#endif
+
+    // GUI Environment setzt default Renderer um.
+    if (getenv("GUI"))
+        renderer = getenv("GUI");
+
 #ifdef WIN32
     char *sep = strrchr(argv[0], '\\');
     if (sep) { *sep = '\0'; chdir(argv[0]); }
 
+    // Spezialfaelle fuer Windows Screensaver Aufrufe
     if (argc == 2 && stricmp(argv[1], "/s") == 0) {
         host  = "infon.dividuum.de";
         width = 1024, height = 768, fullscreen = 1;
     } else if (argc == 3 && stricmp(argv[1], "/p") == 0) {
-        exit(0);
+        exit(EXIT_SUCCESS);
     } else if (argc == 2 && strstr(argv[1], "/c:") == argv[1]) {
         die("There are no settings");
-    } else if (argc != 2) {
+    }
+#endif
+
+    // Keine Fehler auf stderr
+    opterr = 0;
+
+    int opt; 
+    while ((opt = getopt(argc, argv, ":fvw:h:r:")) != -1) {
+        switch (opt) {
+            case '?': die("you specified an unknown option -%c", optopt);
+            case ':': die("missing argument to option -%c", optopt);
+            case 'r': renderer   = optarg;          break;
+            case 'f': fullscreen = 1;               break;
+            case 'w': width      = atoi(optarg);    break;
+            case 'h': height     = atoi(optarg);    break;
+            case 'v': info(); exit(EXIT_SUCCESS);
+        }
+    }
+
+    switch (argc - optind) {
+        case 0:  break;
+        case 1:  host = argv[optind]; break;
+        default: die("you specified more than one game server hostname");
+    }
+
+    if (!renderer)
+        die("no renderer specified. use the '-r <renderer>' option");
+
+#ifdef WIN32
+    if (!host) {
         if (yesno("You did not specify a game server.\nConnect to 'infon.dividuum.de:1234'?"))
             host = "infon.dividuum.de";
         else
             die("You must supply the game servers hostname\n"
-                "as first command line parameter.\n\n"
+                "as a command line parameter.\n\n"
                 "Example: 'infon.exe infon.dividuum.de'\n\n"
                 "Visit http://infon.dividuum.de/ for help.");
-    } else {
-        host = argv[1];
-    }
+    } 
 #else
-    if (argc != 2)
+    if (!host)
         die("usage: %s <serverip[:port]>", argv[0]);
-    host = argv[1];
-#endif
 #endif
 
 #ifndef WIN32
@@ -93,9 +149,11 @@ int main(int argc, char *argv[]) {
     srand(time(0));
     gettimeofday(&start, NULL);
 
-    renderer_init(getenv("GUI"));
+    if (!renderer_init(renderer)) 
+        die("cannot initialize the renderer '%s'", renderer);
+
     if (!renderer_open(width, height, fullscreen))
-        die("cannot open renderer. sorry");
+        die("cannot start the renderer '%s'. sorry", renderer);
 
     client_init(host);
     client_game_init();

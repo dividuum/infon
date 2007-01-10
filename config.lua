@@ -9,7 +9,7 @@ debugpass  = ""
 join_info  = "this message can be changed in config.lua"
 
 -- maps to rotate
-maps       = {"foo", "gpn", "water", "cn", "owl" }
+maps       = {"foo", "gpn", "water", "cn", "owl", "stripeslice" }
 
 -- rules file to use. 
 rules      = "default"
@@ -40,11 +40,11 @@ banner = [[
                   /   /  _( o)_ ; \
                   O  O  /      ' -.\
                         \___;_/-.  ;)
-                          __/    '//.
-                         ; /     //  \
-                         ' (INFON  )  )
-                          \(       )  )
-                           '      /  /
+                          __/    '//-.
+                         ; /     //   \
+                         ' (INFON  )   )
+                          \(       )   )
+                           '      /   /
                             '.__.- -'
                           _ \\   // _
                          (_'_/   \_'_)
