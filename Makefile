@@ -61,7 +61,7 @@ endif
 	AA_RENDERER       = aa_gui.so
 	LILITH_RENDERER   = lilith_gui.so 
 
-	RENDERER          = $(SDL_RENDERER) $(NULL_RENDERER) 
+	RENDERER          = $(SDL_RENDERER) $(NULL_RENDERER) $(GL_RENDERER)
 endif
 
 CFLAGS += -DPREFIX=\"$(PREFIX)\"
@@ -130,6 +130,8 @@ $(LILITH_RENDERER)  : LDFLAGS  += -lSDL -lGL -lGLU -lstdc++
 $(NULL_RENDERER)    : CFLAGS   += -fPIC
 endif
 
+gl_gui.o			: CFLAGS   += -Wno-unused
+
 ifdef DEFAULT_RENDERER
 $(INFON_EXECUTABLE) : CFLAGS   += -DDEFAULT_RENDERER=$(DEFAULT_RENDERER)
 endif
@@ -156,14 +158,14 @@ win32-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER)
 	$(STRIP) $^
 	upx -9 --all-methods $(INFON_EXECUTABLE)
 	upx -9 --all-methods $(SDL_RENDERER)
-	zip infon-win32-r$(REVISION).zip README $^ gfx/*.fnt gfx/*.png
+	zip infon-win32-r$(REVISION).zip README.txt $^ gfx/*.fnt gfx/*.png
 
 linux-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER)
 	strip $^
-	tar cfvz infon-linux-i386-r$(REVISION).tgz README $^ gfx/*.fnt gfx/*.png
+	tar cfvz infon-linux-i386-r$(REVISION).tgz README.txt $^ gfx/*.fnt gfx/*.png
 
 linux-server-dist: $(INFOND_EXECUTABLE)
-	tar cfvz infond-linux-i386-r$(REVISION).tgz README $(INFOND_EXECUTABLE) $(INFOND_EXECUTABLE)-static *.lua level/*.lua rules/*.lua
+	tar cfvz infond-linux-i386-r$(REVISION).tgz README.txt $(INFOND_EXECUTABLE) $(INFOND_EXECUTABLE)-static *.lua level/*.lua rules/*.lua
 
 $(INFOND_EXECUTABLE): infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o 
 	$(CC) $^ $(LDFLAGS) -o $@

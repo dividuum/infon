@@ -167,7 +167,7 @@ extern const  infon_api_t    *infon;
 
 /* infon seitige API */
 
-void renderer_init(const char *name);
+int  renderer_init(const char *name);
 void renderer_shutdown();
 
 int  renderer_open(int w, int h, int fs);

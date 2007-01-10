@@ -45,6 +45,10 @@
 // warn if no coredumps possible
 // #define WARN_COREDUMP
 
+#ifdef  BUILTIN_RENDERER
+#define DEFAULT_RENDERER BUILTIN_RENDERER
+#endif
+
 #ifndef DEFAULT_RENDERER
 #define DEFAULT_RENDERER sdl_gui
 #endif
