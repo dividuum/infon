@@ -45,9 +45,11 @@ static int get_tick() {
     return (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
 }
 
+#ifndef WIN32
 static void sighandler(int sig) {
     signal_received = 1;
 }
+#endif
 
 static void info() {
     fprintf(stdout, "%s built %s %s\n", 
