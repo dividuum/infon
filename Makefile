@@ -39,9 +39,10 @@ ifdef WINDOWS
 	INFON_EXECUTABLE  = infon.exe
 
 	SDL_RENDERER      = sdl_gui.dll
+	GL_RENDERER       = gl_gui.dll
 	NULL_RENDERER     = null_gui.dll
 
-	RENDERER          = $(SDL_RENDERER)
+	RENDERER          = $(SDL_RENDERER) $(GL_RENDERER)
 else
 	PREFIX           ?= ./
 	SDLDIR           := $(shell sdl-config --prefix)
@@ -79,6 +80,12 @@ $(SDL_RENDERER)     : LDFLAGS  += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a 
                                   $(MINGW)/lib/libpng.a $(MINGW)/lib/libz.a     $(MINGW)/lib/libSDL_gfx.a $(MINGW)/lib/libSDL.a \
                                   -lmingw32 -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
 $(SDL_RENDERER)     : infon.res
+
+$(GL_RENDERER)      : CFLAGS   += -I$(SDLDIR)/include/SDL 
+$(GL_RENDERER)      : LDFLAGS  += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a \
+                                  $(MINGW)/lib/libz.a   $(MINGW)/lib/libSDL.a \
+                                  -lmingw32 -lopengl32 -lglu32 -lstdc++ -lwsock32 -lwinmm -mwindows -Wl,-s
+$(GL_RENDERER)      : infon.res
 else
 $(INFON_EXECUTABLE) : LDFLAGS  += -levent -lz -lm 
 
@@ -111,7 +118,7 @@ endif
 $(SDL_RENDERER)     : CFLAGS   += -fPIC -I$(SDLDIR)/include/SDL 
 $(SDL_RENDERER)     : LDFLAGS  += -lSDL -lSDL_image -lSGE -lSDL_gfx 
 
-$(GL_RENDERER)      : CFLAGS   += -fPIC
+$(GL_RENDERER)      : CFLAGS   += -fPIC -I$(SDLDIR)/include/SDL 
 $(GL_RENDERER)      : LDFLAGS  += -lSDL -lGL -lGLU
 
 $(AA_RENDERER)      : CFLAGS   += -fPIC
@@ -121,6 +128,10 @@ $(LILITH_RENDERER)  : CPPFLAGS += -fPIC
 $(LILITH_RENDERER)  : LDFLAGS  += -lSDL -lGL -lGLU -lstdc++ 
 
 $(NULL_RENDERER)    : CFLAGS   += -fPIC
+endif
+
+ifdef DEFAULT_RENDERER
+$(INFON_EXECUTABLE) : CFLAGS   += -DDEFAULT_RENDERER=$(DEFAULT_RENDERER)
 endif
 
 ############################################################
