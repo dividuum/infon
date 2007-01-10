@@ -154,18 +154,19 @@ dist:
 source-dist: distclean
 	tar cvzh -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
 
-win32-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER)
+win32-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(GL_RENDERER)
 	$(STRIP) $^
 	upx -9 --all-methods $(INFON_EXECUTABLE)
 	upx -9 --all-methods $(SDL_RENDERER)
-	zip infon-win32-r$(REVISION).zip README.txt $^ gfx/*.fnt gfx/*.png
+	upx -9 --all-methods $(GL_RENDERER)
+	zip infon-win32-r$(REVISION).zip README.txt $^ gfx/*.fnt gfx/*.png gfx/*.bmp gfx/*.mdl bots/*.lua
 
-linux-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER)
+linux-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER) $(GL_RENDERER)
 	strip $^
-	tar cfvz infon-linux-i386-r$(REVISION).tgz README.txt $^ gfx/*.fnt gfx/*.png
+	tar cfvz infon-linux-i386-r$(REVISION).tgz README.txt $^ gfx/*.fnt gfx/*.png gfx/*.bmp gfx/*.mdl bots/*.lua
 
 linux-server-dist: $(INFOND_EXECUTABLE)
-	tar cfvz infond-linux-i386-r$(REVISION).tgz README.txt $(INFOND_EXECUTABLE) $(INFOND_EXECUTABLE)-static *.lua level/*.lua rules/*.lua
+	tar cfvz infond-linux-i386-r$(REVISION).tgz README.txt $(INFOND_EXECUTABLE) $(INFOND_EXECUTABLE)-static *.lua level/*.lua rules/*.lua api/*.lua libs/*.lua bots/*.lua
 
 $(INFOND_EXECUTABLE): infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o 
 	$(CC) $^ $(LDFLAGS) -o $@
