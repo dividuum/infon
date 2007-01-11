@@ -143,12 +143,13 @@ int main(int argc, char *argv[]) {
         die("usage: %s <serverip[:port]>", argv[0]);
 #endif
 
-screen_saver_start:
 
 #ifndef WIN32
     signal(SIGTERM, sighandler);
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
+#else
+screen_saver_start:
 #endif
 
     srand(time(0));
