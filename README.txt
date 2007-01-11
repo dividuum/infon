@@ -1,42 +1,62 @@
- ___        __               ____        _   _   _      
-|_ _|_ __  / _| ___  _ __   | __ )  __ _| |_| |_| | ___ 
- | || '_ \| |_ / _ \| '_ \  |  _ \ / _` | __| __| |/ _ \
- | || | | |  _| (_) | | | | | |_) | (_| | |_| |_| |  __/
-|___|_| |_|_|  \___/|_| |_| |____/ \__,_|\__|\__|_|\___|
-                _                         
-               / \   _ __ ___ _ __   __ _ 
-              / _ \ | '__/ _ \ '_ \ / _` |
-             / ___ \| | |  __/ | | | (_| |
-            /_/   \_\_|  \___|_| |_|\__,_|
+ ___        __               ____        _   _   _          .--..-.
+|_ _|_ __  / _| ___  _ __   | __ )  __ _| |_| |_| | ___    /   / \ \'-.  _
+ | || '_ \| |_ / _ \| '_ \  |  _ \ / _` | __| __| |/ _ \  /   /  _( o)_ ; \
+ | || | | |  _| (_) | | | | | |_) | (_| | |_| |_| |  __/  O  O  /      ' -.\
+|___|_| |_|_|  \___/|_| |_| |____/ \__,_|\__|\__|_|\___|        \___;_/-__ ;)
+                _                                                 __/   \ //-.
+               / \   _ __ ___ _ __   __ _                        ; /     //   \
+              / _ \ | '__/ _ \ '_ \ / _` |                       ' (INFON  )   )
+             / ___ \| | |  __/ | | | (_| |                        \(       )   )
+            /_/   \_\_|  \___|_| |_|\__,_|                         '      /   /
+                                                                    '.__.- -'
+    For more information on the game, see the website at          _ \\   // _
+               http://infon.dividuum.de/                         (_'_/   \_'_)
 
-For more information on the game, see the website at 
-http://infon.dividuum.de/
+Playing:
 
-Compiling the Game  
+  Please visit http://infon.dividuum.de/
+  There you'll find tutorials, a function reference and 
+  example code.
+
+Compiling the Game:
 
   Requirements:
 
+  Server:
     libevent (tested with 1.1a)
+    zlib
+
+  Client:
+    libevent
+    zlib
+
+  2D SDL based renderer:
     SDL (tested with 1.2.8) 
     SDL_image
     SDL_gfx
     SGE
 
+  3D OpenGL based renderer:
+    SDL
+    OpenGL
+
   Type 'make', edit config.lua, run ./infond 
-  and ./infon localhost. 
+  then ./infon localhost. If you need help, please
+  visit the channel #infon on irc.freenode.net.
 
-Send me your bots, images of events, patches etc..
+Contact:  
 
-  Florian `dividuum` Wesch <fw@dividuum.de>
+  Florian 'dividuum' Wesch <fw@dividuum.de>
+  Please send me your bots, images of events, patches etc..
 
-License
+License:
 
   The game itself is released under the GPL.
 
     See http://www.gnu.org/licenses/gpl.txt for details
 
-  The binary release of the client is linked 
-  against the following Libraries: 
+  The binary release of the 2D renderer (sdl_gui.so / sdl_gui.dll) is 
+  linked against:
 
     SDL         http://www.libsdl.org
     SDL_image   http://www.libsdl.org/projects/SDL_image/
@@ -46,7 +66,16 @@ License
       All of them are covered by the LGPL. 
       See http://www.gnu.org/licenses/lgpl.txt for details
 
-  Both client and server use libevent:
+  The binary release of the 3D renderer (gl_gui.so / gl_gui.dll) is 
+  linked against:
+
+    SDL         http://www.libsdl.org
+
+      This library is covered by the LGPL. 
+      See http://www.gnu.org/licenses/lgpl.txt for details
+
+  The binary releases of both client (infon / infon.exe) and 
+  server (infond) include libevent:
 
     libevent    http://www.monkey.org/~provos/libevent/        
 
@@ -98,3 +127,9 @@ License
       LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
       OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
       THE SOFTWARE.
+
+  The Datafiles included in client and server distribution:
+
+    gfx/5x7.fnt      - From SDL_gfx (LGPL)
+    gfx/font.png     - From SDL_sge (LGPL)
+    gfx/creature.mdl - hm!? 
