@@ -95,6 +95,7 @@ int main(int argc, char *argv[]) {
     if (argc == 2 && stricmp(argv[1], "/s") == 0) {
         host  = "infon.dividuum.de";
         width = 1024, height = 768, fullscreen = 1;
+        goto screen_saver_start;
     } else if (argc == 3 && stricmp(argv[1], "/p") == 0) {
         exit(EXIT_SUCCESS);
     } else if (argc == 2 && strstr(argv[1], "/c:") == argv[1]) {
@@ -141,6 +142,8 @@ int main(int argc, char *argv[]) {
     if (!host)
         die("usage: %s <serverip[:port]>", argv[0]);
 #endif
+
+screen_saver_start:
 
 #ifndef WIN32
     signal(SIGTERM, sighandler);
