@@ -206,5 +206,5 @@ clean:
 	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags 
 
 distclean: clean
-	$(MAKE) -C lua-5.1.1 clean
-	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo
+	$(MAKE) -C lua-5.1.1 clean 
+	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo infond-wrapper

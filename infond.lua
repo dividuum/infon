@@ -576,12 +576,8 @@ function rules_init()
 end
 
 function rules_call(name, ...)
-    if type(rule) ~= "table" then
-        error("'rule' is not a table. cannot call rule handler '" .. name .. "'")
-    end
-    if not rule[name] then
-        error("rule handler '" .. name .. "' not defined")
-    end
+    assert(type(rule) == "table", "'rule' is not a table. cannot call rule handler '" .. name .. "'")
+    assert(rule[name], "rule handler '" .. name .. "' not defined")
     rule[name](...)
 end
 
