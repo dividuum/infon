@@ -126,6 +126,8 @@ static void cam_tick(int msec) {
 
     glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 0.1);
     glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 120.0);
+
+    glClearColor(0.5f, 0.5f, 0.5f, 0.0f);
 }
 
 /*
@@ -804,6 +806,12 @@ static void gl_tick(int gt, int delta) {
     // particle_draw();
 
     video_flip();
+
+#ifdef WIN32
+    Sleep(20);
+#else
+    usleep(4000);
+#endif
 }
 
 static const renderer_api_t gl_api = {
