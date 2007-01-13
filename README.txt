@@ -132,4 +132,5 @@ License:
 
     gfx/5x7.fnt      - From SDL_gfx (LGPL)
     gfx/font.png     - From SDL_sge (LGPL)
-    gfx/creature.mdl - hm!? 
+    gfx/creature.mdl - From the "Hack and Slash: Y2K Apocalypse Edition" 
+                       Quake Mod (GPL). Originally called dog.mdl :-)
