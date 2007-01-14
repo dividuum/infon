@@ -3,20 +3,13 @@
  * own chroot environment.
  *
  * You'll need the statically compiled server (infond-static).
- *
- * Be sure to define INFOND_UID and INFOND_GID (the user and group id
- * that infond should run as) while compiling this program. For example:
- *
- * gcc infond-wrapper.c -o infond-wrapper -DINFOND_UID=1000 -DINFOND_GID=1000
  */
 
+#include <sys/types.h>
 #include <unistd.h>
 #include <assert.h>
 #include <stdlib.h>
-
-#if !defined(INFOND_UID) || !defined(INFOND_GID)
-#error "INFOND_UID and INFOND_GID must be defined"
-#endif
+#include <stdio.h>
 
 #define must_not_fail(c) do {   \
     if ((c) != 0) {             \
@@ -26,12 +19,28 @@
 } while (0)
 
 int main() {
+    const char *uid_s = getenv("INFOND_UID");
+    const char *gid_s = getenv("INFOND_GID");
+    if (!uid_s || !gid_s) {
+        fprintf(stderr, "both INFOND_UID and INFOND_GID must be set\n");
+        exit(EXIT_FAILURE);
+    }
     int fd;
     for (fd = 3; fd < 1024; fd++) close(fd);
+    uid_t uid = atol(uid_s);
+    gid_t gid = atol(gid_s);
     must_not_fail(chroot("."));
     must_not_fail(chdir("/"));
-    must_not_fail(setgid(INFOND_UID));
-    must_not_fail(setuid(INFOND_GID));
+    must_not_fail(setgid(gid));
+    must_not_fail(setuid(uid));
+    if (getuid() == 0) {
+        fprintf(stderr, "uid is 0. won't continue\n");
+        exit(EXIT_FAILURE);
+    }
+    if (getgid() == 0) {
+        fprintf(stderr, "gid is 0. won't continue\n");
+        exit(EXIT_FAILURE);
+    }
     char *argv[] = { "infond-static", NULL };
     char *envp[] = { NULL };
     execve("/infond-static", argv, envp);
