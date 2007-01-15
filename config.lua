@@ -33,6 +33,9 @@ acl        = {{ pattern = "^ip:127\.0\..*"             },
 -- available highlevel apis
 highlevel  =  { 'oo', 'state' }
 
+-- disable joining?
+-- disable_joining = "no joining!"
+
 -- show banner?              
 banner = [[
                     .--..-.
@@ -48,19 +51,26 @@ banner = [[
                             '.__.- -'
                           _ \\   // _
                          (_'_/   \_'_)
-]]                
+]] 
 
 -- allowed files for dofile
 dofile_allowed = { 
     menu = "Botcode Menu System";
 }
 
--- competition = true
--- competition_log  = "competition.log"
--- competition_bots = { { source = "bot1.lua" }, { source = "bot2.lua", log = "bot2.log", name = "2ndbot" } }
+-- competition = {
+--     log  = "competition.log";
+--     bots = {
+--         { source = "bot1.lua" }, 
+--         { source = "bot2.lua", 
+--           log    = "bot2.log", 
+--           name   = "2ndbot" }
+--     }
+-- }
+-- 
+-- maps             = { "foo", "foo", "foo" }
 -- time_limit       = 10 * 60 * 1000
 -- score_limit      = nil
--- maps             = { "foo", "foo", "foo" }
 -- listenaddr       = nil
 
 -- Things to do once after the first game started

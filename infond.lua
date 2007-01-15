@@ -22,7 +22,8 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
-assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua")))()
+config = {}
+setfenv(assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua"))), config)()
 
 stats  = {
     num_clients     = 0;
@@ -59,9 +60,9 @@ function Client.create(fd, addr)
 end
 
 function Client.check_accept(addr) 
-    for n, rule in ipairs(acl) do
+    for n, rule in ipairs(config.acl) do
         if rule.time and rule.time < os.time() then
-            table.remove(acl, n)
+            table.remove(config.acl, n)
         elseif string.match(addr, rule.pattern) then
             if rule.deny then
                 stats.num_refused = stats.num_refused + 1
@@ -96,7 +97,7 @@ end
 function Client:kick_ban(reason, time)
     local addr = self.addr:match("^([^:]+:[^:]+:?)")
     local time = time and os.time() + time or nil
-    table.insert(acl, 1, {
+    table.insert(config.acl, 1, {
         pattern = "^" .. addr .. ".*$",
         deny    = reason,
         time    = time
@@ -110,7 +111,7 @@ function Client:on_new_client(addr)
     self.prompt          = "> "
     self.failed_shell    = 0
     self.forward_unknown = false
-    self.highlevel       = highlevel[1]
+    self.highlevel       = config.highlevel[1]
     self.last_action     = {}
  -- print(self.addr .. " accepted")
     scroller_add(self.addr .. " joined")
@@ -180,9 +181,9 @@ function Client:get_player()
 end
 
 function Client:check_name(name)
-    if check_name_password and check_name_password(name, nil) then 
+    if config.check_name_password and config.check_name_password(name, nil) then 
         self:write("Name '" .. name .. "' requires a password: ")
-        return check_name_password(name, self:readln())
+        return config.check_name_password(name, self:readln())
     else
         return true
     end
@@ -296,10 +297,10 @@ end
 
 function on_game_started()
     -- Demos starten?
-    if type(demo) == "string" then
-        server_start_writer(string.format("%s-%08X.demo", demo, os.time()), true, true);
-    elseif type(demo) == "function" then
-        server_start_writer(demo(), true, true)
+    if type(config.demo) == "string" then
+        server_start_writer(string.format("%s-%08X.demo", config.demo, os.time()), true, true);
+    elseif type(config.demo) == "function" then
+        server_start_writer(config.demo(), true, true)
     end
 
     -- Message
@@ -310,23 +311,22 @@ function on_game_started()
     server_tick = coroutine.wrap(ServerMain)
 
     -- Handler fuer Dinge, welche nur beim ersten Spiel aufgerufen werden sollen
-    if not first_game then
-        first_game = true
+    if not first_game_init then
+        first_game_init = true
 
         -- competition?
-        if competition then
+        if config.competition then
             set_realtime(false)
-            competition_done_setup = true
-            competition_rounds     = #maps
-            disable_joining = "competition mode"
-            for _, bot in pairs(competition_bots) do
-                appendline(competition_log, string.format("joining '%s' as %d", bot.source, start_bot(bot)))
+            competition_rounds     = #config.maps
+            config.disable_joining = "competition mode"
+            for _, bot in pairs(config.competition.bots) do
+                appendline(config.competition.log, "joining '%s' as %d", bot.source, start_bot(bot))
             end
         end
 
         -- Nach dem Starten des ersten Spiels einmalig Funktion autoexec aufrufen
-        if autoexec then 
-            local ok, msg = epcall(debug.traceback, autoexec) 
+        if config.autoexec then 
+            local ok, msg = epcall(debug.traceback, config.autoexec) 
             if not ok then 
                 print(msg)
             end
@@ -334,19 +334,18 @@ function on_game_started()
     end
 
     -- Mapchange
-    if competition then
-        appendline(competition_log, string.format("%d starting on map '%s'", os.time(), map))
+    if config.competition then
+        appendline(config.competition.log, "%d starting on map '%s'", os.time(), map)
     end
 end
 
 function on_game_ended()
     -- competition?
-    if competition then
+    if config.competition then
         for pno in each_player() do 
-            appendline(competition_log, string.format("%d: score %d, creatures %d", 
-                                                      pno, player_score(pno), player_num_creatures(pno)))
+            appendline(config.competition.log, "%d: score %d, creatures %d", pno, player_score(pno), player_num_creatures(pno))
         end
-        appendline(competition_log, string.format("%d completed", os.time()))
+        appendline(config.competition.log, "%d completed", os.time())
         competition_rounds = competition_rounds - 1
         if competition_rounds == 0 then 
             shutdown()
@@ -367,14 +366,14 @@ end
 -----------------------------------------------------------
 
 current_map = 1
-map         = maps[current_map]
+map         = config.maps[current_map]
 
 function world_rotate_map()
     current_map = current_map + 1
-    if current_map > #maps then
+    if current_map > #config.maps then
        current_map = 1
     end
-    map = maps[current_map]
+    map = config.maps[current_map]
 end
 
 function world_get_dummy()
@@ -397,7 +396,9 @@ function world_load(map)
         pairs             = pairs;
         ipairs            = ipairs;
         unpack            = unpack;
-        math              = { random = math.random };
+        math              = { random = math.random;
+                              sqrt   = math.sqrt;
+                              floor  = math.floor  };
         string            = { upper  = string.upper;
                               sub    = string.sub;
                               len    = string.len; };
@@ -452,7 +453,7 @@ function world_init()
     local ok, w, h, kx, ky = pcall(world_load, map)
     if not ok then
         print("cannot load world '" .. map .. "': " .. w .. ". using dummy world")
-        world = world_get_dummy()
+        world  = world_get_dummy()
         w,  h  = world.level_size()
         kx, ky = world.level_koth_pos()
     end
@@ -533,10 +534,10 @@ end
 -----------------------------------------------------------
 
 function rules_init()
-    local rules_code = assert(loadfile(PREFIX .. "rules/" .. rules .. ".lua"))
+    local rules_code = assert(loadfile(PREFIX .. "rules/" .. config.rules .. ".lua"))
 
     -- prepare safe rules environment
-    rule = {
+    rules = {
         -- lua functions
         print                       = print;
         
@@ -558,8 +559,8 @@ function rules_init()
         world_get_spawn_point       = world_get_spawn_point;
         world_add_food_by_worldcoord= world_add_food_by_worldcoord;
 
-        get_score_limit             = function () return score_limit end;
-        get_time_limit              = function () return time_limit  end;
+        get_score_limit             = function () return config.score_limit end;
+        get_time_limit              = function () return config.time_limit  end;
         scroller_add                = scroller_add;
         set_intermission            = set_intermission;
         world_rotate_map            = world_rotate_map;
@@ -572,13 +573,13 @@ function rules_init()
     }
 
     -- activate environment for rules code and load rules
-    setfenv(rules_code, rule)()
+    setfenv(rules_code, rules)()
 end
 
 function rules_call(name, ...)
-    assert(type(rule) == "table", "'rule' is not a table. cannot call rule handler '" .. name .. "'")
-    assert(rule[name], "rule handler '" .. name .. "' not defined")
-    rule[name](...)
+    assert(type(rules) == "table", "'rules' is not a table. cannot call rule handler '" .. name .. "'")
+    assert(rules[name], "rule handler '" .. name .. "' not defined")
+    rules[name](...)
 end
 
 -----------------------------------------------------------
@@ -621,10 +622,10 @@ function admin_help()
     cprint("-------------------------------------------------")
 end
 
-function appendline(filename, line)
+function appendline(filename, fmt, ...)
     if not filename then return end
     local file = assert(io.open(filename, "a+"))
-    file:write(string.format("%s\n", line))
+    file:write(string.format(fmt .. "\n", ...))
     file:close()
 end
 
@@ -691,19 +692,19 @@ function batch()
 end
 
 function acllist()
-    for n, rule in ipairs(acl) do
+    for n, rule in ipairs(config.acl) do
         cprint(string.format("%2d: %-30s - %9d - %s", n, rule.pattern, rule.time and rule.time - os.time() or -1, rule.deny or "accept"))
     end
 end
 
 function aclrm(num)
-    assert(acl[num], "rule " .. num .. " does not exist")
-    table.remove(acl, num)
+    assert(config.acl[num], "rule " .. num .. " does not exist")
+    table.remove(config.acl, num)
 end
 
 function start_listener() 
-    assert(setup_listener(listenaddr, listenport), 
-           string.format("cannot setup listener on %s:%d", listenaddr, listenport))
+    assert(setup_listener(config.listenaddr, config.listenport), 
+           string.format("cannot setup listener on %s:%d", config.listenaddr, config.listenport))
 end
 
 function stop_listener()
@@ -719,7 +720,7 @@ end
 
 function start_bot(options)
     assert(type(options) == "table", "start_bot needs an options table")
-    local highlevel = options.api or highlevel[1]
+    local highlevel = options.api or config.highlevel[1]
     local password  = options.password or tostring(math.random(100000, 999999))
     local botfile   = assert(io.open(options.source, "rb"))
     local botsource = botfile:read("*a")
@@ -748,4 +749,4 @@ end
 assert(loadfile(PREFIX .. "server.lua"))()
 
 -- setup listen socket
-if listenaddr and listenport then start_listener() end 
+if config.listenaddr and config.listenport then start_listener() end 

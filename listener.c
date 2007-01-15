@@ -76,7 +76,7 @@ static void listener_cb(int fd, short event, void *arg) {
     }
 
     static char address[128];
-    sprintf(address, "ip:%s:%d", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
+    sprintf(address, "ip4:%s:%d", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
 
     if (!server_accept(clientfd, address))
         goto error; 

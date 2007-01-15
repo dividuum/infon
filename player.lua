@@ -66,6 +66,7 @@ do
     local sethook, getinfo = debug.sethook, debug.getinfo
     function thread_trace(thread, text)
         assert(type(thread) == "thread", "arg #1 is not a thread")
+        text = text or tostring(thread)
         local dumper = type(text) == "function" and text or function(info)
             print(text .. ":" .. info.source .. ":" .. info.currentline)
         end
