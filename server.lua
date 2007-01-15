@@ -52,8 +52,8 @@ function Client:joinmenu()
             return
         end
 
-        if disable_joining then
-            self:writeln("joining is currently disabled: " .. disable_joining)
+        if config.disable_joining then
+            self:writeln("joining is currently disabled: " .. config.disable_joining)
             return
         end
     
@@ -172,7 +172,7 @@ end
 
 function Client:highmenu() 
     self:writeln("------------------------------")
-    for n, file in ipairs(highlevel) do
+    for n, file in ipairs(config.highlevel) do
         self:writeln(string.format("%3d - %-s", n, file))
     end
     self:writeln("------------------------------")
@@ -182,7 +182,7 @@ function Client:highmenu()
         self:writeln("not numeric")
         return
     end
-    local api = highlevel[tonumber(num)]
+    local api = config.highlevel[tonumber(num)]
     if not api then
         self:writeln("no highlevel api " .. num)
     else
@@ -196,13 +196,13 @@ function Client:shell()
     if self.authorized then 
         ok = true
     else
-        if not debugpass or debugpass == "" then
+        if not config.debugpass or config.debugpass == "" then
             self:writeln("password must be set in config.lua")
             return
         end
         if not self:rate_limit("entering the shell", 5000) then return end
         self:write("password: ")
-        ok = self:readln() == debugpass 
+        ok = self:readln() == config.debugpass 
     end
         
     if ok then 
@@ -289,11 +289,11 @@ function Client:info()
     self:writeln("code executions    | " .. stats.num_exec)
     self:writeln("-------------------+------------------------------")
     local w, h = world.level_size()
-    self:writeln("rules              | " .. rules)
+    self:writeln("rules              | " .. config.rules)
     self:writeln("map                | " .. map .. " (" .. w .. "x" .. h .. ")")
     self:writeln("game time          | " .. string.format("%ds", game_time() / 1000))
-    self:writeln("time limit         | " .. (time_limit and string.format("%ds", time_limit / 1000) or "none"))
-    self:writeln("score limit        | " .. (score_limit or "none"))
+    self:writeln("time limit         | " .. (config.time_limit and string.format("%ds", config.time_limit / 1000) or "none"))
+    self:writeln("score limit        | " .. (config.score_limit or "none"))
     self:writeln("-------------------------------------------------")
 end
 
@@ -393,7 +393,7 @@ function Client:mainmenu()
                 self:highmenu()
             elseif input == "?" then
                 self:menu_header()
-                if disable_joining then
+                if config.disable_joining then
                     self:writeln("j - oin game (currently disabled)")
                 else
                     self:writeln("j - oin game")
@@ -424,8 +424,8 @@ function Client:telnet_mode()
     self:centerln("Hello " .. self.addr .. "!")
     self:centerln("Welcome to " .. GAME_NAME)
     self:writeln("")
-    if banner then
-        self:write(banner:match("\r\n") and banner or banner:gsub("\n", "\r\n"))
+    if config.banner then
+        self:write(config.banner:match("\r\n") and config.banner or config.banner:gsub("\n", "\r\n"))
         self:writeln("")
     end
     self:writeln("enter '?' for help")
@@ -474,8 +474,8 @@ function ServerMain()
     while true do
         if game_time() > info_time + 10000 then
            info_time = game_time() 
-           if join_info and join_info ~= "" then
-               scroller_add(join_info)
+           if config.join_info and config.join_info ~= "" then
+               scroller_add(config.join_info)
            end
         end
         coroutine.yield()
