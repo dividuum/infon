@@ -22,7 +22,7 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
-config = {}
+config = setmetatable({}, {__index = _G})
 setfenv(assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua"))), config)()
 
 stats  = {
