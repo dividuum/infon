@@ -326,13 +326,18 @@ static int db_errorfb (lua_State *L) {
   lua_Debug ar;
   if (lua_isnumber(L, arg+2)) {
     level = (int)lua_tointeger(L, arg+2);
+    if (level < 0)
+      return luaL_argerror(L, arg+2, "invalid stack depth");
     lua_pop(L, 1);
   }
   else
     level = (L == L1) ? 1 : 0;  /* level 0 may be this own function */
   if (lua_gettop(L) == arg)
     lua_pushliteral(L, "");
-  else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
+  else if (lua_isnil(L, arg+1)) {
+    lua_pushliteral(L, "");
+    lua_replace(L, arg+1);
+  } else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
   else lua_pushliteral(L, "\r\n");
   lua_pushliteral(L, "stack traceback:");
   while (lua_getstack(L1, level++, &ar)) {
