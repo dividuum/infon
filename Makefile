@@ -8,6 +8,7 @@ endif
 # EVENT_HOST = 172.30.100.1
 
 CFLAGS += -pedantic -std=gnu99 -Wall -DREVISION="\"$(REVISION)\""
+LUA     = lua-5.1.2
 
 ifdef EVENT_NAME
 	CFLAGS += -DEVENT_NAME="\"$(EVENT_NAME)\""
@@ -104,15 +105,15 @@ misc.o              : CFLAGS   += -fPIC
 endif
 endif
 
-$(INFOND_EXECUTABLE): CFLAGS   += -Ilua-5.1.1/src/ # -DCHEATS
+$(INFOND_EXECUTABLE): CFLAGS   += -I$(LUA)/src/ # -DCHEATS
 $(INFOND_EXECUTABLE): LDFLAGS  += -levent -lz -lm
 
-# Experimental usage of 'all of lua in one file' as seen in lua-5.1.1/etc/all.c
+# Experimental usage of 'all of lua in one file' as seen in lua-5.1.2/etc/all.c
 ifdef OPTIMIZE
 $(INFOND_EXECUTABLE): luacore.o
 luacore.o           : CFLAGS   += -DLUA_USE_POSIX
 else
-$(INFOND_EXECUTABLE): lua-5.1.1/src/liblua.a
+$(INFOND_EXECUTABLE): $(LUA)/src/liblua.a
 endif
 
 $(SDL_RENDERER)     : CFLAGS   += -fPIC -I$(SDLDIR)/include/SDL 
@@ -194,8 +195,8 @@ $(LILITH_RENDERER): lilith_gui.o misc.o lilith/lilith/liblilith.a
 infon.res: infon.rc
 	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff
 
-lua-5.1.1/src/liblua.a:
-	$(MAKE) -C lua-5.1.1 $(LUAPLAT)
+$(LUA)/src/liblua.a:
+	$(MAKE) -C $(LUA) $(LUAPLAT)
 
 %.o:%.c
 	$(CC) $(CFLAGS) $^ -c -o $@
@@ -210,5 +211,5 @@ clean:
 	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags REVISION
 
 distclean: clean
-	$(MAKE) -C lua-5.1.1 clean 
+	$(MAKE) -C $(LUA) clean 
 	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo infond-wrapper
