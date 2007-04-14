@@ -208,8 +208,8 @@ REVISION:
 	echo "REVISION=`svnversion .`" > $@
 
 clean: 
-	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags REVISION
+	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags
 
 distclean: clean
 	$(MAKE) -C $(LUA) clean 
-	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo infond-wrapper
+	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo infond-wrapper REVISION
