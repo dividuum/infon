@@ -23,7 +23,7 @@
 -----------------------------------------------------------
 
 config = setmetatable({}, {__index = _G})
-setfenv(assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua"))), config)()
+setfenv(assert(loadfile(os.getenv("INFOND_CONFIG") or (PREFIX .. "config.lua"))), config)()
 
 stats  = {
     num_clients     = 0;
@@ -110,7 +110,9 @@ function Client:on_new_client(addr)
     self.local_output    = true
     self.prompt          = "> "
     self.failed_shell    = 0
-    self.forward_unknown = false
+    self.forward_unknown = true
+    self.pre_string      = ""
+    self.post_string     = ""
     self.highlevel       = config.highlevel[1]
     self.last_action     = {}
  -- print(self.addr .. " accepted")
@@ -145,7 +147,7 @@ function Client:disconnect(reason)
 end
 
 function Client:write(data) 
-    client_write(self.fd, data)
+    client_write(self.fd, self.pre_string .. data .. self.post_string)
 end
 
 function Client:turn_into_guiclient()
@@ -225,9 +227,10 @@ function Client:execute(code, name)
     local playerno = self:get_player()
     if playerno then
         stats.num_exec = stats.num_exec + 1
-        player_execute(playerno, self.local_output and self.fd or nil, code, name)
+        return player_execute(playerno, self.local_output and self.fd or nil, code, name)
     else
         self:writeln("you do not have a player. cannot execute your code.")
+        return false
     end
 end
 
@@ -738,7 +741,7 @@ function start_bot(options)
             cprint("cannot start log writer: " .. logclient)
         end
     end
-    player_execute(playerno, nil, botsource, options.source)
+    assert(player_execute(playerno, nil, botsource, options.source), "cannot load bot code")
     return playerno
 end
 

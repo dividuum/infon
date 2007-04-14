@@ -23,7 +23,7 @@
 ------------------------------------------------------------------------
 
 local config = {}
-setfenv(assert(loadfile(os.getenv("INFON_CONFIG") or (PREFIX .. "config.lua"))), config)()
+setfenv(assert(loadfile(os.getenv("INFOND_CONFIG") or (PREFIX .. "config.lua"))), config)()
 
 ------------------------------------------------------------------------
 -- save traceback in registry for usage within 'out of cycles' handler
@@ -83,6 +83,14 @@ do
 end
 
 ------------------------------------------------------------------------
+-- Load debugger if requested
+------------------------------------------------------------------------
+
+if config.debugger then
+    ldb = dofile("libs/ldb")
+end
+
+------------------------------------------------------------------------
 -- Disable dangerous functions
 ------------------------------------------------------------------------
 
@@ -99,6 +107,14 @@ package         = nil   -- package support is not needed
 io              = nil   -- disable io
 module          = nil   -- module support not needed
 collectgarbage  = nil   -- no access to the garbage collector
+
+------------------------------------------------------------------------
+-- Disable Linehook unless permitted
+------------------------------------------------------------------------
+
+if not config.linehook then 
+    linehook = nil 
+end
 
 ------------------------------------------------------------------------
 -- 'pretty'-print function
@@ -122,7 +138,6 @@ end
 
 function restart()
     for id, creature in pairs(creatures) do
-        creature.message = nil
         creature:restart()
     end
 end
@@ -136,7 +151,7 @@ function info()
         end
         if type(creature.thread) == 'thread' then
             print(_TRACEBACK(creature.thread, 
-                             "thread status  : " .. coroutine.status(creature.thread), 
+                             "thread status  : " .. (creature.status or coroutine.status(creature.thread)), 
                              coroutine.status(creature.thread) == "dead" and 0 or 1))
         end
         print()
@@ -160,6 +175,14 @@ function exists(...)
 end
 
 ------------------------------------------------------------------------
+-- Install default onCommand
+------------------------------------------------------------------------
+
+function onCommand(cmd)
+    print("huh? use '?' for help")
+end
+
+------------------------------------------------------------------------
 -- Load Highlevel API
 ------------------------------------------------------------------------
 
@@ -173,7 +196,7 @@ do
     dofile("api/" .. api .. "-default")
 
     function needs_api(needed)
-        assert(needed == api, "This Bot need the API '" .. needed .. "' but '" .. api .. "' is loaded")
+        assert(needed == api, "This Code needs the API '" .. needed .. "' but '" .. api .. "' is loaded")
     end
 end
 
@@ -194,7 +217,7 @@ do
             return
         end
 
-        -- no allowed to load this file?
+        -- not allowed to load this file?
         if not config.dofile_allowed or not config.dofile_allowed[file] then
             print(_TRACEBACK("dofile('" .. file .. "') denied. upload it using the batch (b) command"))
             return

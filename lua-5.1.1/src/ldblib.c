@@ -326,8 +326,7 @@ static int db_errorfb (lua_State *L) {
   lua_Debug ar;
   if (lua_isnumber(L, arg+2)) {
     level = (int)lua_tointeger(L, arg+2);
-    if (level < 0)
-      return luaL_argerror(L, arg+2, "invalid stack depth");
+    luaL_argcheck(L, level >= 0, arg+2, "level must be non-negative");
     lua_pop(L, 1);
   }
   else

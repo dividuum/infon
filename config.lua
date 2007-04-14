@@ -58,6 +58,17 @@ dofile_allowed = {
     menu = "Botcode Menu System";
 }
 
+-- Disable Linehook Function.
+-- This function offers some advanced debugging features,
+-- but has not been tested enough. Do not enable, unless
+-- you know what you're doing.
+linehook = false
+
+-- DO NOT ENABLE THE DEBUGGER IF OTHER PLAYERS CAN CONNECT
+-- TO YOUR SERVER. The debugger is not yet secured against
+-- malicious users.
+debugger = false
+
 -- competition = {
 --     log  = "competition.log";
 --     bots = {

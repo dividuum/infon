@@ -104,11 +104,11 @@ License:
       (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
       THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   
-  The server uses a modified lua 5.1.1:
+  The server uses a modified lua 5.1.2:
 
     lua         http://www.lua.org/
 
-      Copyright (C) 1994-2006 Lua.org, PUC-Rio.
+      Copyright (C) 1994-2007 Lua.org, PUC-Rio.
 
       Permission is hereby granted, free of charge, to any person obtaining a copy
       of this software and associated documentation files (the "Software"), to deal
