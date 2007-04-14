@@ -309,6 +309,31 @@ static int luaSaveInRegistry(lua_State *L) {
     return 0;
 }
 
+void luaLineHook(lua_State *L, lua_Debug *ar) {
+    lua_getinfo(L, "S", ar);
+    lua_pushthread(L);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    lua_pushstring(L, ar->source);
+    lua_pushnumber(L, ar->currentline);
+    lua_call(L, 2, 1);
+    int yield = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+    if (yield) lua_yield(L, 0);
+}
+
+static int luaSetLineHook(lua_State *L) {
+    luaL_checktype(L, 1, LUA_TTHREAD);
+    lua_State *thread = lua_tothread(L, 1);
+    if (lua_gettop(L) == 1) {
+        lua_sethook(thread, luaLineHook, 0, 0);
+    } else {
+        luaL_checktype(L, 2, LUA_TFUNCTION);
+        lua_rawset(L, LUA_REGISTRYINDEX);
+        lua_sethook(thread, luaLineHook, LUA_MASKLINE, 0);
+    }
+    return 0;
+}
+
 static int luaPrint(lua_State *L) {
     get_player();
     int n = lua_gettop(L);
@@ -630,6 +655,7 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
 
     lua_register_string_constant(player->L, PREFIX);
     lua_register_player(player, "save_in_registry",     luaSaveInRegistry);
+    lua_register_player(player, "linehook",             luaSetLineHook);
 
     lua_register_player(player, "suicide",              luaCreatureSuicide);
     lua_register_player(player, "set_path",             luaCreatureSetPath);
@@ -704,9 +730,8 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
         fprintf(stderr, "cannot execute 'player.lua': %s\n", lua_tostring(player->L, -1));
         goto failed;
     }
-
-    lua_register_player(player, "print", luaPrint);
     
+    lua_register_player(player, "print", luaPrint);
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 
     player_on_created(player);
@@ -852,10 +877,11 @@ int player_detach_client(client_t *client, player_t *player) {
     return 1;
 }
 
-void player_execute_code(player_t *player, client_t *output_client, const char *code, size_t codelen, const char *where) {
+int player_execute_code(player_t *player, client_t *output_client, const char *code, size_t codelen, const char *where) {
+    int success;
     player->output_client = output_client;
     if (luaL_loadbuffer(player->L, code, codelen, where) == 0) {
-        player_call_user_lua("during interactive execution", player, 0);
+        success = player_call_user_lua("during interactive execution", player, 0);
     } else {
         const char *msg = lua_tostring(player->L, -1);
         if (!msg) 
@@ -863,11 +889,13 @@ void player_execute_code(player_t *player, client_t *output_client, const char *
         player_writeto(player, msg, strlen(msg));
         player_writeto(player, "\r\n", 2); 
         lua_pop(player->L, 1);
+        success = 0;
     }
     player->output_client = NULL;
+    return success;
 }
 
-void player_think() {
+void player_round() {
     int playerno;
     player_t *player = &players[0];
     for (playerno = 0; playerno < MAXPLAYERS; playerno++, player++) {
@@ -908,6 +936,15 @@ void player_think() {
             player_destroy(player);
             continue;
         }
+    }
+}
+
+void player_think() {
+    int playerno;
+    player_t *player = &players[0];
+    for (playerno = 0; playerno < MAXPLAYERS; playerno++, player++) {
+        if (!PLAYER_USED(player))
+            continue;
 
         // Player Code aufrufen
         lua_pushliteral(player->L, "player_think");
@@ -920,6 +957,15 @@ void player_think() {
 
         // Events Strukur neu initialisieren
         player_init_events(player);
+    }
+}
+
+void player_sync() {
+    int playerno;
+    player_t *player = &players[0];
+    for (playerno = 0; playerno < MAXPLAYERS; playerno++, player++) {
+        if (!PLAYER_USED(player))
+            continue;
 
         // Verbrauchte CPU Zeit speichern:
         // Dies ist die rein fuer player_think verbrauchte
@@ -1170,8 +1216,8 @@ static int luaPlayerExecute(lua_State *L) {
     client_t *client = lua_isnumber(L, 2) ? client_get_checked_lua(L, 2) : NULL;
     size_t codelen; const char *code = luaL_checklstring(L, 3, &codelen);
     const char *name = luaL_checkstring(L, 4);
-    player_execute_code(player, client, code, codelen, name);
-    return 0;
+    lua_pushboolean(L, player_execute_code(player, client, code, codelen, name));
+    return 1;
 }
 
 void player_init() {

@@ -1,7 +1,7 @@
 all: targets
 
 ifndef REVISION
-REVISION := $(shell svnversion . || echo 'exported')
+-include REVISION
 endif
 
 # EVENT_NAME = Computer Night 2006
@@ -143,6 +143,7 @@ endif
 targets: infond $(INFON_EXECUTABLE) $(RENDERER)
 
 dist:
+	$(MAKE) distclean
 	$(MAKE) source-dist
 	$(MAKE) clean
 	WINDOWS=1  $(MAKE) win32-client-dist
@@ -151,7 +152,7 @@ dist:
 	$(MAKE) clean
 	$(MAKE) linux-server-dist
 
-source-dist: distclean
+source-dist: REVISION 
 	tar cvzh -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
 
 win32-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(GL_RENDERER)
@@ -202,8 +203,11 @@ lua-5.1.1/src/liblua.a:
 %.o:%.cpp
 	$(CXX) $(CPPFLAGS) $^ -c -o $@
 
-clean:
-	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags 
+REVISION:
+	echo "REVISION=`svnversion .`" > $@
+
+clean: 
+	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags REVISION
 
 distclean: clean
 	$(MAKE) -C lua-5.1.1 clean 

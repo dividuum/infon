@@ -19,7 +19,7 @@
 ]]--
 
 -----------------------------------------------------------
--- Clientlogik
+-- Client Handling Code
 -----------------------------------------------------------
 
 function Client:joinmenu()
@@ -119,6 +119,8 @@ function Client:luamenu()
         local line = self:readln()
         if line == "" then 
             break
+        elseif line:match("^=") then
+            self:execute('print(' .. line:sub(2) .. ')', self:paste_full_name(paste))
         else
             self:execute(line, self:paste_full_name(paste))
         end
@@ -323,6 +325,10 @@ function Client:mainmenu()
             self.prompt = self:readln()
         elseif input == "shell" then
             self:shell()
+        elseif input == "colorize" then
+            self:write("pre string: ")  local pre  = self:readln()
+            self:write("post string: ") local post = self:readln()
+            self.pre_string, self.post_string = pre, post
         elseif input == "info" then
             self:info()
         elseif input == "" then
@@ -355,9 +361,9 @@ function Client:mainmenu()
                 self:write("limit botcode output to this connection? [y/N] ")
                 local bot_output_client = self:readln() == "y" and self.fd or nil
                 player_set_output_client(self:get_player(), bot_output_client)
-            elseif input == "fwd" then
-                self:write("forward unknown commands to onCommand function? [y/N] ")
-                self.forward_unknown = self:readln() == "y"
+         -- elseif input == "fwd" then
+         --     self:write("forward unknown commands to onCommand function? [y/N] ")
+         --     self.forward_unknown = self:readln() == "y"
             elseif input == "?" then
                 self:menu_header()
                 self:writeln("n - ame")
@@ -375,14 +381,21 @@ function Client:mainmenu()
                 self:menu_header()
                 self:writeln("lbo    - limit bot output")
                 self:writeln("lio    - limit interactive output")
-                self:writeln("fwd    - set unknown command forward")
+            --  self:writeln("fwd    - set unknown command forward")
                 self:writeln("prompt - change prompt")
                 self:writeln("bb     - hex batch (load precompiled code)")
                 self:writeln("0 - 9  - execute onInputX()")
                 self:writeln("info   - server information")
+                if self.forward_unknown then
+                    self:writeln("")
+                    self:writeln("Any other input will be passed to the onCommand")
+                    self:writeln("function defined within your lua vm.")
+                end
                 self:menu_footer()
             elseif self.forward_unknown then
-                self:execute("onCommand(" .. string.format("%q", input) .. ")", "onCommand")
+                if not self:execute("onCommand(" .. string.format("%q", input) .. ")", "onCommand") then
+                    self:writeln("huh? use '?' for help")
+                end
             else
                 self:writeln("huh? use '?' for help")
             end
@@ -433,19 +446,19 @@ function Client:telnet_mode()
 end
 
 function Client:www_mode()
-    --[[
-    self:writeln()
-    self:writeln("This is an infon game server, not a webserver.")
-    self:writeln("You'll need a telnet client to access this game.")
-    self:writeln("See http://infon.dividuum.de for more information")
-    self:writeln()
-    self:info()
-    self:writeln()
-    self:writeln()
-    self:showscores() 
-    self:writeln()
-    self:writeln()
-    ]]--
+    if config.verbose_http_error then
+        self:writeln()
+        self:writeln("This is an infon game server, not a webserver.")
+        self:writeln("You'll need a telnet client to access this game.")
+        self:writeln("See http://infon.dividuum.de for more information")
+        self:writeln()
+        self:info()
+        self:writeln()
+        self:writeln()
+        self:showscores() 
+        self:writeln()
+        self:writeln()
+    end
     self:disconnect("please use telnet")
 end
 

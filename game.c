@@ -110,6 +110,11 @@ static int luaSetRealtime(lua_State *L) {
     return 0;
 }
 
+static int luaSetPaused(lua_State *L) {
+    game_paused = lua_toboolean(L, 1);
+    return 0;
+}
+
 static int luaGameIntermission(lua_State *L) {
     snprintf(intermission, sizeof(intermission), "%s", luaL_checkstring(L, 1));
     game_send_intermission(SEND_BROADCAST);
@@ -162,6 +167,7 @@ void game_init() {
     
     lua_register(L, "hex_decode",       luaHexDecode);
     lua_register(L, "set_realtime",     luaSetRealtime);
+    lua_register(L, "set_paused",       luaSetPaused);
     lua_register(L, "shutdown",         luaShutdown);
 
     lua_register_constant       (L, MAXPLAYERS);
@@ -238,20 +244,28 @@ void game_one_game() {
             // Runde starten
             game_send_round_info(SEND_BROADCAST, delta);
 
+            // Rule Handler
+            game_call_rule_handler("onRound", 0);
+
             // World Zeugs
             world_tick();
+        }
 
+        player_round();
+
+        if (!game_paused) {
             // Spielerprogramme ausfuehren
             player_think();
+        }
 
+        player_sync();
+
+        if (!game_paused) {
             // Viecher bewegen
             creature_moveall(delta);
 
             // Zeit weiterlaufen lassen
             game_time += delta;
-
-            // Rule Handler
-            game_call_rule_handler("onRound", 0);
         }
         
         // IO Lesen/Schreiben

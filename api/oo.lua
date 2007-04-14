@@ -252,10 +252,29 @@ function Creature:sleep(msec)
 end
 
 function Creature:main_restarter() 
-    while true do
-        self:main()
-        self:wait_for_next_round()
+    local wrap do 
+        if self.onThreadFatal then
+            wrap = function(func, ...)
+                while true do
+                    local _, msg = pcall(func, ...)
+                    if not self:onThreadFatal(msg) then break end
+                end
+                error("thread terminated")
+            end
+        else
+            wrap = function(func, ...)
+                return func(...)
+            end
+        end
     end
+
+    wrap(function () 
+        if self.onRestart then self:onRestart() end
+        while true do 
+            self:main() 
+            self:wait_for_next_round() 
+        end 
+    end)
 end
 
 function Creature:traceback()
@@ -264,20 +283,117 @@ end
 
 function Creature:restart()
     set_state(self.id, CREATURE_IDLE)
-    self.thread = coroutine.create(self.main_restarter)
-    if self.onRestart then
-        local ok, msg = pcall(self.onRestart, self)
-        if not ok then 
-            print("restarting main failed: " .. msg)
-        end
-    else
-        print("onRestart method deleted")
-    end
+    self.message = nil
+    self.thread  = coroutine.create(self.main_restarter)
+    if self.onThreadStart then self:onThreadStart() end
 end
 
 function Creature:wait_for_next_round()
     assert(can_yield, "you cannot wait_for_next_round() in interactive mode")
     coroutine.yield()
+    if self.onThreadResume then self:onThreadResume() end
+end
+
+function Creature:assert(...)
+    return assert(...)
+end
+
+if ldb then
+    local debugged_creature_id
+
+    function Creature:onThreadStart()
+        self.is_in_debugger = nil
+    end
+    
+    function Creature:onThreadFatal(msg)
+        self:enter_debugger(msg, {"up 2"})
+        return false
+    end
+
+    function Creature:onThreadResume()
+        if self.debug_me then
+           local msg = self.debug_me
+           self.debug_me = nil
+           self:enter_debugger(msg, {"up 4"})
+        end
+    end
+
+    function Creature:enter_debugger(msg, cmd)
+        self.is_in_debugger  = true
+        self.message         = "Debugger active (activate with 'd" .. self.id .. "')"
+        debugged_creature_id = self.id
+        print("debugger started for creature " .. self)
+        local ok, msg = pcall(ldb, msg, cmd)
+        if not ok then
+            print("internal debugger error: " .. msg)
+        end
+        self.is_in_debugger  = nil
+        self.message         = nil
+        debugged_creature_id = nil
+        coroutine.yield()
+    end
+
+    function Creature:assert(v, msg)
+        if not v then
+            self:enter_debugger(msg or "assertation failed", {"up 3"})
+            return nil
+        else
+            return v
+        end
+    end
+
+    function onCommand(cmd)
+        local id = tonumber(cmd:match("^d([0-9]+)$"))
+        if id then 
+            if id == debugged_creature_id then
+                print("already debugging creature " .. id)
+            elseif not creatures[id] then
+                print("creature " .. id .. " does not exist")
+            elseif not creatures[id].is_in_debugger then
+                creatures[id].debug_me = "execution stopped"
+            else
+                debugged_creature_id = id
+                print("debugging creature " .. creatures[debugged_creature_id])
+                coroutine.resume(creatures[debugged_creature_id].thread, "bt")
+            end
+            return
+        end
+
+        local debugger_available = creatures[debugged_creature_id] and 
+                                   creatures[debugged_creature_id].is_in_debugger
+
+        if cmd == "help" then                                   
+            print("   d<id>         attach debugger to creature <id>")
+            print("   clist         show creature list")
+            if debugger_available then
+                coroutine.resume(creatures[debugged_creature_id].thread, cmd)
+            end
+        elseif cmd == "clist" then
+            print("creatures (* = active debugger, ! = in debug mode):")
+            for id, creature in pairs(creatures) do
+                print(string.format("%s%s %d - %s", 
+                                    debugged_creature_id == id and "*" or " ",
+                                    creature.is_in_debugger and "!" or " ",
+                                    id, tostring(creature)))
+            end
+        elseif debugger_available then
+            coroutine.resume(creatures[debugged_creature_id].thread, cmd)
+        else
+            print("Huh? Try '?' for help on infon, or 'help' for help on the debugger")
+        end
+    end
+
+    function onRoundStart()
+        onRoundStart = nil
+        print("-----------------------------------------")
+        print("This server has the ldb debugger enabled.")
+        print("Type 'help' to get the debugger commands.")
+        print("-----------------------------------------")
+    end
+
+    function debug_hook(creature)
+        return not creature.is_in_debugger
+    end
 end
 
 ------------------------------------------------------------------------
@@ -377,21 +493,18 @@ function player_think(events)
                 creature.message = 'main() terminated (maybe it was killed for using too much cpu/memory?)'
             end
         else
-            if creature.debug then
-                thread_trace(creature.thread, creature.id)
-            else
-                thread_untrace(creature.thread)
-            end
-            local ok, msg = coroutine.resume(creature.thread, creature)
-            if not ok then
-                creature.message = msg
-                -- If the coroutine was interrupted for using too much
-                -- CPU, the following function call will abort the
-                -- player_think function (since no more function calls
-                -- are possible at this point). The code that caused 
-                -- too much CPU can be seen by inspecting the traceback 
-                -- that was saved in creature.message. Use 'i' in the client.
-                this_function_call_fails_if_cpu_limit_exceeded()
+            if not debug_hook or debug_hook(creature) then 
+                local ok, msg = coroutine.resume(creature.thread, creature)
+                if not ok then
+                    creature.message = msg
+                    -- If the coroutine was interrupted for using too much
+                    -- CPU, the following function call will abort the
+                    -- player_think function (since no more function calls
+                    -- are possible at this point). The code that caused 
+                    -- too much CPU can be seen by inspecting the traceback 
+                    -- that was saved in creature.message. Use 'i' in the client.
+                    this_function_call_fails_if_cpu_limit_exceeded()
+                end
             end
         end
     end

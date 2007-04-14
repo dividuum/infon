@@ -85,7 +85,9 @@ void        player_writeto(player_t *player, const void *data, size_t size);
 void        player_set_name(player_t *player, const char *name);
 player_t   *player_create(const char *name, const char *pass, const char *highlevel);
 
+void        player_round();
 void        player_think();
+void        player_sync();
 
 void        player_is_king_of_the_hill(player_t *player, int delta);
 void        player_there_is_no_king();

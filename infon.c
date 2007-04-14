@@ -107,14 +107,25 @@ int main(int argc, char *argv[]) {
     opterr = 0;
 
     int opt; 
-    while ((opt = getopt(argc, argv, ":fvw:h:r:")) != -1) {
+    while ((opt = getopt(argc, argv, ":fvx:y:r:h")) != -1) {
         switch (opt) {
-            case '?': die("you specified an unknown option -%c", optopt);
-            case ':': die("missing argument to option -%c", optopt);
+            case '?': die("you specified an unknown option -%c.", optopt);
+            case ':': die("missing argument to option -%c.", optopt);
             case 'r': renderer   = optarg;          break;
             case 'f': fullscreen = 1;               break;
-            case 'w': width      = atoi(optarg);    break;
-            case 'h': height     = atoi(optarg);    break;
+            case 'x': width      = atoi(optarg);    break;
+            case 'y': height     = atoi(optarg);    break;
+            case 'h': die("usage: %s [-r <renderer>] [-f] [-x <width>] [-y <height>] [-v] [-h] <server[:port]>\n"
+                          "\n"
+                          " -r <renderer>    - renderer to use (sdl_gui, gl_gui, ...)\n"
+                          " -x <width>       - initial screen width.\n"
+                          " -y <height>      - initial screen height.\n"
+                          " -f               - start in fullscreen mode.\n"
+                          " -v               - display version information.\n"
+                          " -h               - this help.\n"
+                          "\n"
+                          "<server[:port]>   - ip/hostname of an infon game server.\n"
+                          "                    if not port is given, 1234 is used.\n", argv[0]);
             case 'v': info(); exit(EXIT_SUCCESS);
         }
     }
@@ -140,7 +151,8 @@ int main(int argc, char *argv[]) {
     } 
 #else
     if (!host)
-        die("usage: %s <serverip[:port]>", argv[0]);
+        die("usage: %s [options] <server[:port]>\n"
+            "see %s -h for a full list of options", argv[0], argv[0]);
 #endif
 
 

@@ -98,6 +98,7 @@ function setupCreature()
     end
 
     function restart()
+        message = nil
         reload()
         _set_state("restarting")
         _restart_thread()

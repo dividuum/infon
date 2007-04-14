@@ -37,9 +37,8 @@ void die(const char *fmt, ...) {
     vsnprintf(buf, sizeof(buf), fmt, ap);
     MessageBoxA(GetActiveWindow(), buf, "Fatal Error", MB_ICONSTOP);
 #else
-    printf("--[ FATAL ERROR ]-----------\n");
     vprintf(fmt, ap);
-    printf("\n----------------------------\n");
+    printf("\n");
 #endif
     va_end(ap);
     exit(1);
