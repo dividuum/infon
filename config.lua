@@ -9,7 +9,7 @@ debugpass  = ""
 join_info  = "this message can be changed in config.lua"
 
 -- maps to rotate
-maps       = {"foo", "gpn", "water", "cn", "owl", "stripeslice" }
+maps       = {"foo", "gpn", "water", "cn", "owl", "stripeslice", "castle", "infon" }
 
 -- rules file to use. 
 rules      = "default"
