@@ -656,6 +656,7 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
     lua_register_string_constant(player->L, PREFIX);
     lua_register_player(player, "save_in_registry",     luaSaveInRegistry);
     lua_register_player(player, "linehook",             luaSetLineHook);
+    lua_register_player(player, "client_print",         luaPrint);
 
     lua_register_player(player, "suicide",              luaCreatureSuicide);
     lua_register_player(player, "set_path",             luaCreatureSetPath);
@@ -731,7 +732,6 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
         goto failed;
     }
     
-    lua_register_player(player, "print", luaPrint);
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 
     player_on_created(player);
