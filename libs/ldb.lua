@@ -1,8 +1,5 @@
 -- ldb - A Lua debugger
--- 
-local VERSION = ([[$Revision: 1.10 $]]):match":([^$]*)"
-local VERSION_DATE = ([[$Date: 2007/04/11 07:03:47 $]]):match":([^$]*)"
--- $Id: ldb.lua,v 1.10 2007/04/11 07:03:47 jbloggs Exp $
+-- $Id: ldb.lua,v 1.17 2007/04/18 21:24:24 jbloggs Exp $
 --
 -- Requires Lua 5.1
 --
@@ -11,6 +8,9 @@ local VERSION_DATE = ([[$Date: 2007/04/11 07:03:47 $]]):match":([^$]*)"
 -- disclaiming all rights and responsibilities. Do with it
 -- as you will. Caution: do not operate while under the influence
 -- of heavy machinery.
+-- 
+local VERSION = ([[$Revision: 1.17 $]]):match":([^$]*)"
+local VERSION_DATE = ([[$Date: 2007/04/18 21:24:24 $]]):match":([^$]*)"
 
 local function Memoize(func)
   return setmetatable({}, {__index = function(t, k)
@@ -24,6 +24,77 @@ local function words(s)
   return rv
 end
 
+-- PLUGIN datastructures ----------------------------------------------------
+--
+-- SPLAIN -- the help/command parser
+
+-- command[name] -> function(state, args)
+-- The command functions
+-- By convention, the functions are written in O-O style,
+-- so that `self` is the state object.
+local command = {}
+
+-- splain[name] -> string
+-- If the key is present in command[], then this is help for a
+-- command. The first line of the string *must* have the format:
+-- "args - summary". The `- ` is mandatory, but `args` and the
+-- space which follows are optional. If an argument is optional,
+-- it should be surrounded by []. By convention, argument names
+-- are written in CAPITAL LETTERS.
+--
+-- If the key is not present in command[], then this is a topic,
+-- and the first line of the string *must* have the format:
+-- "X summary" where `X` is either a `*` or a `-`. If it is
+-- a `*` then this is an "important" topic and the help system
+-- will print it first in the topics summary.
+--
+-- If there is a long description, it should be separated from
+-- the summary line by a blank line, and be indented two spaces.
+-- Please keep lines to 78 characters including the indent.
+local splain = {}
+
+-- alias[string] -> string
+-- Commands can have at most one alias, and aliases should either
+-- be a single non-alphabetic character or a short alphabetic
+-- string (one or two characters). Topics cannot have aliases.
+-- If a non-alphabetic alias is more than one character long,
+-- it will not be recognized unless followed by a space.
+local alias = {}
+
+-- HANDLER hooks 
+
+-- prehandler[string] -> function(arg2)
+-- handler[string] -> function(state, arg1, arg2)
+
+-- ldb() is always entered with two arguments, both of which are
+-- optional. When entered as an error function, the first argument
+-- will be the error object (usually a simple string message) and
+-- the second argument will usually be nil, but may be a hint from
+-- error() about which callframe is the user-visible error. When 
+-- entered as a hook function, the first argument will be one of
+-- Lua's hook strings (line, call, count, return, 'tail return').
+-- When called directly, the first argument could be anything, but
+-- all strings starting ldb_ are reserved. The only handler defined
+-- by the core system is ldb_cmd, which is used by the C glue.
+--
+-- The prehandler is primarily used by the breakpoint system, in order
+-- to continue execution as fast as possible. It is called immediately
+-- when ldb is entered, and should either return nothing/nil/false as
+-- fast as possible, or return a new arg1, arg2 pair. In the first case,
+-- ldb is not entered at all; this is used to filter unwanted hook calls.
+-- It's probably not of much use otherwise.
+--
+-- The handler is called once the debugger state has been set up, but
+-- before anything else has happened. It should either return:
+--   nil or nothing --> ldb will enter interactive mode
+--   true, value    --> ldb will return the specified value.
+-- Note the different prototypes. prehandler was deliberately stripped
+-- to the minimum possible calling interface.
+--
+local prehandler, handler = {}, {}
+
+-- STARTUP ------------------------------------------------------------------
+local ldb
 
 -- Grab debug and other globals now, in case they get modified
 local _G = getfenv()
@@ -57,10 +128,12 @@ end
 
 -- Create an id line from an info table. This is similar
 -- but not identical to debug.traceback, but it can be customized
+-- TODO: Move this into the config system.
 local id do
   local function lineno(l, pfx)
     if l and l > 0 then return pfx..tostring(l) else return "" end
   end
+  -- The default id doesn't use self
   function id(info)
     if info.what == "tail" then return "[tailcall]" end
     local segone
@@ -74,31 +147,55 @@ local id do
     end
     local segs = { ("%-8s"):format(segone) }
     segs[#segs+1] = info.name
-    segs[#segs+1] = info.short_src
-                    and ("<%s%s>"):format(info.short_src, lineno(info.linedefined, ":"))
+    local source = info.source and info.source:sub(1,1) == "@" and info.source:sub(2)
+                   or info.short_src
+    segs[#segs+1] = source and 
+                    ("<%s%s>"):format(source, lineno(info.linedefined, ":"))
     segs[#segs+1] = lineno(info.currentline, "at line ")
     return concat(segs, " ")
   end
   infofuncs.id = id
 end
 
+-- CONFIGURATION ------------------------------------------------------------
 -- This is the pseudo-environment table which will be used
 -- by all instances of the debugger. It's not actually
 -- the debugger's environment table; rather, it's bound
 -- into the metamethods for debugger contexts, but it's
 -- pretty similar. A future version may allow multiple
 -- debuggers with different environments.
--- local env = prefer"ldb-config" or {}
-local env = {
-    input  = coroutine.yield
-}
+local env = prefer"ldb-config" or {}
+if type(env) ~= "table" then
+  print"ldb-config.lua must return a table of configuration settings"
+  print"Ignoring ldb-config and using defaults"
+  env = {}
+end
+-- Make it look like the config was loaded even if it wasn't.
+package.loaded["ldb-config"] = env
+
+-- Add the configuration hooks
+env.splain = splain
+env.alias = alias
+env.command = command
+env.prehandler = prehandler
+env.handler = handler
+
+-- Set up the default configuration
 env.PROMPT = env.PROMPT   or "(ldb) "
 env.PROMPT2 = env.PROMPT2 or "  >>> "
 env.input = env.input or function(prompt) io.write(prompt); return io.read"*l" end
 env.output = env.output or print
+env.error = env.error or env.output
+do
+  local function donothing() end
+  local function selfidentity(self, ...) return ... end
+  env.enterframe = env.enterframe or selfidentity
+  env.leave = env.leave or selfidentity
+  env.edit = env.edit or donothing
+  env.load_plugins = env.load_plugins or donothing
+end
 env.g = _G
--- ? Should we get this out of env instead of putting it in?
-env.id = id
+env.id = env.id or id
 
 setmetatable(env, {__index = _G})
 
@@ -112,6 +209,7 @@ setmetatable(env, {__index = _G})
 -- we knew about.
 --
 
+--[[
 local function getoffset(sentinel)
   for base = 3, 1e6 do
     if getinfo(base, "f").func == sentinel then
@@ -128,6 +226,29 @@ local function getoffset(sentinel)
     end
   end
 end
+]]
+
+local function getoffset(sentinel)
+  for base = 3, 1e6 do
+    if getinfo(base, "f").func == sentinel then return base end
+  end
+end
+
+local function geterroffset(sentinel)
+  local base = getoffset(sentinel)
+  if base then
+    local rv = 0
+    local _, val = getlocal(base+1, 2)
+    if val == debug and not getlocal(base+1, 3) then
+      rv = rv + 1
+    end
+    local errfunc = getinfo(base+1+rv, "f").func
+    if errfunc == error or errfunc == assert then
+      rv = rv + 1
+    end
+    return base - 1, rv
+  end
+end
 
 -- Create the debugger State, which encapsulates everything needed
 -- during a single invocation of the debugger. This was called
@@ -138,22 +259,57 @@ end
 -- Such things could probably go into env; we'll see when I
 -- actually write the breakpoint handling stuff.
 
+-- FIXME There's only one local being protected by this whole
+-- do block, now that I've hiked statemeta out of it. But
+-- reindenting will create too big a diff for now. Also,
+-- change statemeta to statemethods.
+
+local statemeta = {}; statemeta.__index = statemeta
+
 local State do
   -- Methods on the state object
-  local statemeta = {}; statemeta.__index = statemeta
-  -- The double indirection here is to allow customization of the functions
+  -- The double indirection here is to allow run-time customization
+  -- of the functions. Maybe it's dumb...
+  --
+  -- CUSTOMIZABLE CONFIGURATION FUNCTIONS
+  -- We reflect the configurable functions into the state object,
+  -- throwing away self (in most cases) to make the state object's
+  -- interface consistent.
+  --
+  -- input(prompt) should display prompt to the user and return one
+  -- line of input.
   function statemeta:input(prompt) return self.var.input(prompt) end
+  -- output should display its arguments in a fashion similar to
+  -- print(). There is no guarantee about the arguments; they may
+  -- be simple values or multi-line help-text.
   function statemeta:output(...) return self.var.output(...) end
-  -- No difference from output, but there might be someday
-  function statemeta:error(...) return self.var.output(...) end
-  function statemeta:edit(filename, line) 
-    local edit = self.var.edit
-    if edit then
-      edit(filename, line)
-      return true
-    end
+  -- error should display its argument in a fashion similar to print.
+  -- Indeed, it's possible to use the same function for output and
+  -- error; however, it may be desirable to distinguish style in
+  -- some way.
+  function statemeta:error(...)
+    self.var.error(...)
+    if not self.ignore_error then return false end
   end
+  -- edit is called to implement the edit command.
+  -- IMPORTANT: edit must return true if it handled the edit; otherwise,
+  -- false and an error message. If nothing or only false is returned,
+  -- ldb will produce a "no editor configured" message.
+  function statemeta:edit(name, line) return self.var.edit(name, line) end
+  -- enterframe is called whenever the debugger enters a different call frame
+  function statemeta:enterframe() return self.var.enterframe(self) end
+  -- leave is called with a value when control is about to return to the program
+  -- the value should be returned as an argument
+  function statemeta:leave(val) return self.var.leave(self, val) end
+  -- id is called to produce an id line for a stackframe.
   function statemeta:id(info) return self.var.id(info) end
+
+  -- END OF CUSTOMIZABLE INTERFACE
+
+  -- Get the offset using getoffset and the cached erroffset
+  function statemeta:getoffset()
+    return getoffset(self.sentinel) + self.erroffset - 1
+  end
 
   -- This is used to read expressions, chunks, etc. from commands
   function statemeta:getchunk(cmd)
@@ -179,9 +335,8 @@ local State do
 
   -- Announce where we are in the callframe
   function statemeta:announce()
-    if self.interactive then
-      self:output( ("*%2d %s"):format(self.here.level, self.here.id) )
-    end
+    self:enterframe()
+    self:output( ("*%2d %s"):format(self.here.level, self.here.id) )
   end
 
   -- The proxy stack contains information about the current stack
@@ -193,9 +348,7 @@ local State do
   -- the Lua level, but it might not hurt to remove empty tailcall
   -- frames from the level count. Each level contains the full
   -- information returned by debug.getinfo (except available
-  -- breakpoints), plus some computed information. The key element
-  -- is 'env' which holds a table usable as an environment table for
-  -- evaluations at that level.
+  -- breakpoints), plus some computed information.
 
   -- We export the stack as a (memoised) array of proxy info
   -- objects, which are defined here.  The proxy object can be
@@ -254,6 +407,10 @@ local State do
   -- alternative to the local context. A few debugger internals
   -- are exported.
   --
+  -- For historical reasons, the context is actually `state.var`,
+  -- which matches the current context being `state.here.var`. It
+  -- might have been better to have called it `context`
+  --
   -- Any other key is resolved in the `env` table and then in the
   -- globals table, but setting is always done in the `env` table.
   --
@@ -264,7 +421,7 @@ local State do
   -- done with `g` (to avoid typos, mostly).
   -- 
 
-  function statemeta:makevar(env)
+  function statemeta:makecontext(env)
     local getter, setter = {}, {}
     function getter.here()    return self.here   end
     function getter.stack()   return self.stack  end
@@ -293,10 +450,10 @@ local State do
   end
 
   -- This function builds the local context from information
-  -- hopefully cached by Context.
+  -- hopefully cached by State.
   --
-  -- TODO Construct the context lazily, maybe
-  local function makeinfovar(info, sentinel)
+  -- TODO Construct the context lazily
+  local function makeinfovar(info, sentinel, erroffset)
     info.var = setmetatable({}, {
       __index = function(_, key)
         local name, val
@@ -305,14 +462,14 @@ local State do
           if index < 0 then
             name, val = getupvalue(info.func, -index)
           else
-            name, val = getlocal(getoffset(sentinel) + info.level, index)
+            name, val = getlocal(getoffset(sentinel) + erroffset + info.level, index)
           end
         else
           local word, index = key:match"^(%l+)(%d+)$"
           if word == "upval" then
             name, val = getupvalue(info.func, tonumber(index))
           elseif word == "local" then
-            name, val = getlocal(getoffset(sentinel) + info.level,
+            name, val = getlocal(getoffset(sentinel) + erroffset + info.level,
                                        tonumber(index))
           end
           if not name then val = getfenv(info.func)[key] end
@@ -325,14 +482,14 @@ local State do
           if index < 0 then
             setupvalue(info.func, -index, val)
           else
-            setlocal(getoffset(sentinel) + info.level, index, val)
+            setlocal(getoffset(sentinel) + erroffset + info.level, index, val)
           end
         else
           local word, index = key:match"^(%l+)(%d+)$"
           if word == "upval" then
             setupvalue(info.func, tonumber(index), val)
           elseif word == "local" then
-            setlocal(getoffset(sentinel) + info.level, tonumber(index), val)
+            setlocal(getoffset(sentinel) + erroffset + info.level, tonumber(index), val)
           else
             getfenv(info.func)[key] = val
           end
@@ -342,12 +499,16 @@ local State do
   end
 
   function State(sentinel, env)
-    local base = getoffset(sentinel)
+    local base, erroffset = geterroffset(sentinel)
+    --[[ DEBUG
+      print ("State", base, erroffset)
+    --]]
     local self
     if base then
-      self = setmetatable({sentinel = sentinel}, statemeta)
+      base = base + erroffset
+      self = setmetatable({sentinel = sentinel, erroffset = erroffset}, statemeta)
       self.stack = self:proxystack()
-      self.var = self:makevar(env)
+      self.var = self:makecontext(env)
       for level = 1, 1e6 do
         local info = getinfo(base + level, "nSluf")
         if not info then break end
@@ -369,7 +530,7 @@ local State do
             end
           end
           info.visible = visible
-          makeinfovar(info, sentinel)
+          makeinfovar(info, sentinel, erroffset)
         end -- if func (not a tailcall)
       end -- for level
       self.here = self.stack[1]
@@ -378,40 +539,7 @@ local State do
   end
 end
 
--- The splain system with (primitive) command parser
---
--- command[name] -> function(state, args)
--- The command functions
--- By convention, the functions are written in O-O style,
--- so that `self` is the state object.
-local command = {}
-
--- splain[name] -> string
--- If the key is present in command[], then this is help for a
--- command. The first line of the string *must* have the format:
--- "args - summary". The `- ` is mandatory, but `args` and the
--- space which follows are optional. If an argument is optional,
--- it should be surrounded by []. By convention, argument names
--- are written in CAPITAL LETTERS.
---
--- If the key is not present in command[], then this is a topic,
--- and the first line of the string *must* have the format:
--- "X summary" where `X` is either a `*` or a `-`. If it is
--- a `*` then this is an "important" topic and the help system
--- will print it first in the topics summary.
---
--- If there is a long description, it should be separated from
--- the summary line by a blank line, and be indented two spaces.
--- Please keep lines to 78 characters including the indent.
-local splain = {}
-
--- alias[string] -> string
--- Commands can have at most one alias, and aliases should either
--- be a single non-alphabetic character or a short alphabetic
--- string (one or two characters). Topics cannot have aliases.
--- If a non-alphabetic alias is more than one character long,
--- it will not be recognized unless followed by a space.
-local alias = {}
+-- SPLAIN -- Command parser and help system ---------------------------------
 
 -- Any unambiguous prefix of a command is allowed. Aliases must be
 -- typed exactly, but may be otherwise ambiguous
@@ -430,8 +558,8 @@ local resolve_command = Memoize(function (cmd)
   return possible or "Unknown"
 end)
 
-local function do_a_command(self, input)
-  local dot, args = input:match"%s*(%.?)%s*(.*)"
+function statemeta:do_a_command(input)
+  local bang, dot, args = input:match"%s*(!?)%s*(%.?)%s*(.*)"
   if args ~= "" then
     local cmd = args:match"^%W"
     if cmd then
@@ -449,19 +577,21 @@ local function do_a_command(self, input)
       end
     end
     self.context = dot == "" and self.here or self
+    self.ignore_error = bang == "!"
     return command[resolve_command[cmd]](self, args)
   end
 end
 
 -- These save a couple of tests.
 function command:Ambiguous()
-  self:error "Ambiguous command"
+  return self:error "Ambiguous command"
 end
 
 function command:Unknown()
-  self:error "Huh? Try 'help'"
+  return self:error "Huh?"
 end
 
+-- CORE COMMANDS ------------------------------------------------------------
 splain.backtrace = "- print a backtrace"
 alias.backtrace = "bt"
 
@@ -473,14 +603,16 @@ function command:backtrace()
 end
 
 splain.up = "[N] - move up N levels, default 1"
+alias.up = 'u'
 function command:up(i)
   local here = self.here + (tonumber(i) or 1)
   if here then self.here = here end
 end
 
 splain.down = "[N] - move down N levels, default 1"
+alias.down = 'd'
 function command:down(i)
-  local here = self.here - (tonumber(i) or 1) or self.here
+  local here = self.here - (tonumber(i) or 1)
   if here then self.here = here end
 end
 
@@ -499,10 +631,10 @@ function command:edit(filename)
   end
   if filename then
     if not self:edit(filename, lineno) then
-      self:error "No editor configured"
+      return self:error "No editor configured"
     end
   else
-    self:error "No current file"
+    return self:error "No current file"
   end
 end
 
@@ -527,7 +659,7 @@ function command:show(cmd)
   local currentlevel = self.here.level
   local info = self[currentlevel]
   if info then
-    local level = getoffset(self.sentinel) + currentlevel
+    local level = self:getoffset() + currentlevel
     local func = info.func
     if func == nil then
       self:output"[tailcall]"
@@ -596,15 +728,15 @@ splain.set = [[VAR EXPR - set debugger variable VAR to EXPR
 function command:set(cmd)
   local var, chunk = cmd:match"(%S+)%s*(.*)"
   if not var:match"^[%a_][%w_]*$" then
-    self:error "Only simple variable names can be set"
+    return self:error "Only simple variable names can be set"
   elseif chunk == "" then
-    self:error "No value specified for set"
+    return self:error "No value specified for set"
   else
     local ok, val = self:do_in_context(self:getchunk("return "..chunk))
     if ok then
       self.var[var] = val
     else
-      self:error(val)
+      return self:error(val)
     end
   end
 end
@@ -636,30 +768,60 @@ function command:exec(cmd)
   if ok then
     if self.interactive then self:output"Ok!" end
   else
-    self:error(err)
+    return self:error(err)
   end
 end
 
-splain.continue = [=[[EXPR] - continue execution
+splain.quit = [=[[EXPR] - return from ldb, with an optional value
 
-  If an EXPR is provided, it will be returned from the call to ldb (which is
-  only useful if ldb is invoked directly).  Currently, only a single value may
-  be returned.
+  Causes the current invocation of ldb to return. If an EXPR is provided,
+  it will be returned from the call to ldb (which is only useful if ldb
+  is invoked directly).  Currently, only a single value may be returned.
+
+  If the evaluation of EXPR throws an error and the command was not
+  being executed interactively, ldb will return <false, error message>
 ]=]
-alias.continue = 'q'  -- backwards compatibility
-function command:continue(cmd)
-  if cmd == "" then
-    return true
-  else
+function command:quit(cmd)
+  if cmd:match"%S" then
     local ok, val = self:do_in_context(self:getchunk("return "..cmd))
     if ok then
       return true, val
+    elseif not self.interactive then
+      return true, false, val
     else
-      self:error(val)
+      return self:error(val)
     end
   end
+  return true
 end
 
+splain["if"] = [=[EXPR - return from ldb if EXPR is a true value
+
+  Causes the current invocation of ldb to return with value EXPR
+  if EXPR evaluates to a value other than `false` or `nil`. If an error
+  is thrown, the invocation does not return.
+]=]
+command["if"] = function(self, cmd)
+  local ok, val = self:do_in_context(self:getchunk("return "..cmd))
+  if ok and val then return ok, val end
+end
+
+splain.unless = [=[EXPR - return from ldb if EXPR is `false` or `nil`
+
+  Causes the current invocation of ldb to return (with no return value)
+  if EXPR evalutes to `false` or `nil`, or throws an error.
+]=]
+function command:unless(cmd)
+  local ok, val = self:do_in_context(self:getchunk("return "..cmd))
+  return not ok or not val
+end
+
+splain.continue = [[- return from ldb]]
+alias.continue = 'c'
+function command:continue()
+  return true
+end
+  
 -- Topics
 
 splain.intro = [[* quick introduction to ldb
@@ -895,7 +1057,7 @@ do
       end
     elseif cmd == "" then
       for cmd, descr in sorted(function(key) return command[key] end) do
-        local arg, desc = descr:match"^([^-\n]*) ?%- ([^\n]*)"
+        local arg, desc = descr:match"^([^-\n]-) ?%- ([^\n]*)"
         self:output(align( ("%-3s%s"):format(alias[cmd] or "", cmd.." "..arg),
                               desc) )
       end
@@ -908,29 +1070,57 @@ do
   end
 end
 
-return function (err, cmds)
-  if err then print(err) end
-  local function sentinel()
+-- Do a single command and return
+function handler:ldb_cmd(token, cmd)
+  self:do_a_command(cmd)
+  return true
+end
+
+function env.ldb (arg1, arg2)
+  local check = prehandler[arg1]
+  if check then
+    local newarg1, newarg2 = check(arg2)
+    if not newarg1 then return end
+    arg1 = newarg1; arg2 = newarg2
+  end
+  local function sentinel(arg1, arg2)
     local self = State(sentinel, env)
     assert(self, "Couldn't find myself in the backtrace!")
-    if type(cmds) == "table" then
-      for _, input in ipairs(cmds) do
-        local flag, val = do_a_command(self, input)
-        if flag then return val end
+    self.var.arg1 = arg1
+    self.var.arg2 = arg2
+    local f = handler[arg1]
+    if f then
+      local flag, val = f(self, arg1, arg2)
+      if flag then return self:leave(val) end
+    else
+      if type(arg2) == "string" then
+        local flag, val = self:do_a_command(arg2)
+        if flag then return self:leave(val) end
+      elseif type(arg2) == "table" then
+        for _, cmd in ipairs(arg2) do
+          local flag, val = self:do_a_command(cmd)
+          if flag ~= nil then return self:leave(val) end
+        end
       end
+      if arg1 then self:output(arg1) end
     end
     self.interactive = true
-    local level
+    local here
     while true do
-      if level ~= self.here.level then
+      if here ~= self.here then
         self:announce()
-        level = self.here.level
+        here = self.here
       end
-      local flag, val = do_a_command(self, self:input(env.PROMPT) or "continue")
-      if flag then return val end
+      local flag, val = self:do_a_command(self:input(env.PROMPT) or "continue")
+      if flag then return self:leave(val) end
     end
   end
   -- the tailcall will put a pseudoframe on the stack, but it
   -- should still be skipped over by getinfo
-  return sentinel()
+  return sentinel(arg1, arg2)
 end
+
+-- In case we were started in some other way than "require'ldb'":
+package.loaded.ldb = env.ldb
+env.load_plugins()
+return env.ldb
