@@ -1,3 +1,4 @@
+-- Example for the state API. 
 needs_api "state"
 
 function bot()
