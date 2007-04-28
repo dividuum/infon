@@ -71,6 +71,7 @@ int creature_id(const creature_t *creature) {
 }
 
 creature_t *creature_by_id(int vm_id) {
+    if (vm_id < 0) return NULL;
     const int hash  = HASHVALUE(vm_id);
     creature_t *creature = creature_hash[hash];
     while (creature) {
