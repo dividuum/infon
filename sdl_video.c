@@ -143,10 +143,12 @@ void video_hline(Sint16 x1, Sint16 x2, Sint16 y, Uint8 r, Uint8 g, Uint8 b, Uint
     hlineRGBA(screen, x1, x2, y, r, g, b, a);        
 }
 
-void video_line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2) {
-    //printf("%d %d %d %d\n", x1, y1, x2, y2);
-    //sge_LineAlpha(screen, x1, y1, x2, y2, SDL_);
-    sge_AAmcLine(screen, x1, y1, x2, y2, 0, 0xFF, 0,  0xFF, 0, 0);
+void video_line_green_red(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2) {
+    sge_AAmcLine(screen, x1, y1, x2, y2, 0, 0xFF, 0, 0xFF, 0, 0);
+}
+
+void video_line_green(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2) {
+    sge_AAmcLine(screen, x1, y1, x2, y2, 0, 0xFF, 0, 0, 0x9F, 0);
 }
 
 void video_write(Sint16 x, Sint16 y, const char *text) {

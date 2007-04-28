@@ -231,14 +231,25 @@ static void draw_creature(const client_creature_t *creature, void *opaque) {
         video_tiny(x, y + 38, tmp);
     }
         
-    if (creature->state == CREATURE_ATTACK) {
-        const client_creature_t *target = infon->get_creature(creature->target);
-        if (target) { 
-            video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3 + offset_x, Y_TO_SCREENY(target->y) - 3 + offset_y);
-            video_line(x + 6, y + 6, X_TO_SCREENX(target->x) - 3 + offset_x, Y_TO_SCREENY(target->y) + 3 + offset_y);
-            video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + offset_x, Y_TO_SCREENY(target->y) - 3 + offset_y);
-            video_line(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + offset_x, Y_TO_SCREENY(target->y) + 3 + offset_y);
+    switch (creature->state) {
+        case CREATURE_ATTACK: {
+            const client_creature_t *target = infon->get_creature(creature->target);
+            if (target) { 
+                video_line_green_red(x + 6, y + 6, X_TO_SCREENX(target->x) - 3 + offset_x, Y_TO_SCREENY(target->y) - 3 + offset_y);
+                video_line_green_red(x + 6, y + 6, X_TO_SCREENX(target->x) - 3 + offset_x, Y_TO_SCREENY(target->y) + 3 + offset_y);
+                video_line_green_red(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + offset_x, Y_TO_SCREENY(target->y) - 3 + offset_y);
+                video_line_green_red(x + 6, y + 6, X_TO_SCREENX(target->x) + 3 + offset_x, Y_TO_SCREENY(target->y) + 3 + offset_y);
+            }
+            break;
         }
+        case CREATURE_FEED: {
+            const client_creature_t *target = infon->get_creature(creature->target);
+            if (target) 
+                video_line_green(x + 6, y + 6, X_TO_SCREENX(target->x) + offset_x, Y_TO_SCREENY(target->y) + offset_y);
+            break;
+        }
+        default: 
+            ;
     }
 }
 

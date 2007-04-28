@@ -256,8 +256,8 @@ function Creature:main_restarter()
         if self.onThreadFatal then
             wrap = function(func, ...)
                 while true do
-                    local _, msg = pcall(func, ...)
-                    if not self:onThreadFatal(msg) then break end
+                    local _, msg = epcall(_TRACEBACK, func, ...)
+                    if not self:onThreadFatal("main failed: " .. msg) then break end
                 end
                 error("thread terminated")
             end
