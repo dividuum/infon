@@ -5,6 +5,12 @@ listenport = 1234
 -- password for the 'shell' command. disabled if empty or missing.
 debugpass  = ""
 
+-- password to disable no-client kicking. by default, a player is
+-- kicked, once no client is connected for 120 seconds. using this
+-- password, players can disable this limit. disabled if empty or 
+-- missing.
+nokickpass = ""
+
 -- message displayed every 10 seconds
 join_info  = "this message can be changed in config.lua"
 
