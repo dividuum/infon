@@ -274,6 +274,21 @@ function Client:showscores()
     self:writeln("-------+-----------+------+---------+-----+-----+----+-------------")
 end
 
+function Client:nokick() 
+    if not config.nokickpass or config.nokickpass == "" then
+        self:writeln("no kick mode disabled. sorry")
+    else
+        if not self:rate_limit("no kicking", 3000) then return end
+        self:write("enter nokick password: ")
+        if self:readln() == config.nokickpass then
+            player_set_no_client_kick_time(self:get_player(), 0)
+            self:writeln("no-client kicking disabled. hurray!")
+        else
+            self:writeln("wrong password")
+        end
+    end
+end
+
 function Client:info()
     self:writeln("-------------------------------------------------")
     self:writeln("Server Information")
@@ -354,6 +369,8 @@ function Client:mainmenu()
                 self:execute("onInput" .. input .. "()", "calling onInput" .. input)
             elseif input == "k" then
                 self:killmenu()
+            elseif input == "nk" then
+                self:nokick()
             elseif input == "lio" then
                 self:write("limit interactive output to local connection? [Y/n] ")
                 self.local_output = self:readln() ~= "n"
@@ -383,6 +400,7 @@ function Client:mainmenu()
                 self:writeln("lio    - limit interactive output")
             --  self:writeln("fwd    - set unknown command forward")
                 self:writeln("prompt - change prompt")
+                self:writeln("nk     - disable no-client kicking")
                 self:writeln("bb     - hex batch (load precompiled code)")
                 self:writeln("0 - 9  - execute onInputX()")
                 self:writeln("info   - server information")
