@@ -244,12 +244,12 @@ end
 
 function Client:rate_limit(action, every)
     local time, last = real_time(), self.last_action[action]
-    if not last or time > last + every then 
+    if not last or last + every <= time then 
         self.last_action[action] = real_time()
         return true
     else
-        self:writeln(string.format("%s too fast. please wait %.1fs...", 
-                                   action, (every - (time - last)) / 1000))
+        self:writeln(string.format("%s too fast. please wait %d seconds...", 
+                                   action, (every - (time - last))))
         return false
     end
 end

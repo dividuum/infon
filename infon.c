@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 screen_saver_start:
 #endif
 
-    srand(time(0));
+    srand(time(NULL));
     gettimeofday(&start, NULL);
 
     if (!renderer_init(renderer)) 

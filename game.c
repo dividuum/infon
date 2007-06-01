@@ -32,7 +32,8 @@
 #include "misc.h"
 
 static int            should_end_game = 0;
-static struct timeval server_start, game_start;
+static struct timeval game_start;
+static time_t         server_start;
 static char           intermission[256] = {0};
 static int            realtime = 1;
 
@@ -155,7 +156,7 @@ static int luaHexDecode(lua_State *L) {
 }
 
 void game_init() {
-    gettimeofday(&server_start, NULL);
+    server_start = time(NULL);
 
     lua_register(L, "game_end",         luaGameEnd);
     lua_register(L, "game_time",        luaGameTime);
@@ -235,7 +236,7 @@ void game_one_game() {
         lasttick = tick;
 
         // Realtime update
-        real_time = get_tick(&server_start);
+        real_time = time(NULL) - server_start; 
         
         // GC
         lua_gc(L, LUA_GCSTEP, 1);

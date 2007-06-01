@@ -45,6 +45,7 @@ __attribute__((packed))
 #define PACKET_ROUND             9
 #define PACKET_INTERMISSION     10
 #define PACKET_WELCOME_MSG      32
+#define PACKET_MASTER_PING     253
 #define PACKET_START_COMPRESS  254
 #define PACKET_HANDSHAKE       255
     uint8_t  data[256];

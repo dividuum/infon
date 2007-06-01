@@ -23,7 +23,7 @@
 -----------------------------------------------------------
 
 function Client:joinmenu()
-    if not self:rate_limit("joining", 3000) then return end
+    if not self:rate_limit("joining", 3) then return end
 
     self:writeln("------------------------------")
     local numplayers = 0
@@ -92,7 +92,7 @@ function Client:partmenu()
 end
 
 function Client:namemenu() 
-    if not self:rate_limit("changing name", 1000) then return end
+    if not self:rate_limit("changing name", 2) then return end
 
     self:write("Player Name: ")
     if not self:set_name(self:readln()) then
@@ -101,7 +101,7 @@ function Client:namemenu()
 end
 
 function Client:colormenu() 
-    if not self:rate_limit("changing color", 1000) then return end
+    if not self:rate_limit("changing color", 2) then return end
 
     self:write("color (0 - 255): ")
     local color = self:readln()
@@ -202,7 +202,7 @@ function Client:shell()
             self:writeln("password must be set in config.lua")
             return
         end
-        if not self:rate_limit("entering the shell", 5000) then return end
+        if not self:rate_limit("entering the shell", 5) then return end
         self:write("password: ")
         ok = self:readln() == config.debugpass 
     end
@@ -278,7 +278,7 @@ function Client:nokick()
     if not config.nokickpass or config.nokickpass == "" then
         self:writeln("no kick mode disabled. sorry")
     else
-        if not self:rate_limit("no kicking", 3000) then return end
+        if not self:rate_limit("no kicking", 3) then return end
         self:write("enter nokick password: ")
         if self:readln() == config.nokickpass then
             player_set_no_client_kick_time(self:get_player(), 0)
@@ -290,11 +290,13 @@ function Client:nokick()
 end
 
 function Client:info()
+    local clients, players, creatures = server_info()
     self:writeln("-------------------------------------------------")
     self:writeln("Server Information")
     self:writeln("-------------------+-----------------------------")
+    self:writeln("server name        | " .. (config.servername  or 'default server'))
     self:writeln("version            | " .. GAME_NAME)
-    self:writeln("uptime             | " .. string.format("%ds", real_time() / 1000))
+    self:writeln("uptime             | " .. string.format("%ds", real_time()))
     self:writeln("cpu usage          | " .. os.clock() .. "s")
     self:writeln("memory             | " .. string.format("%d", collectgarbage("count")) .. "kb")
     self:writeln("traffic            | " .. server_get_traffic())
@@ -304,6 +306,10 @@ function Client:info()
     self:writeln("joined players     | " .. stats.num_players)
     self:writeln("played maps        | " .. stats.num_maps)
     self:writeln("code executions    | " .. stats.num_exec)
+    self:writeln("-------------------+------------------------------")
+    self:writeln("current players    | " .. players)
+    self:writeln("current clients    | " .. clients)
+    self:writeln("current creatures  | " .. creatures)
     self:writeln("-------------------+------------------------------")
     local w, h = world.level_size()
     self:writeln("rules              | " .. config.rules)
@@ -502,13 +508,24 @@ function ServerMain()
     scroller_add("Welcome to " .. GAME_NAME .. "!")
                         
     local info_time = game_time()
+    local ping_time = -10000
     while true do
+        -- Add info message to the scroller
         if game_time() > info_time + 10000 then
            info_time = game_time() 
            if config.join_info and config.join_info ~= "" then
                scroller_add(config.join_info)
            end
         end
+
+        -- Announce this server to the master server.
+        if config.master_ip and real_time() > ping_time + 60 then
+            ping_time = real_time()
+            server_ping_master(config.master_ip, 
+                               config.master_port or 1234, 
+                               config.servername  or 'default server')
+        end
+
         coroutine.yield()
     end
 end

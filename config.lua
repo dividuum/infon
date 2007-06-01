@@ -93,7 +93,7 @@ debugger = false
 -- Things to do once after the first game started
 --
 -- function autoexec()
---     start_bot{ source   = "bots/easybot.lua",
+--     start_bot{ source   = "contrib/bots/easybot.lua",
 --                name     = "foo",
 --                password = "secret",
 --                api      = "state" }
@@ -107,4 +107,10 @@ debugger = false
 -- function check_name_password(user, pass)
 -- end
 
+-- Uncomment the following lines to announce your
+-- server to the Master Server at infon.dividuum.de.
+-- This will send a tiny UDP packet every minute.
+--
+-- master_ip  = '217.28.96.154' -- infon.dividuum.de
+-- servername = 'An Infon Server'
 
