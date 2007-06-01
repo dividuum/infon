@@ -80,14 +80,28 @@ static void handle_events() {
                         if (event.key.keysym.mod & KMOD_ALT)
                             video_fullscreen_toggle();
                         break;
-                    case SDLK_F9:  
-                        if (--highlight_player < -1)
-                            highlight_player = infon->max_players;
+                    case SDLK_F9: {
+                        int new_highlight = highlight_player;
+                        do {
+                            if (--new_highlight < -1)
+                                new_highlight = infon->max_players - 1;
+                        } while (new_highlight != highlight_player &&
+                                 new_highlight != -1 && 
+                                 !infon->get_player(new_highlight));
+                        highlight_player = new_highlight;
                         break;
-                    case SDLK_F10:  
-                        if (++highlight_player >= infon->max_players)
-                            highlight_player = -1;
+                    }
+                    case SDLK_F10: {
+                        int new_highlight = highlight_player;
+                        do {
+                            if (++new_highlight >= infon->max_players)
+                                new_highlight = -1;
+                        } while (new_highlight != highlight_player &&
+                                 new_highlight != -1 && 
+                                 !infon->get_player(new_highlight));
+                        highlight_player = new_highlight;
                         break;
+                    }
                     case SDLK_F11: send_events ^= 1; 
                                    sdl_scroll_message(send_events ? "Forwarding input" 
                                                                   : "Stopped forwarding input"); 
@@ -339,7 +353,14 @@ static void draw_player_row() {
 
         // Name / Punkte
         static char buf[18];
-        snprintf(buf, sizeof(buf), "%2d. %4d %s", n + 1, player->score, player->name);
+        size_t namelen = strlen(player->name);
+        int offset = 0;
+        if (namelen > 9) {
+            offset = (render_real_time / 500) % ((namelen - 8)*2);
+            if (offset >= (namelen - 8))
+                offset  = (namelen - 8)*2-1 - offset;
+        }
+        snprintf(buf, sizeof(buf), "%2d. %4d %s", n + 1, player->score, player->name + offset);
         video_write(player_displayed * 128 + 16,
                     video_height() - 30, 
                     buf);
