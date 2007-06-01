@@ -35,6 +35,8 @@
 #include "misc.h"
 
 static creature_t creatures[MAXCREATURES];
+static int        num_creatures = 0;
+
 #define CREATURE_USED(creature) (!!((creature)->player))
 
 #define HASHTABLE_SIZE  ((MAXCREATURES) * 4)
@@ -896,6 +898,8 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     if (!creature)
         return NULL;
 
+    num_creatures++;
+
     memset(creature, 0, sizeof(creature_t));
 
     creature->vm_id        = next_free_vm_id++;
@@ -935,6 +939,8 @@ void creature_kill(creature_t *creature, creature_t *killer) {
 
     path_delete(creature->path);
     creature->player = NULL;
+
+    num_creatures--;
 
     const int hash = HASHVALUE(creature->vm_id);
     creature_t *tmp = creature_hash[hash];
@@ -1017,13 +1023,17 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
     server_send_packet(&packet, client);
 }
 
+int creature_num_creatures() {
+    return num_creatures;
+}
+
 void creature_init() {
     for (int i = 0; i < MAXCREATURES; i++) {
         creature_t *creature = &creatures[i];
         creature->player = NULL;
     }
-
     next_free_vm_id = 0;
+    assert(num_creatures == 0);
 }
 
 void creature_shutdown() {

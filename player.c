@@ -42,6 +42,8 @@
 #define PLAYER_USED(player) (!!((player)->L))
 
 static player_t players[MAXPLAYERS];
+static int      num_players = 0;
+
 static player_t *king_player   = NULL;
 
 void player_change_score(player_t *player, int scoredelta, const char *reason) {
@@ -734,6 +736,8 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
     
     player_to_network(player, PLAYER_DIRTY_ALL, SEND_BROADCAST);
 
+    num_players++;
+    
     player_on_created(player);
     return player;
 
@@ -755,6 +759,8 @@ void player_destroy(player_t *player) {
 
     lua_close(player->L);
     player->L = NULL;
+
+    num_players--;
     
     player_to_network(player, PLAYER_DIRTY_ALIVE, SEND_BROADCAST);
 }
@@ -1218,6 +1224,10 @@ static int luaPlayerExecute(lua_State *L) {
     const char *name = luaL_checkstring(L, 4);
     lua_pushboolean(L, player_execute_code(player, client, code, codelen, name));
     return 1;
+}
+
+int player_num_players() {
+    return num_players;
 }
 
 void player_init() {

@@ -46,11 +46,15 @@
 #include "misc.h"
 #include "game.h"
 #include "creature.h"
+#include "pinger.h"
 
 #define CLIENT_USED(client) ((client)->in_buf)
 
 static client_t *guiclients = NULL;
+
 static client_t  clients[MAXCLIENTS];
+static int       num_clients = 0;
+
 static client_t *output_client = NULL;
 
 static int       traffic       = 0;
@@ -118,6 +122,8 @@ client_t *server_accept(int fd, const char *address) {
     client->is_gui_client = 0;
     client->next_gui = NULL;
     client->prev_gui = NULL;
+
+    num_clients++;
 
     // Annehmen
     lua_pushliteral(L, "on_client_accepted");
@@ -362,6 +368,8 @@ void server_destroy(client_t *client, const char *reason) {
             guiclients = client->next_gui;
         }
     }
+
+    num_clients--;
     
 #ifndef NO_CONSOLE_CLIENT    
     if (fd != STDIN_FILENO)
@@ -518,6 +526,22 @@ static int luaSetupListener(lua_State *L) {
     return 1;
 }
 
+static int luaPingMaster(lua_State *L) {
+    ping_master(luaL_checkstring(L, 1), luaL_checklong(L, 2),
+                luaL_checkstring(L, 3), 
+                server_num_clients(), 
+                player_num_players(),
+                creature_num_creatures());
+    return 0;
+}
+
+static int luaServerInfo(lua_State *L) {
+    lua_pushnumber(L, server_num_clients());
+    lua_pushnumber(L, player_num_players());
+    lua_pushnumber(L, creature_num_creatures());
+    return 3;
+}
+
 void server_tick() {
     lua_set_cycles(L, 0xFFFFFF);
     
@@ -543,6 +567,10 @@ void server_tick() {
     }
 }
 
+int server_num_clients() {
+    return num_clients;
+}
+
 void server_init() {
 #ifdef WIN32
     WSADATA wsa;
@@ -564,8 +592,9 @@ void server_init() {
     lua_register(L, "cprint",                   luaClientPrint);
     lua_register(L, "server_start_writer",      luaStartFileWriter);
     lua_register(L, "server_get_traffic",       luaGetTraffic);
+    lua_register(L, "server_ping_master",       luaPingMaster);
+    lua_register(L, "server_info",              luaServerInfo);
     lua_register(L, "setup_listener",           luaSetupListener);
-
 }
 
 void server_game_end() {

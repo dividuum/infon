@@ -95,6 +95,7 @@ int         creature_attack_distance(const creature_t *creature);
 
 void        creature_kill_all_players_creatures(player_t *player);
 void        creature_moveall(int delta);
+int         creature_num_creatures();
 
 /* Network */
 void        creature_send_initial_update(client_t *client);

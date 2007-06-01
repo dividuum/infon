@@ -45,8 +45,9 @@
 
 lua_State *L;
 
-int real_time   = 0;
-int game_time   = 0;
+int real_time   = 0; // Seconds since server start
+int game_time   = 0; // Microseconds since game start
+
 int game_paused = 0;
 int game_exit   = 0;
 
@@ -66,7 +67,7 @@ int main(int argc, char *argv[]) {
     signal(SIGINT,  sighandler);
     signal(SIGPIPE, SIG_IGN);
 
-    srand(time(0));
+    srand(time(NULL));
 
     L = luaL_newstate();
     luaL_openlibs(L);

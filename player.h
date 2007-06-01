@@ -92,6 +92,7 @@ void        player_sync();
 void        player_is_king_of_the_hill(player_t *player, int delta);
 void        player_there_is_no_king();
 player_t   *player_king();
+int         player_num_players();
 
 /* Network */
 void        player_send_initial_update(client_t *client);
