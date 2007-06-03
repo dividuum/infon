@@ -442,15 +442,16 @@ function player_think(events)
             local id     = event.id
             local killer = event.killer ~= -1 and event.killer or nil
             assert(creatures[id])
-            if creatures[id].onKilled then 
-                local ok, msg = pcall(creatures[id].onKilled, creatures[id], killer)
+            local creature = creatures[id]
+            creatures[id] = nil
+            if creature.onKilled then 
+                local ok, msg = pcall(creature.onKilled, creature, killer)
                 if not ok then 
                     print("cannot call onKilled: " .. msg)
                 end
             else
                 print("onKilled method deleted")
             end
-            creatures[id] = nil
         elseif event.type == CREATURE_ATTACKED then
             local id       = event.id
             local attacker = event.attacker
