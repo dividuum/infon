@@ -1,0 +1,51 @@
+Infon Editor-Server v0.1 (2007-06-10)
+By Moritz 'Nudelbrotsuppe' Kroll <Moritz.Kroll@gmx.de>
+
+The Editor-Server is a server for the Infon SDL client (it may work for
+other Infon clients, too) which allows for creating new maps.
+
+Compiling:
+ Just type 'make'.
+
+Command line description:
+ Usage: editor-server [options]
+ Options:
+   -w <width>        Sets the width of the map (default: 40)
+   -h <height>       Sets the height of the map (default: 30)
+   -o <outputfile>   Sets the name of the output file (default: "testmap.lua")
+
+Editing:
+ After pressing F11 to enable input forwarding, you can draw on the map with
+ the right mouse button. The editor distinguishes three modes:
+ 
+  - Tile mode: You can draw either solid or walkable tiles. The tiles can be
+      selected in the control panel on the left side.
+  - Fill mode: Fills the area defined by the tile under the mouse cursor with
+      the currently selected pen tile, when you press the right mouse button.
+      Fill mode can be toggled with the 'F' key, when a tile is selected as
+      the current pen. In fill mode the "mode player" is highlighted.
+  - Food mode: Draws food spawners on the map tiles. The food amount specifies
+      how much food is added to a random point inside a 10x10 rectangle with
+      the food spawner in the upper left corner after 200ms.
+      The behaviour of the food spawners should probably be fine tuned in the
+      generated level lua sourcecode.
+
+ Keys ("<->" means a range of keys on the keyboard next to each other):
+  - 'S':         Saves the map into the output file
+  - 'F':         Toggles fill mode
+  - 'C':         Clears the map after confirmation with 'Y' ('Z' on qwertz)
+  - 'R' <-> 'P': Selects solid tiles
+  - 'G' <-> 'K': Selects walkable tiles
+ 
+Tested on:
+ - Mandriva 2007 Spring (Linux-2.6.17)
+ - Debian 3.1
+ - Cygwin on Win2k
+ - Mingw on Win2k
+
+Changes:
+ v0.1 (released 2007-06-10)
+  - Initial release
+
+License:
+ Released under the GPL (http://www.gnu.org/licenses/gpl.txt).
