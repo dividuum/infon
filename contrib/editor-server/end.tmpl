@@ -1,0 +1,16 @@
+       last_food = game_time()
+end
+
+-- wird, wie der Name schon sagt, jede Runde ausgefuehrt
+function level_tick()
+       if game_time() > last_food + 10000 then
+               for n, spawner in pairs(food_spawner) do
+                       if game_time() > spawner.n then
+                               world_add_food(spawner.x + math.random(spawner.rx) ,
+                               spawner.y + math.random(spawner.ry) ,
+                               spawner.a)
+                       spawner.n = spawner.n + spawner.i
+                       end
+               end
+       end
+end

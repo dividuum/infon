@@ -1,0 +1,61 @@
+end
+
+
+function level_size()
+
+       local mapsizeX = 1
+       local mapsizeY = 1
+       maplayout()
+       arraySize = table.getn(m);
+       for i=1, arraySize, 1 do
+               if string.len(m[i]) > mapsizeX then
+                       mapsizeX = string.len(m[i])
+               end
+       end
+       mapsizeY = arraySize
+       return mapsizeX+2, mapsizeY+2
+end
+
+
+function level_koth_pos()
+
+       local kothX = 1
+       local kothY = 1
+       maplayout()
+       arraySize = table.getn(m);
+       for i=1, arraySize, 1 do
+               for j=1, string.len(m[i]), 1 do
+                       k = string.upper(string.sub(m[i],j,j))
+                       if k == "K" then
+                               kothX = j
+                               kothY = i
+                       end
+               end
+       end
+       return kothX, kothY
+end
+
+-- wird aufgerufen wenn ein Bot joint
+-- player ist, uh wie erstaunlich, die Spielernummer
+--function level_spawn_point(player)
+--      availSpawnpoints = {{2,2},{15,15}}
+--      return world_tile_center(15, 15)
+--end
+
+
+function level_init()
+
+       maplayout()
+       arraySize = table.getn(m);
+       for i=1, arraySize, 1 do
+               for j=1, string.len(m[i]), 1 do
+                       k = string.upper(string.sub(m[i],j,j))
+                       if k == "P" or k == "U" or k == "D" or k == "K" then
+                               world_set_type(j,i, TILE_PLAIN)
+                       end
+                       world_set_gfx(j,i, tile[k])
+               end
+       end
+       world_make_border(TILE_GFX_WATER)
+
+       food_spawner = {}
