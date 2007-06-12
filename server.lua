@@ -38,6 +38,7 @@ function Client:joinmenu()
 
     local playerno
     local password = nil
+
     if numplayers == 0 then 
         playerno = ""
     else
@@ -45,6 +46,11 @@ function Client:joinmenu()
         playerno = self:readln()
     end
     if playerno == "" then
+        if config.disable_joining then
+            self:writeln("cannot create new player: " .. config.disable_joining)
+            return
+        end
+
         self:write("password for new player: ")
         password = self:readln()
         if password == "" then
@@ -53,7 +59,7 @@ function Client:joinmenu()
         end
 
         if config.disable_joining then
-            self:writeln("joining is currently disabled: " .. config.disable_joining)
+            self:writeln("cannot create new player: " .. config.disable_joining)
             return
         end
     
@@ -198,8 +204,8 @@ function Client:shell()
     if self.authorized then 
         ok = true
     else
-        if not config.debugpass or config.debugpass == "" then
-            self:writeln("password must be set in config.lua")
+        if not config.debugpass then
+            self:writeln("admin access disabled")
             return
         end
         if not self:rate_limit("entering the shell", 5) then return end
@@ -275,11 +281,11 @@ function Client:showscores()
 end
 
 function Client:nokick() 
-    if not config.nokickpass or config.nokickpass == "" then
-        self:writeln("no kick mode disabled. sorry")
+    if not config.nokickpass then
+        self:writeln("no-kick mode disabled. sorry")
     else
         if not self:rate_limit("no kicking", 3) then return end
-        self:write("enter nokick password: ")
+        self:write("enter no-kick password: ")
         if self:readln() == config.nokickpass then
             player_set_no_client_kick_time(self:get_player(), 0)
             self:writeln("no-client kicking disabled. hurray!")
@@ -294,13 +300,14 @@ function Client:info()
     self:writeln("-------------------------------------------------")
     self:writeln("Server Information")
     self:writeln("-------------------+-----------------------------")
-    self:writeln("server name        | " .. (config.servername  or 'default server'))
+    self:writeln("server name        | " .. config.servername)
     self:writeln("version            | " .. GAME_NAME)
     self:writeln("uptime             | " .. string.format("%ds", real_time()))
     local usage = os.clock()
     if usage > 0 then usage = usage .."s" else usage = "too much :-)" end
     self:writeln("cpu usage          | " .. usage)
     self:writeln("memory             | " .. string.format("%d", collectgarbage("count")) .. "kb")
+    self:writeln("master server      | " .. (config.master_ip or '-'))
     self:writeln("traffic            | " .. server_get_traffic())
     self:writeln("-------------------+------------------------------")
     self:writeln("accepted clients   | " .. stats.num_clients)
@@ -316,7 +323,8 @@ function Client:info()
     local w, h = world.level_size()
     self:writeln("rules              | " .. config.rules)
     self:writeln("map                | " .. map .. " (" .. w .. "x" .. h .. ")")
-    self:writeln("game time          | " .. string.format("%ds", game_time() / 1000))
+    self:writeln("game time          | " .. string.format("%ds ", game_time() / 1000) ..
+                                            (get_realtime() and "(realtime)" or "(max speed)"))
     self:writeln("time limit         | " .. (config.time_limit and string.format("%ds", config.time_limit / 1000) or "none"))
     self:writeln("score limit        | " .. (config.score_limit or "none"))
     self:writeln("-------------------------------------------------")
@@ -352,6 +360,13 @@ function Client:mainmenu()
             self:write("pre string: ")  local pre  = self:readln()
             self:write("post string: ") local post = self:readln()
             self.pre_string, self.post_string = pre, post
+        elseif input == "R" then 
+            if config.speedchange then
+                set_realtime(not get_realtime())
+                self:writeln("speed set to " ..  (get_realtime() and "realtime" or "max speed"))
+            else
+                self:writeln("changing the speed is disabled on this server")
+            end
         elseif input == "info" then
             self:info()
         elseif input == "" then
@@ -386,9 +401,6 @@ function Client:mainmenu()
                 self:write("limit botcode output to this connection? [y/N] ")
                 local bot_output_client = self:readln() == "y" and self.fd or nil
                 player_set_output_client(self:get_player(), bot_output_client)
-         -- elseif input == "fwd" then
-         --     self:write("forward unknown commands to onCommand function? [y/N] ")
-         --     self.forward_unknown = self:readln() == "y"
             elseif input == "?" then
                 self:menu_header()
                 self:writeln("n - ame")
@@ -406,9 +418,10 @@ function Client:mainmenu()
                 self:menu_header()
                 self:writeln("lbo    - limit bot output")
                 self:writeln("lio    - limit interactive output")
-            --  self:writeln("fwd    - set unknown command forward")
                 self:writeln("prompt - change prompt")
-                self:writeln("nk     - disable no-client kicking")
+                if config.nokickpass then
+                    self:writeln("nk     - disable no-client kicking")
+                end
                 self:writeln("bb     - hex batch (load precompiled code)")
                 self:writeln("0 - 9  - execute onInputX()")
                 self:writeln("info   - server information")
@@ -510,10 +523,11 @@ function ServerMain()
     scroller_add("Welcome to " .. GAME_NAME .. "!")
                         
     local info_time = game_time()
-    local ping_time = -10000
+    local ping_time = -424242
+
     while true do
         -- Add info message to the scroller
-        if game_time() > info_time + 10000 then
+        if config.join_info and game_time() > info_time + 10000 then
            info_time = game_time() 
            if config.join_info and config.join_info ~= "" then
                scroller_add(config.join_info)
@@ -525,7 +539,7 @@ function ServerMain()
             ping_time = real_time()
             server_ping_master(config.master_ip, 
                                config.master_port or 1234, 
-                               config.servername  or 'default server')
+                               config.servername)
         end
 
         coroutine.yield()

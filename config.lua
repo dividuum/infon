@@ -1,9 +1,11 @@
--- ip and port to bind listen socket
-listenaddr = "0.0.0.0"
+-- IP and port to listen for incoming connections. Change the listenaddr
+-- to "0.0.0.0" to listen to all addresses. This allows other players to 
+-- join your server.
+listenaddr = "127.0.0.1"
 listenport = 1234
 
 -- password for the 'shell' command. disabled if empty or missing.
-debugpass  = ""
+debugpass = ""
 
 -- password to disable no-client kicking. by default, a player is
 -- kicked, once no client is connected for 120 seconds. using this
@@ -12,34 +14,34 @@ debugpass  = ""
 nokickpass = ""
 
 -- message displayed every 10 seconds
-join_info  = "this message can be changed in config.lua"
+-- join_info = "join #infon on irc.freenode.net for help"
 
 -- maps to rotate
-maps       = {"foo", "gpn", "water", "cn", "owl", "stripeslice", "castle", "infon" }
+maps = {"foo", "gpn", "water", "cn", "owl", "stripeslice", "castle", "infon" }
 
 -- rules file to use. 
-rules      = "default"
+rules = "default"
 
 -- filename prefix for demo files. disabled if unset.
 -- demo       = "infond"
 
--- time limit for each map
-time_limit = nil 
+-- time limit for each map (in ms). default is 10 minutes.
+time_limit = 10 * 60 * 1000
 
 -- score limit for each map
 score_limit = 500 
 
 -- access control list. default is to allow connections 
 -- from all clients. 
-acl        = {{ pattern = "^ip:127\.0\..*"             }, 
-              { pattern = "^special:.*"                }, 
-              { pattern = ".*"                         },
-              { pattern = ".*", deny = "access denied" }}
+acl = {{ pattern = "^ip:127\.0\..*"             }, 
+       { pattern = "^special:.*"                }, 
+       { pattern = ".*"                         },
+       { pattern = ".*", deny = "access denied" }}
 
 -- available highlevel apis
-highlevel  =  { 'oo', 'state' }
+highlevel = { 'oo', 'state' }
 
--- disable joining?
+-- disable joining? If set, no *new* players can join the game.
 -- disable_joining = "no joining!"
 
 -- show banner?              
@@ -62,6 +64,7 @@ banner = [[
 -- allowed files for dofile
 dofile_allowed = { 
     menu = "Botcode Menu System";
+    pp   = "A Pretty Printer";
 }
 
 -- Disable Linehook Function.
@@ -74,6 +77,11 @@ linehook = false
 -- TO YOUR SERVER. The debugger is not yet secured against
 -- malicious users.
 debugger = false
+
+-- Allows changing the speed from realtime to maximum speed 
+-- using the 'R' command. You should probably keep it 
+-- disabled on a public server.
+speedchange = false
 
 -- competition = {
 --     log  = "competition.log";

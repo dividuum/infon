@@ -25,6 +25,11 @@
 config = setmetatable({}, {__index = _G})
 setfenv(assert(loadfile(os.getenv("INFOND_CONFIG") or (PREFIX .. "config.lua"))), config)()
 
+-- update some configuration values
+config.servername = config.servername or 'Unnamed Server'
+if config.nokickpass == "" then config.nokickpass = nil end
+if config.debugpass  == "" then config.debugpass  = nil end
+
 stats  = {
     num_clients     = 0;
     num_refused     = 0;
