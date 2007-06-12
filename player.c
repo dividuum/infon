@@ -154,9 +154,8 @@ void player_on_all_dead(player_t *player, int time) {
 
 void player_on_created(player_t *player) {
     // Zeiten zuruecksetzen
-    player->all_dead_time         = game_time;
-    player->all_disconnected_time = real_time;
-    player->spawn_time            = game_time;
+    player->all_dead_time = game_time;
+    player->spawn_time    = game_time;
 
     // Event eintragen
     lua_pushliteral(player->L, "id"); lua_pushnumber(player->L, player_num(player));
@@ -645,7 +644,8 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
 
     player->max_cycles          = LUA_MAX_CPU;
 
-    player->no_client_kick_time = NO_CLIENT_KICK_TIME;
+    player->no_client_kick_time   = NO_CLIENT_KICK_TIME;
+    player->all_disconnected_time = real_time;
     
     player->L = lua_newstate(player_allocator, player);
     luaL_openlibs(player->L);

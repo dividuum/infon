@@ -111,6 +111,11 @@ static int luaSetRealtime(lua_State *L) {
     return 0;
 }
 
+static int luaGetRealtime(lua_State *L) {
+    lua_pushboolean(L, realtime);
+    return 1;
+}
+
 static int luaSetPaused(lua_State *L) {
     game_paused = lua_toboolean(L, 1);
     return 0;
@@ -168,6 +173,7 @@ void game_init() {
     
     lua_register(L, "hex_decode",       luaHexDecode);
     lua_register(L, "set_realtime",     luaSetRealtime);
+    lua_register(L, "get_realtime",     luaGetRealtime);
     lua_register(L, "set_paused",       luaSetPaused);
     lua_register(L, "shutdown",         luaShutdown);
 
