@@ -78,8 +78,17 @@ int main(int argc, char *argv[]) {
     server_init();
     player_init();
     
-    if (luaL_dofile(L, PREFIX "infond.lua")) 
-        die("cannot execute 'infond.lua': %s", lua_tostring(L, -1));
+    if (luaL_loadfile(L, PREFIX "infond.lua") != 0) 
+        die("startup failed: %s", lua_tostring(L, -1));
+
+    if (!lua_checkstack(L, argc)) 
+        die("too many arguments?");
+
+    for (int i = 1; i < argc; i++) 
+        lua_pushstring(L, argv[i]);
+
+    if (lua_pcall(L, argc - 1, 0, 0) != 0)
+        die("startup failed: %s", lua_tostring(L, -1));
     
     // XXX: HACK: stdin client starten
 #ifndef NO_CONSOLE_CLIENT    

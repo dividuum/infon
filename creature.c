@@ -124,46 +124,26 @@ int creature_eat_from_tile(creature_t *creature, int amount) {
     return world_food_eat(X_TO_TILEX(creature->x), Y_TO_TILEY(creature->y), amount);
 }
 
-int creature_max_health(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL: 
-            return 10000;
-        case CREATURE_BIG:
-            return 20000;
-        case CREATURE_FLYER:
-            return  5000;
-        default:
-            assert(0);
-            return 0;
-    }
+static int max_health[CREATURE_TYPES] = { 10000, 20000, 5000, 0 };
+
+int creature_type_health(creature_type type) {
+    return max_health[type];
 }
+
+int creature_max_health(const creature_t *creature) {
+    return creature_type_health(creature->type);
+}
+
+static int max_food[CREATURE_TYPES] = { 10000, 20000, 5000, 0 };
 
 int creature_max_food(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL: 
-            return 10000;
-        case CREATURE_BIG:
-            return 20000;
-        case CREATURE_FLYER:
-            return  5000;
-        default:
-            assert(0);
-            return 0;
-    }
+    return max_food[creature->type];
 }
 
+static int aging[CREATURE_TYPES] = { 5, 7, 5, 0 };
+
 int creature_aging(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL:
-            return 5;
-        case CREATURE_BIG:
-            return 7;
-        case CREATURE_FLYER:
-            return 5;
-        default:
-            assert(0);
-            return 0;
-    }
+    return aging[creature->type];
 }
 
 creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
@@ -191,18 +171,18 @@ creature_t *creature_nearest_enemy(const creature_t *reference, int *distptr) {
 
 // ------------- Bewegung -------------
 
+static int base_speed[CREATURE_TYPES] = { 200, 400, 800, 0 };
+static int health_speed[CREATURE_TYPES] = { 625, 0, 0, 0 };
+
 int creature_speed(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL:
-            return 200 + creature->health / 16;
-        case CREATURE_BIG:
-            return 400;
-        case CREATURE_FLYER:
-            return 800;
-        default:
-            assert(0);
-            return 0;
-    }
+    int speed = base_speed[creature->type] + 
+                (float)health_speed[creature->type] / creature_max_health(creature) * creature->health;
+
+    // speed limit. needed since (speed / CREATURE_SPEED_RESOLUTION) is synchronized as byte.
+    if (speed > 250 * CREATURE_SPEED_RESOLUTION)
+        speed = 250 * CREATURE_SPEED_RESOLUTION;
+
+    return speed;
 }
 
 static int creature_can_walk_path(creature_t *creature) {
@@ -250,18 +230,10 @@ int  creature_can_heal(const creature_t *creature) {
            creature->food   > 0;
 }
 
+static int heal_rate[CREATURE_TYPES] = {500, 300, 600, 0};
+
 int creature_heal_rate(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL:
-            return 500;
-        case CREATURE_BIG:
-            return 300;
-        case CREATURE_FLYER:
-            return 600;
-        default:
-            assert(0);
-            return 0;
-    }
+    return heal_rate[creature->type];
 }
 
 void creature_do_heal(creature_t *creature, int delta) {
@@ -291,18 +263,10 @@ int creature_can_eat(const creature_t *creature) {
            creature->food < creature_max_food(creature);
 }
 
+static int eat_rate[CREATURE_TYPES] = { 800, 400, 600, 0 };
+
 int creature_eat_rate(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL:
-            return 800;
-        case CREATURE_BIG:
-            return 400;
-        case CREATURE_FLYER:
-            return 600;
-        default:
-            assert(0);
-            return 0;
-    }
+    return eat_rate[creature->type];
 }
 
 void creature_do_eat(creature_t *creature, int delta) {
@@ -321,70 +285,49 @@ void creature_do_eat(creature_t *creature, int delta) {
 
 // ------------- Attack -------------
 
-static const int attack_possible[CREATURE_TYPES][CREATURE_TYPES] = 
-                               // TARGET
-    { {    0,      0,      1,      0 },// ATTACKER
-      {    1,      1,      1,      0 },
-      {    0,      0,      0,      0 },
-      {    0,      0,      0,      0 } };
+static int hitpoints[CREATURE_TYPES][CREATURE_TYPES] = {
+      // TARGET -> 
+    {    0,      0,   1000,      0 },  // ATTACKER
+    { 1500,   1500,   1500,      0 },  //   |
+    {    0,      0,      0,      0 },  //   v
+    {    0,      0,      0,      0 },
+};
 
-int creature_can_attack(const creature_t *creature, const creature_t *target) {
-    return attack_possible[creature->type][target->type];
+int creature_hitpoints(const creature_t *creature, const creature_t *target) {
+    return hitpoints[creature->type][target->type];
 }
 
-int creature_hitpoints(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL:
-            return 1000;
-        case CREATURE_BIG:
-            return 1500;
-        case CREATURE_FLYER:
-            return    0;
-        default:
-            assert(0);
-            return 0;
-    }
-}
+static int attack_distance[CREATURE_TYPES][CREATURE_TYPES] = {
+      // TARGET -> 
+    {    0,      0,    768,      0 },  // ATTACKER
+    {  512,    512,    512,      0 },  //   |
+    {    0,      0,      0,      0 },  //   v
+    {    0,      0,      0,      0 },
+};
 
-int creature_attack_distance(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL:
-            return 3 * TILE_SCALE;
-        case CREATURE_BIG:
-            return 2 * TILE_SCALE;
-        case CREATURE_FLYER:
-            return 0;
-        default:
-            assert(0);
-            return 0;
-    }
+int creature_attack_distance(const creature_t *creature, const creature_t *target) {
+    return attack_distance[creature->type][CREATURE_TYPES];
 }
 
 void creature_do_attack(creature_t *creature, int delta) {
-    const int hitpoints = creature_hitpoints(creature) * delta / 1000;
-    if (hitpoints == 0)
-        goto finished_attacking;
-    
     creature_t *target = creature_by_id(creature->target_id);
 
     // Nicht gefunden?
     if (!target) 
         goto finished_attacking;
 
-    // Kann nicht angreifen?
-    if (!creature_can_attack(creature, target))
-        goto finished_attacking;
-    
-    // Ziel zu jung?
-    // if (target->spawn_time + 500 > game_time)
-    //    goto finished_attacking;
-
     // Eigenes Viech?
     if (target->player == creature->player)
         goto finished_attacking;
 
+    const int hitpoints = creature_hitpoints(creature, target) * delta / 1000;
+
+    // Kann nicht angreifen?
+    if (hitpoints == 0)
+        goto finished_attacking;
+
     // Zu weit weg?
-    if (creature_dist(creature, target) > creature_attack_distance(creature))
+    if (creature_dist(creature, target) > creature_attack_distance(creature, target))
         goto finished_attacking;
 
     target->health -= hitpoints;
@@ -404,11 +347,13 @@ finished_attacking:
 
 // ------------- Creature Conversion -------------
 
-int creature_conversion_speed(creature_t *creature) {
-    return 1000;
+static int conversion_speed[CREATURE_TYPES] = { 1000, 1000, 1000, 0 };
+
+int creature_conversion_speed(const creature_t *creature) {
+    return conversion_speed[creature->type];
 }
 
-static const int conversion_food_needed[CREATURE_TYPES][CREATURE_TYPES] = 
+static int conversion_food_needed[CREATURE_TYPES][CREATURE_TYPES] = 
                                // TO
     { {    0,   8000,   5000,      0 },// FROM
       { 8000,      0,      0,      0 },
@@ -460,6 +405,9 @@ int creature_set_conversion_type(creature_t *creature, creature_type type) {
     if (creature_conversion_food(creature, type) == 0)
         return 0;
 
+    if (creature_type_health(type) == 0)
+        return 0;
+
     // Beim Type Wechsel geht Food verloren
     if (creature->convert_type != type) 
         creature->convert_food = 0;
@@ -490,18 +438,30 @@ int creature_set_type(creature_t *creature, creature_type type) {
 // ------------- Creature Spawning -------------
 
 // Waehrend des Spawnens verbrauchtes Futter
+static int spawn_food[CREATURE_TYPES] = { 0, 5000, 0, 0 };
+
 int creature_spawn_food(const creature_t *creature) {
-    return 5000;
+    return spawn_food[creature->type];
 }
 
 // Spawngeschwindigkeit (wie schnell wird das obige Futter verbraucht)
+static int spawn_speed[CREATURE_TYPES] = { 0, 2000, 0, 0 };
+
 int creature_spawn_speed(const creature_t *creature) {
-    return 2000;
+    return spawn_speed[creature->type];
 }
 
 // Beim Spawnstart verlorene Lebensenergie
+static int spawn_health[CREATURE_TYPES] = { 0, 4000, 0, 0 };
+
 int creature_spawn_health(const creature_t *creature) {
-    return 4000;
+    return spawn_health[creature->type];
+}
+
+static int spawn_type[CREATURE_TYPES] = { -1, CREATURE_SMALL, -1, -1 };
+
+int creature_spawn_type(const creature_t *creature) {
+    return spawn_type[creature->type];
 }
 
 void creature_do_spawn(creature_t *creature, int delta) {
@@ -531,53 +491,27 @@ void creature_do_spawn(creature_t *creature, int delta) {
 }
 
 int creature_can_spawn(const creature_t *creature) {
-    return creature->type == 1 &&
-           creature->food >= creature_spawn_food(creature) &&
+    return creature_spawn_type(creature) != -1 &&
            creature->health > creature_spawn_health(creature);
 }
 
 // ---------------- Feeding -----------------
 
+static int feed_distance[CREATURE_TYPES] = { 256, 0, 256, 0 };
+
 int creature_can_feed(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL: 
-            return creature->food > 0;
-        case CREATURE_BIG:
-            return 0;
-        case CREATURE_FLYER:
-            return creature->food > 0;
-        default:
-            assert(0);
-            return 0;
-    }
+    return feed_distance[creature->type] > 0 &&
+           creature->food > 0;
 }
 
 int creature_feed_distance(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL: 
-            return TILE_SCALE;
-        case CREATURE_BIG: 
-            return 0;
-        case CREATURE_FLYER:
-            return TILE_SCALE;
-        default:
-            assert(0);
-            return 0;
-    }
+    return feed_distance[creature->type];
 }
 
+static int feed_speed[CREATURE_TYPES] = { 400, 0, 400, 0 };
+
 int creature_feed_speed(const creature_t *creature) {
-    switch (creature->type) {
-        case CREATURE_SMALL: 
-            return 400;
-        case CREATURE_BIG:
-            return   0;
-        case CREATURE_FLYER:
-            return 400;
-        default:
-            assert(0);
-            return 0;
-    }
+    return feed_speed[creature->type];
 }
 
 void creature_do_feed(creature_t *creature, int delta) {
@@ -589,10 +523,6 @@ void creature_do_feed(creature_t *creature, int delta) {
     // Nicht gefunden?
     if (!target) 
         goto finished_feeding;
-
-    // Ziel zu jung?
-    // if (target->spawn_time + 500 > game_time)
-    //     goto finished_feeding;
 
     // Zu weit weg?
     if (creature_dist(creature, target) > creature_feed_distance(creature))
@@ -898,6 +828,10 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     if (!creature)
         return NULL;
 
+    // spawning this type ok?
+    if (creature_type_health(type) == 0)
+        return NULL;
+
     num_creatures++;
 
     memset(creature, 0, sizeof(creature_t));
@@ -907,7 +841,7 @@ creature_t *creature_spawn(player_t *player, creature_t *parent, int x, int y, c
     creature->y            = y;
     creature->type         = type;
     creature->food         = 0;
-    creature->health       = creature_max_health(creature);
+    creature->health       = creature_type_health(type);
     creature->player       = player;
     creature->target_id    = creature->vm_id; // muesste nicht gesetzt werden
     creature->path         = NULL;
@@ -1025,6 +959,44 @@ void creature_to_network(creature_t *creature, int dirtymask, client_t *client) 
 
 int creature_num_creatures() {
     return num_creatures;
+}
+
+static int pure = 1;
+
+struct creature_option { 
+    const char *name; 
+    const int   min; 
+    const int   max; 
+    int        *value; 
+};
+
+#include "creature_config.h"
+
+int luaCreatureGetConfig(lua_State *L) {
+    size_t namelen; const char *name = luaL_checklstring(L, 1, &namelen);
+    const struct creature_option *opt = in_word_set(name, namelen);
+    if (!opt) luaL_error(L, "option '%s' does not exist", name);
+    lua_pushnumber(L, *opt->value);
+    return 1;
+}
+
+int luaCreatureSetConfig(lua_State *L) {
+    if (num_creatures > 0) 
+        luaL_error(L, "cannot change options while there are creatures");
+    size_t namelen; const char *name = luaL_checklstring(L, 1, &namelen);
+    int value = luaL_checklong(L, 2);
+    const struct creature_option *opt = in_word_set(name, namelen);
+    if (!opt) luaL_error(L, "option '%s' does not exist", name);
+    if (value < opt->min || value > opt->max) 
+        luaL_error(L, "value for '%s' out of range. (%d - %d)", name, opt->min, opt->max);
+    *opt->value = value;
+    pure = 0;
+    return 0;
+}
+
+int luaCreatureConfigChanged(lua_State *L) {
+    lua_pushboolean(L, pure);
+    return 1;
 }
 
 void creature_init() {

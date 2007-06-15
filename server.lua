@@ -327,6 +327,7 @@ function Client:info()
                                             (get_realtime() and "(realtime)" or "(max speed)"))
     self:writeln("time limit         | " .. (config.time_limit and string.format("%ds", config.time_limit / 1000) or "none"))
     self:writeln("score limit        | " .. (config.score_limit or "none"))
+    self:writeln("pure game          | " .. (pure_game() and "yes" or "no"))
     self:writeln("-------------------------------------------------")
 end
 
@@ -369,6 +370,19 @@ function Client:mainmenu()
             end
         elseif input == "info" then
             self:info()
+        elseif input == "hint" then
+            if not self.hintnum then
+                self.hintnum = math.random(#hints)
+            end
+            self.hintnum = self.hintnum + 1
+            if self.hintnum > #hints then
+                self.hintnum = 1
+            end
+            self:writeln("--------------------------------------------")
+            self:writeln("Hint " .. self.hintnum .. " of " .. #hints)
+            self:writeln("--------------------------------------------")
+            self:write(hints[self.hintnum])
+            self:writeln("--------------------------------------------")
         elseif input == "" then
             -- nix
         elseif self:get_player() then
@@ -394,11 +408,11 @@ function Client:mainmenu()
                 self:killmenu()
             elseif input == "nk" then
                 self:nokick()
-            elseif input == "lio" then
-                self:write("limit interactive output to local connection? [Y/n] ")
-                self.local_output = self:readln() ~= "n"
+            elseif input == "bio" then
+                self:write("broadcast interactive output to all connections? [y/N] ")
+                self.local_output = self:readln() ~= "y"
             elseif input == "lbo" then
-                self:write("limit botcode output to this connection? [y/N] ")
+                self:write("limit botcode output to local connection? [y/N] ")
                 local bot_output_client = self:readln() == "y" and self.fd or nil
                 player_set_output_client(self:get_player(), bot_output_client)
             elseif input == "?" then
@@ -417,7 +431,7 @@ function Client:mainmenu()
             elseif input == "??" then
                 self:menu_header()
                 self:writeln("lbo    - limit bot output")
-                self:writeln("lio    - limit interactive output")
+                self:writeln("bio    - broadcast interactive output")
                 self:writeln("prompt - change prompt")
                 if config.nokickpass then
                     self:writeln("nk     - disable no-client kicking")
@@ -425,6 +439,7 @@ function Client:mainmenu()
                 self:writeln("bb     - hex batch (load precompiled code)")
                 self:writeln("0 - 9  - execute onInputX()")
                 self:writeln("info   - server information")
+                self:writeln("hint   - shows a hint")
                 if self.forward_unknown then
                     self:writeln("")
                     self:writeln("Any other input will be passed to the onCommand")
@@ -457,6 +472,7 @@ function Client:mainmenu()
                 self:menu_header()
                 self:writeln("hl     - choose highlevel api")
                 self:writeln("info   - server information")
+                self:writeln("hint   - shows a hint")
                 self:menu_footer()
             else
                 self:writeln("huh? use '?' for help")

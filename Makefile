@@ -153,7 +153,7 @@ dist:
 	$(MAKE) clean
 	$(MAKE) linux-server-dist
 
-source-dist: REVISION 
+source-dist: REVISION creature_config.h
 	tar cvzh -C.. --exclude ".svn" --exclude "infon-source*" --file infon-source-r$(REVISION).tgz infon
 
 win32-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(GL_RENDERER)
@@ -199,6 +199,11 @@ $(GL_RENDERER): gl_video.o gl_gui.o gl_mdl.o misc.o
 $(LILITH_RENDERER): lilith_gui.o misc.o lilith/lilith/liblilith.a
 	$(CC) $^ $(LDFLAGS) -shared -o $@
 
+creature.c: creature_config.h
+
+creature_config.h: creature_config.gperf
+	gperf --output-file=$@ -c -C -t  $^ 
+
 infon.res: infon.rc
 	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff
 
@@ -219,4 +224,4 @@ clean:
 
 distclean: clean
 	$(MAKE) -C $(LUA) clean 
-	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo infond-wrapper REVISION
+	-rm -f infon*.zip infon*.tgz *.orig *.rej infond-*.demo infond-wrapper REVISION creature_config.h

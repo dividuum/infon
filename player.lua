@@ -175,6 +175,24 @@ function exists(...)
     return creature_exists(...)
 end
 
+function get_hitpoints(...)
+    error("'get_hitpoints' is no longer available. use the values of 'creature_config' instead.", 2)
+end
+
+function get_attack_distance(...)
+    error("'get_attack_distance' is no longer available. use the values of 'creature_config' instead.", 2)
+end
+
+------------------------------------------------------------------------
+-- Creature Config Access
+------------------------------------------------------------------------
+
+creature_config = setmetatable({}, {
+    __index = function (t, val) 
+        return creature_get_config(val)
+    end
+})
+
 ------------------------------------------------------------------------
 -- Install default onCommand
 ------------------------------------------------------------------------

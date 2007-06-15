@@ -22,6 +22,8 @@
 -- Konfiguration laden
 -----------------------------------------------------------
 
+argv   = {...}
+
 config = setmetatable({}, {__index = _G})
 setfenv(assert(loadfile(os.getenv("INFOND_CONFIG") or (PREFIX .. "config.lua"))), config)()
 
@@ -276,7 +278,6 @@ function Client:welcome(msg)
     self:write("  \r\n" .. msg .. string.rep(" ", 28 - msglen) .. "\r\n")
 end
 
-
 -----------------------------------------------------------
 -- Server C Callbacks
 -----------------------------------------------------------
@@ -368,6 +369,19 @@ function on_game_ended()
         player_set_score(pno, 0)
     end
 end
+
+------------------------------------------------------------------------
+-- Creature Config Access
+------------------------------------------------------------------------
+
+creature_config = setmetatable({}, {
+    __index = function (t, val) 
+        return creature_get_config(val)
+    end,
+    __newindex = function (t, name, val)
+        return creature_set_config(name, val)
+    end
+})
 
 -----------------------------------------------------------
 -- World Funktionen
@@ -746,15 +760,21 @@ function start_bot(options)
             cprint("cannot start log writer: " .. logclient)
         end
     end
-    assert(player_execute(playerno, nil, botsource, options.source), "cannot load bot code")
+    assert(player_execute(playerno, nil, botsource, options.source), "cannot load bot code " .. options.source)
     return playerno
 end
+
+-----------------------------------------------------------
+-- Load hint file
+-----------------------------------------------------------
+
+hints = dofile(PREFIX .. "hints.lua") or {}
 
 -----------------------------------------------------------
 -- Clienthandler laden
 -----------------------------------------------------------
 
-assert(loadfile(PREFIX .. "server.lua"))()
+dofile(PREFIX .. "server.lua")
 
 -- setup listen socket
 if config.listenaddr and config.listenport then start_listener() end 

@@ -83,6 +83,16 @@ debugger = false
 -- disabled on a public server.
 speedchange = false
 
+-- Use this section to automate competitions. information about
+-- the fight will be written into 'log'. the bots in 'bots' will
+-- automatically join the game. Each of them takes the same 
+-- parameters as shown in the autoexec example below.
+-- Set the parameters 'maps', 'time_limit', 'score_limit' as you
+-- wish. 'listenaddr' should be set to nil so nobody can join
+-- this server. the server will terminate once all maps were 
+-- played once. The infond command line options are available
+-- in the table 'argv'.
+--
 -- competition = {
 --     log  = "competition.log";
 --     bots = {
@@ -101,10 +111,15 @@ speedchange = false
 -- Things to do once after the first game started
 --
 -- function autoexec()
---     start_bot{ source   = "contrib/bots/easybot.lua",
---                name     = "foo",
---                password = "secret",
---                api      = "state" }
+--     -- Change runner speed
+--     creature_config.runner_speed = 1000
+--
+--     -- Join a bot
+--     start_bot{ source   = "contrib/bots/queener.lua",
+--                name     = "Queener",
+--                password = "topsecret",
+--                log      = "queener.log",
+--                api      = "oo" }
 -- end
 
 -- function checking user/password combinations.
