@@ -176,6 +176,7 @@ void game_init() {
     lua_register(L, "get_realtime",     luaGetRealtime);
     lua_register(L, "set_paused",       luaSetPaused);
     lua_register(L, "shutdown",         luaShutdown);
+    lua_register(L, "pure_game",        luaCreatureConfigChanged);
 
     lua_register_constant       (L, MAXPLAYERS);
     lua_register_string_constant(L, GAME_NAME);

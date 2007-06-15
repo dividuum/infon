@@ -481,20 +481,6 @@ static int luaCreatureGetState(lua_State *L) {
     return 1;
 }
 
-static int luaCreatureGetHitpoints(lua_State *L) {
-    get_player_and_creature();
-    if (RESTRICTIVE) assure_is_players_creature();
-    lua_pushnumber(L, creature_hitpoints(creature));
-    return 1;
-}
-
-static int luaCreatureGetAttackDistance(lua_State *L) {
-    get_player_and_creature();
-    if (RESTRICTIVE) assure_is_players_creature();
-    lua_pushnumber(L, creature_attack_distance(creature));
-    return 1;
-}
-
 #ifdef CHEATS
 static int luaCreatureCheatGiveAll(lua_State *L) {
     get_player_and_creature();
@@ -677,8 +663,6 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
     lua_register_player(player, "get_max_food",         luaCreatureGetMaxFood);
     lua_register_player(player, "get_distance",         luaCreatureGetDistance);
     lua_register_player(player, "set_message",          luaCreatureSetMessage);
-    lua_register_player(player, "get_hitpoints",        luaCreatureGetHitpoints);
-    lua_register_player(player, "get_attack_distance",  luaCreatureGetAttackDistance);
 
 #ifdef CHEATS
     lua_register_player(player, "cheat_give_all",       luaCreatureCheatGiveAll);
@@ -694,6 +678,7 @@ player_t *player_create(const char *name, const char *pass, const char *highleve
     lua_register(player->L,     "player_exists",        luaPlayerExists);
     lua_register(player->L,     "king_player",          luaKingPlayer);
     lua_register(player->L,     "player_score",         luaPlayerScore);
+    lua_register(player->L,     "creature_get_config",  luaCreatureGetConfig);
 
     lua_register_constant(player->L, CREATURE_IDLE);
     lua_register_constant(player->L, CREATURE_WALK);
@@ -1266,12 +1251,12 @@ void player_init() {
     lua_register(L, "creature_get_tile_food",        luaCreatureGetTileFood);
     lua_register(L, "creature_get_max_food",         luaCreatureGetMaxFood);
     lua_register(L, "creature_get_distance",         luaCreatureGetDistance);
-    lua_register(L, "creature_get_hitpoints",        luaCreatureGetHitpoints);
-    lua_register(L, "creature_get_attack_distance",  luaCreatureGetAttackDistance);
     lua_register(L, "creature_get_player",           luaCreatureGetPlayer);
 
     lua_register(L, "creature_set_food",             luaCreatureSetFood);
     lua_register(L, "creature_set_type",             luaCreatureSetType);
+    lua_register(L, "creature_get_config",           luaCreatureGetConfig);
+    lua_register(L, "creature_set_config",           luaCreatureSetConfig);
 
     lua_register_constant(L, CREATURE_SMALL);
     lua_register_constant(L, CREATURE_BIG);

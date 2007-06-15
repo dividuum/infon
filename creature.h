@@ -90,8 +90,6 @@ int         creature_dist(const creature_t *a, const creature_t *b);
 int         creature_food_on_tile(const creature_t *creature);
 maptype_e   creature_tile_type(const creature_t *creature);
 int         creature_max_food(const creature_t *creature);
-int         creature_hitpoints(const creature_t *creature);
-int         creature_attack_distance(const creature_t *creature);
 
 void        creature_kill_all_players_creatures(player_t *player);
 void        creature_moveall(int delta);
@@ -100,6 +98,10 @@ int         creature_num_creatures();
 /* Network */
 void        creature_send_initial_update(client_t *client);
 void        creature_to_network(creature_t *creature, int dirtymask, client_t *client);
+
+int         luaCreatureGetConfig(lua_State *L); 
+int         luaCreatureSetConfig(lua_State *L);
+int         luaCreatureConfigChanged(lua_State *L);
 
 void        creature_init();
 void        creature_shutdown();
