@@ -5,10 +5,10 @@
 ## DP: No description.
 
 @DPATCH@
-diff -urNad infon-0~r139~/config.lua infon-0~r139/config.lua
---- infon-0~r139~/config.lua	2006-12-22 15:51:04.000000000 +0000
-+++ infon-0~r139/config.lua	2006-12-22 15:54:21.884025875 +0000
-@@ -1,12 +1,15 @@
+diff -urNad infon-0~r198~/config.lua infon-0~r198/config.lua
+--- infon-0~r198~/config.lua	2007-06-01 21:39:54.000000000 +0200
++++ infon-0~r198/config.lua	2007-06-01 21:41:56.135930724 +0200
+@@ -1,6 +1,10 @@
  -- ip and port to bind listen socket
 -listenaddr = "0.0.0.0"
 +listenaddr = "127.0.0.1"
@@ -16,13 +16,16 @@ diff -urNad infon-0~r139~/config.lua infon-0~r139/config.lua
 +-- uncomment the following line to enable other players
 +-- to connect over the network
 +-- listenaddr = "0.0.0.0"
++
  
  -- password for the 'shell' command. disabled if empty or missing.
  debugpass  = ""
+@@ -12,7 +16,7 @@
+ nokickpass = ""
  
  -- message displayed every 10 seconds
 -join_info  = "this message can be changed in config.lua"
 +join_info  = "this message can be changed in /etc/infond/config.lua"
  
  -- maps to rotate
- maps       = {"foo", "gpn", "water", "cn", "owl" }
+ maps       = {"foo", "gpn", "water", "cn", "owl", "stripeslice", "castle", "infon" }
