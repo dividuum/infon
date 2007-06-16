@@ -58,8 +58,7 @@ clean-patched:
 	rm -f build-arch-stamp build-indep-stamp
 
 	# Add here commands to clean up after the build process.
-	-$(MAKE) clean
-	-$(MAKE) -C lua-5.1.1 clean
+	-$(MAKE) distclean
 
 	dh_clean 
 
