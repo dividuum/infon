@@ -60,12 +60,10 @@ static StkId traceexec (lua_State *L, const Instruction *pc) {
   lu_byte mask = L->hookmask;
   const Instruction *oldpc = GETPC(L);
   SAVEPC(L, pc);
-  if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
-    if (L->hookcount == 0) {
-      resethookcount(L);
-      luaD_callhook(L, LUA_HOOKCOUNT, -1);
-    }
-  }     
+  if (mask & LUA_MASKLINE && L->hookcount == 0) {
+    resethookcount(L);
+    luaD_callhook(L, LUA_HOOKCOUNT, -1);
+  }
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(L->ci)->l.p;
     int npc = pcRel(pc, p);
