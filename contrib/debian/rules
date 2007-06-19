@@ -94,7 +94,7 @@ binary-common:
 	dh_installdocs
 #	dh_installexamples
 	dh_installmenu
-	dh_installinit
+	#dh_installinit
 	dh_installman
 	dh_link
 	dh_strip

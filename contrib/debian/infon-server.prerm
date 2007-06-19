@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+#DEBHELPER#
+
+if [ -x "/etc/init.d/infon-server" ]; then
+	if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+		invoke-rc.d infon-server stop || exit $?
+	else
+                /etc/init.d/infon-server stop || exit $?
+	fi
+fi
+

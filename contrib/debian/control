@@ -8,7 +8,7 @@ XS-Vcs-Svn: http://infon.dividuum.de/svn/infon/trunk/contrib/debian
 
 Package: infon-server
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, metainit
 Description: Program bugs to compete for food and survival - Server
  Infon is a game which simulates the live of simple bugs who eat,
  propagate, eat each other and evolve. The players can not control

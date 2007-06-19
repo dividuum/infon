@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+#DEBHELPER#
+
+if [ "$1" = "purge" ] ; then
+        /usr/sbin/update-metainit --remove infon-server --purge >/dev/null
+fi
+
