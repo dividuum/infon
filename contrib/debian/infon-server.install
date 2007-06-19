@@ -4,4 +4,3 @@ api/ 	usr/share/infon-server/
 infond.lua player.lua server.lua	usr/share/infon-server/
 rules/	etc/infond/
 config.lua	etc/infond/
-debian/infon-server.metainit etc/metainit

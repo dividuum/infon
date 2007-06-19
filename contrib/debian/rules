@@ -96,6 +96,7 @@ binary-common:
 	dh_installmenu
 	#dh_installinit
 	dh_installman
+	dh_metainit
 	dh_link
 	dh_strip
 	dh_compress 
