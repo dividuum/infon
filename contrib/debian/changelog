@@ -1,3 +1,9 @@
+infon (0~r198-2) UNRELEASED; urgency=low
+
+  * Uses metainit (very experimental)
+
+ -- Joachim Breitner <nomeata@debian.org>  Sat, 16 Jun 2007 15:34:22 +0100
+
 infon (0~r198-1) unstable; urgency=low
 
   * New upstream release
