@@ -80,7 +80,7 @@ $(INFON_EXECUTABLE) : infon.res
 $(INFOND_EXECUTABLE): CFLAGS   += -I$(LUA)/src/ -DNO_CONSOLE_CLIENT
 $(INFOND_EXECUTABLE): LDFLAGS  += $(MINGW)/lib/libevent.a $(MINGW)/lib/libz.a \
                                   -lmingw32 -lwsock32 -mconsole -Wl,-s
-$(INFOND_EXECUTABLE): infon.res luacore.o
+$(INFOND_EXECUTABLE): infond.res luacore.o
 
 $(SDL_RENDERER)     : CFLAGS   += -I$(SDLDIR)/include/SDL 
 $(SDL_RENDERER)     : LDFLAGS  += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
@@ -220,7 +220,7 @@ creature.c: creature_config.h
 creature_config.h: creature_config.gperf
 	gperf --output-file=$@ -c -C -t  $^ 
 
-infon.res: infon.rc
+%.res: %.rc
 	$(WINDRES) -i $^ -DREVISION="\\\"$(REVISION)\\\"" --input-format=rc -o $@ -O coff
 
 $(LUA)/src/liblua.a:
@@ -236,7 +236,7 @@ REVISION:
 	echo "REVISION=`svnversion .`" > $@
 
 clean: 
-	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon.res tags
+	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon*.res infond.exe infond.exe-static tags
 
 distclean: clean
 	$(MAKE) -C $(LUA) clean 

@@ -1,0 +1,22 @@
+#include <windows.h>
+
+icon ICON MOVEABLE PURE LOADONCALL DISCARDABLE "infon.ico"
+
+1 VERSIONINFO 
+FILETYPE VFT_APP
+{
+  BLOCK "StringFileInfo"
+     {
+         BLOCK "040904E4"
+         {
+             VALUE "CompanyName", "fw@dividuum.de"
+             VALUE "FileDescription", "Infon Battle Arena Server"
+             VALUE "FileVersion", REVISION
+             VALUE "InternalName", "infond"
+             VALUE "LegalCopyright", "GPL"
+             VALUE "OriginalFilename", "infond.exe"
+             VALUE "ProductName", "Infon Battle Arena"
+             VALUE "ProductVersion", REVISION
+         }
+     }
+}
