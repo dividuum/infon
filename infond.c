@@ -65,7 +65,9 @@ int main(int argc, char *argv[]) {
 
     signal(SIGTERM, sighandler);
     signal(SIGINT,  sighandler);
+#ifndef WIN32
     signal(SIGPIPE, SIG_IGN);
+#endif
 
     srand(time(NULL));
 
@@ -73,6 +75,7 @@ int main(int argc, char *argv[]) {
     luaL_openlibs(L);
     
     lua_register_string_constant(L, PREFIX);
+    lua_register_string_constant(L, PLATFORM);
 
     game_init();
     server_init();

@@ -18,19 +18,24 @@
 
 */
 
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#else
 #include <netinet/tcp.h>
 #include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
+#include <sys/ioctl.h>
+#endif
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <lauxlib.h>
 #include <event.h>
@@ -67,22 +72,34 @@ int client_num(client_t *client) {
 }
 
 client_t *server_accept(int fd, const char *address) {
-    if (fd >= MAXCLIENTS) {
-        fprintf(stderr, "cannot accept() new incoming connection: file descriptor too large\n");
-        return NULL;
+    client_t *client = clients;
+
+    for (int i = 0; i < MAXCLIENTS; i++, client++) {
+        if (!CLIENT_USED(client))
+            goto found;
     }
-    
-    memset(&clients[fd], 0, sizeof(client_t));
-    client_t *client = &clients[fd];
+
+    // write(fd, "no free slot\r\n", 14);
+    fprintf(stderr, "cannot accept() new incoming connection: no free slot\n");
+    return NULL;
+
+found:
+    memset(client, 0, sizeof(client_t));
+    client->fd = fd;
 
     // File Writer wird leicht unterschiedlich behandelt
     client->is_file_writer = strstr(address, "special:file") == address;
 
     // Non Blocking setzen 
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
+#ifdef WIN32
+    DWORD notblock = 1;
+    ioctlsocket(client->fd, FIONBIO, &notblock);
+#else
+    if (fcntl(client->fd, F_SETFL, O_NONBLOCK) < 0) {
         fprintf(stderr, "cannot set accept()ed socket nonblocking: %s\n", strerror(errno));
         return NULL;
     }
+#endif
 
     // Soll Verbindung angenommen werden?
     lua_pushliteral(L, "on_new_client");
@@ -97,7 +114,7 @@ client_t *server_accept(int fd, const char *address) {
 
     if (!lua_toboolean(L, -2)) {
         size_t len; const char *msg = lua_tolstring(L, -1, &len);
-        write(fd, msg, len);
+        write(client->fd, msg, len);
         lua_pop(L, 2);
         return NULL;
     }
@@ -105,8 +122,8 @@ client_t *server_accept(int fd, const char *address) {
     lua_pop(L, 2);
 
     // Libevent aktivieren
-    event_set(&client->rd_event, fd, EV_READ | EV_PERSIST, server_readable, &client->rd_event);
-    event_set(&client->wr_event, fd, EV_WRITE            , server_writable, &client->wr_event);
+    event_set(&client->rd_event, client->fd, EV_READ | EV_PERSIST, server_readable, client);
+    event_set(&client->wr_event, client->fd, EV_WRITE            , server_writable, client);
     
     client->in_buf  = evbuffer_new();
     client->out_buf = evbuffer_new();
@@ -128,7 +145,7 @@ client_t *server_accept(int fd, const char *address) {
     // Annehmen
     lua_pushliteral(L, "on_client_accepted");
     lua_rawget(L, LUA_GLOBALSINDEX);
-    lua_pushnumber(L, fd);
+    lua_pushnumber(L, client_num(client));
     lua_pushstring(L, address);
 
     if (lua_pcall(L, 2, 0, 0) != 0) {
@@ -143,7 +160,7 @@ client_t *server_accept(int fd, const char *address) {
 }
 
 static void server_readable(int fd, short event, void *arg) {
-    client_t *client = &clients[fd];
+    client_t *client = (client_t*)arg;
 
     // Der Client wurde 'extern' gekickt, allerdings noch
     // nicht entfernt. Dann wird dieser Readcallback aufgerufen,
@@ -163,7 +180,7 @@ static void server_readable(int fd, short event, void *arg) {
         while ((line = evbuffer_readline(client->in_buf))) {
             lua_pushliteral(L, "on_client_input");   
             lua_rawget(L, LUA_GLOBALSINDEX);      
-            lua_pushnumber(L, fd);               
+            lua_pushnumber(L, client_num(client));
             lua_pushstring(L, line);
             free(line);
 
@@ -208,7 +225,7 @@ static void server_flush_compression(client_t *client) {
 }
 
 static void server_writable(int fd, short event, void *arg) {
-    client_t *client = &clients[fd];
+    client_t *client = (client_t*)arg;
 
 #ifndef NO_CONSOLE_CLIENT    
     // HACK um die Ausgabe des Consolenclients an
@@ -307,11 +324,9 @@ void server_send_packet(packet_t *packet, client_t *client) {
 }
 
 void server_destroy(client_t *client, const char *reason) {
-    int fd = client_num(client);
-
     lua_pushliteral(L, "on_client_close");
     lua_rawget(L, LUA_GLOBALSINDEX);
-    lua_pushnumber(L, fd);
+    lua_pushnumber(L, client_num(client));
     lua_pushstring(L, reason);
     if (lua_pcall(L, 2, 0, 0) != 0) {
         fprintf(stderr, "error calling on_client_close: %s\n", lua_tostring(L, -1));
@@ -337,7 +352,7 @@ void server_destroy(client_t *client, const char *reason) {
     // Bei Filewritern muss nichts geschrieben werden, da deren Daten
     // immer direkt rausgeschrieben werden.
     if (!client->is_file_writer) 
-        evbuffer_write(client->out_buf, fd);
+        evbuffer_write(client->out_buf, client->fd);
 
     evbuffer_free(client->in_buf);
     evbuffer_free(client->out_buf);
@@ -372,9 +387,17 @@ void server_destroy(client_t *client, const char *reason) {
     num_clients--;
     
 #ifndef NO_CONSOLE_CLIENT    
-    if (fd != STDIN_FILENO)
+    if (client->fd != STDIN_FILENO)
 #endif
-        close(fd);
+#ifdef WIN32
+        if (client->is_file_writer) {
+            close(client->fd);
+        } else {
+            closesocket(client->fd);
+        }
+#else
+        close(client->fd);
+#endif
 }
 
 static void initial_update(client_t *client) {
@@ -410,7 +433,7 @@ client_t *server_start_file_writer(const char *filename) {
     int fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, 0644);
     if (fd < 0)
         return NULL;
-    static char address[512];
+    char address[512];
     snprintf(address, sizeof(address), "special:file:%s", filename);
     return server_accept(fd, address);
 }
