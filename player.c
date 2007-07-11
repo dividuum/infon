@@ -200,7 +200,9 @@ static int player_at_cpu_exceeded(lua_State *L) {
 }
 
 static player_t *alarm_player = NULL;
+#ifndef WIN32
 static struct itimerval timer;
+#endif
 
 static void alarm_signal(int sig) {
     assert(sig == SIGVTALRM);
@@ -227,6 +229,7 @@ static int player_call_user_lua(const char *where, player_t *player, int params)
 
     // Notfallzeitbeschraenkung einbauen. Kann auftreten, falls sehr viele
     // teure Lua Funktionen aufgerufen werden.
+#ifndef WIN32
     alarm_player              = player;
     timer.it_interval.tv_sec  = 0;
     timer.it_interval.tv_usec = 0;
@@ -234,6 +237,7 @@ static int player_call_user_lua(const char *where, player_t *player, int params)
     timer.it_value.tv_usec    = 0;
     signal(SIGVTALRM, alarm_signal);
     setitimer(ITIMER_VIRTUAL, &timer, NULL);
+#endif
 
     // Normalerweise liegt ein "cpu exceeded" Fehler an Ueberschreitung der lua VM Cycles.
     // Nur im CPU Rechenzeit-Fall wird diese Meldung entsprechend angepasst.
@@ -242,11 +246,13 @@ static int player_call_user_lua(const char *where, player_t *player, int params)
     // Usercode aufrufen
     int ret = lua_pcall(player->L, params, 0, -2 - params);
 
+#ifndef WIN32
     // Alarm aufheben
     timer.it_value.tv_sec     = 0;
     timer.it_value.tv_usec    = 0;
     setitimer(ITIMER_VIRTUAL, &timer, NULL);
     alarm_player              = NULL;
+#endif
 
     // Keine Speicherbeschraenkung mehr (ab hier wird die VM wieder von infon gesteuert)
     player->mem_enforce = 0;

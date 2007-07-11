@@ -53,4 +53,14 @@
 #define DEFAULT_RENDERER sdl_gui
 #endif
 
+#ifdef WIN32
+#define PLATFORM "win32"
+#else
+#define PLATFORM "posix"
+#endif
+
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET -1
+#endif
+
 #endif

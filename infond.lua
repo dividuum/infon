@@ -438,6 +438,7 @@ function world_load(map)
         world_fill_all    = world_fill_all;
         world_tile_center = world_tile_center;
         game_time         = game_time;
+        server_info       = server_info;
 
         level_spawn_point = world_find_digged_worldcoord;
 
@@ -778,3 +779,14 @@ dofile(PREFIX .. "server.lua")
 
 -- setup listen socket
 if config.listenaddr and config.listenport then start_listener() end 
+
+if PLATFORM == "win32" then
+    print("\n")
+    print(config.banner:match("\r\n") and config.banner or config.banner:gsub("\n", "\r\n"))
+    print [[
+
+          The Infon Server is now running. Have fun!
+
+           To terminate it, just close this window.
+]]
+end

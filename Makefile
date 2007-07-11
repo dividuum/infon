@@ -23,7 +23,7 @@ ifdef WINDOWS
 endif
 
 ifdef OPTIMIZE
-	CFLAGS += -O3 -fexpensive-optimizations -finline-functions -fomit-frame-pointer -DNDEBUG
+	CFLAGS += -O3 -DNDEBUG
 else
 	CFLAGS += -ggdb
 endif
@@ -36,8 +36,9 @@ ifdef WINDOWS
 	CFLAGS           += -I$(MINGW)/include
 	WINDRES           = /opt/xmingw/bin/i386-mingw32msvc-windres
 	STRIP             = /opt/xmingw/bin/i386-mingw32msvc-strip
-	LUAPLAT            = mingw
+	LUAPLAT           = mingw
 	INFON_EXECUTABLE  = infon.exe
+	INFOND_EXECUTABLE = infond.exe
 
 	SDL_RENDERER      = sdl_gui.dll
 	GL_RENDERER       = gl_gui.dll
@@ -75,6 +76,11 @@ ifdef WINDOWS
 $(INFON_EXECUTABLE) : LDFLAGS  += $(MINGW)/lib/libevent.a $(MINGW)/lib/libz.a \
                                   -lmingw32 $(MINGW)/lib/libSDLmain.a -lwsock32 -mwindows -Wl,-s
 $(INFON_EXECUTABLE) : infon.res
+
+$(INFOND_EXECUTABLE): CFLAGS   += -I$(LUA)/src/ -DNO_CONSOLE_CLIENT
+$(INFOND_EXECUTABLE): LDFLAGS  += $(MINGW)/lib/libevent.a $(MINGW)/lib/libz.a \
+                                  -lmingw32 -lwsock32 -mconsole -Wl,-s
+$(INFOND_EXECUTABLE): infon.res luacore.o
 
 $(SDL_RENDERER)     : CFLAGS   += -I$(SDLDIR)/include/SDL 
 $(SDL_RENDERER)     : LDFLAGS  += $(MINGW)/lib/libSGE.a $(MINGW)/lib/libevent.a $(MINGW)/lib/libSDL_image.a \
@@ -149,6 +155,8 @@ dist:
 	$(MAKE) clean
 	WINDOWS=1  $(MAKE) win32-client-dist
 	$(MAKE) clean
+	WINDOWS=1  $(MAKE) win32-server-dist
+	$(MAKE) clean
 	OPTIMIZE=1 $(MAKE) linux-client-dist
 	$(MAKE) clean
 	$(MAKE) linux-server-dist
@@ -163,6 +171,14 @@ win32-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(GL_RENDERER)
 	upx -9 --all-methods $(GL_RENDERER)
 	zip infon-win32-r$(REVISION).zip \
 		README.txt $^ gfx/*.fnt gfx/*.png gfx/*.bmp gfx/*.mdl \
+		contrib/bots/*.lua contrib/bots/*.txt
+
+win32-server-dist: $(INFOND_EXECUTABLE)
+	$(STRIP) $^
+	upx -9 --all-methods $(INFOND_EXECUTABLE)
+	zip infond-win32-r$(REVISION).zip \
+		README.txt $(INFOND_EXECUTABLE) \
+		*.lua level/*.lua rules/*.lua api/*.lua libs/*.lua \
 		contrib/bots/*.lua contrib/bots/*.txt
 
 linux-client-dist: $(INFON_EXECUTABLE) $(SDL_RENDERER) $(NULL_RENDERER) $(GL_RENDERER)

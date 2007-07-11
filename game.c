@@ -234,7 +234,11 @@ void game_one_game() {
                 lasttick = tick;
                 continue;
             } else if (delta < 100) {
+#ifdef WIN32
+                Sleep(max(95 - delta, 10));
+#else
                 usleep(max(95000 - delta * 1000, 1000));
+#endif
                 continue;
             }
         } else {

@@ -30,15 +30,15 @@
 #include <sys/ioctl.h>
 #include <netdb.h>
 #endif
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <event.h>
 #include <zlib.h>
@@ -53,7 +53,7 @@
 #include "client_creature.h"
 #include "client_game.h"
 
-static int              clientfd;
+static int              clientfd = INVALID_SOCKET;
 static struct event     rd_event;
 static struct event     wr_event;
 static struct evbuffer *in_buf;
@@ -286,7 +286,7 @@ void client_printf(const char *fmt, ...) {
 }
 
 int  client_is_connected() {
-    return clientfd != -1;
+    return clientfd != INVALID_SOCKET;
 }
 
 void file_loop(int delta) {
@@ -363,11 +363,10 @@ int client_open_socket(char *addr) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
 
     /* Fehler beim Socket erzeugen? */
-#ifdef WIN32
     if (fd == INVALID_SOCKET)
+#ifdef WIN32
         die("cannot open socket: %s", ErrorString(WSAGetLastError()));
 #else
-    if (fd == -1) 
         die("cannot open socket: %s", strerror(errno));
 #endif
 
@@ -436,7 +435,7 @@ void client_init(char *source) {
 }
 
 void client_destroy(const char *reason) {
-    assert(clientfd != -1);
+    assert(clientfd != INVALID_SOCKET);
     fprintf(stderr, "datasource destroyed: %s\n", reason);
 
     evbuffer_free(in_buf);
@@ -446,8 +445,16 @@ void client_destroy(const char *reason) {
     if (compression) 
         inflateEnd(&strm);
 
+#ifdef WIN32
+    if (is_file_source) {
+        close(clientfd);
+    } else {
+        closesocket(clientfd);
+    }
+#else
     close(clientfd);
-    clientfd = -1;
+#endif
+    clientfd = INVALID_SOCKET;
     
     if (!is_file_source) {
         event_del(&rd_event);
