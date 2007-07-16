@@ -1,8 +1,8 @@
-infon (0~r198-2) UNRELEASED; urgency=low
+infon (0~r198-2) unstable; urgency=low
 
-  * Uses metainit (very experimental)
+  * Uses metainit for the init script
 
- -- Joachim Breitner <nomeata@debian.org>  Sat, 16 Jun 2007 15:34:22 +0100
+ -- Joachim Breitner <nomeata@debian.org>  Mon, 16 Jul 2007 16:05:19 +0200
 
 infon (0~r198-1) unstable; urgency=low
 
