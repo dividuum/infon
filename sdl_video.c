@@ -39,8 +39,7 @@ static sge_bmpFont *font;
 static char tiny_font[1792]; // XXX Hardcoded
 
 void video_init(int w, int h, int fs) {
-    if (SDL_InitSubSystem(SDL_INIT_VIDEO) == -1)
-    if (SDL_Init(0) == -1) 
+    if (SDL_Init(SDL_INIT_VIDEO) == -1) 
         die("Couldn't initialize SDL: %s", SDL_GetError());
 
     const SDL_VideoInfo *vi = SDL_GetVideoInfo();

@@ -77,7 +77,6 @@ void video_setup_opengl(int width, int height) {
 
 void video_init(int w, int h, int fs) {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) == -1)
-    if (SDL_Init(0) == -1) 
         die("Couldn't initialize SDL: %s", SDL_GetError());
 
     if (fs) 
