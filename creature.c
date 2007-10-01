@@ -306,7 +306,7 @@ static int attack_distance[CREATURE_TYPES][CREATURE_TYPES] = {
 };
 
 int creature_attack_distance(const creature_t *creature, const creature_t *target) {
-    return attack_distance[creature->type][CREATURE_TYPES];
+    return attack_distance[creature->type][target->type];
 }
 
 void creature_do_attack(creature_t *creature, int delta) {
