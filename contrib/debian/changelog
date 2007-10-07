@@ -1,3 +1,9 @@
+infon (0~r198-3) UNRELEASED; urgency=low
+
+  * Complete infon.6 manpage (Closes: #445647)
+
+ -- Joachim Breitner <nomeata@debian.org>  Sun, 07 Oct 2007 17:30:38 +0200
+
 infon (0~r198-2) unstable; urgency=low
 
   * Uses metainit for the init script
