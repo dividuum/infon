@@ -18,13 +18,10 @@
 .SH NAME
 infon \- Program bugs to compete for food and survival
 .SH SYNOPSIS
-.B infon
-.RI server[:port]
+
+infon [\fB\-r\fR <renderer>] [\fB\-f\fR] [\fB\-x\fR <width>] [\fB\-y\fR <height>] [\fB\-v\fR] [\fB\-h\fR] <server[:port]>
+
 .SH DESCRIPTION
-This manual page documents briefly the
-.B infon
-command.
-.PP
 \fBinfonx\fP is the graphical viewers for the infon game.
 Infon is a game which simulates the live of simple bugs who eat,
 propagate, eat each other and evolve. The players can not control
@@ -37,9 +34,22 @@ You have to specify the hostname of the server to connect to on the
 command line.
 
 .SH OPTIONS
-.TP
-.B server[:port]
-The server (and port) to connect to.
+.HP
+\fB\-r\fR <renderer>    \- renderer to use (sdl_gui, gl_gui, ...)
+.HP
+\fB\-x\fR <width>       \- initial screen width.
+.HP
+\fB\-y\fR <height>      \- initial screen height.
+.HP
+\fB\-f\fR               \- start in fullscreen mode.
+.HP
+\fB\-v\fR               \- display version information.
+.HP
+\fB\-h\fR               \- this help.
+.PP
+<server[:port]>   \- ip/hostname of an infon game server.
+if not port is given, 1234 is used.
+
 .SH SEE ALSO
 .BR infond (8)
 
