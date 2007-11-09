@@ -188,6 +188,8 @@ end
 ------------------------------------------------------------------------
 
 creature_config = setmetatable({}, {
+    -- See the file creature_config.gperf for the 
+    -- list of available values within this table.
     __index = function (t, val) 
         return creature_get_config(val)
     end

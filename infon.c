@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
                           " -h               - this help.\n"
                           "\n"
                           "<server[:port]>   - ip/hostname of an infon game server.\n"
-                          "                    if not port is given, 1234 is used.\n", argv[0]);
+                          "                    if no port is given, 1234 is used.\n", argv[0]);
             case 'v': info(); exit(EXIT_SUCCESS);
         }
     }
