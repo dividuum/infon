@@ -17,7 +17,7 @@ nokickpass = ""
 -- join_info = "join #infon on irc.freenode.net for help"
 
 -- maps to rotate
-maps = {"foo", "gpn", "water", "cn", "owl", "stripeslice", "castle", "infon" }
+maps = {"foo", "gpn", "water", "cn", "owl", "stripeslice", "castle", "infon", "pacman" }
 
 -- rules file to use. 
 rules = "default"
