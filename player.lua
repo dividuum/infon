@@ -121,16 +121,24 @@ end
 -- 'pretty'-print function
 ------------------------------------------------------------------------
 
-function p(x) 
-    if type(x) == "table" then
-        print("+--- Table: " .. tostring(x))
-        for key, val in pairs(x) do
-            print("| " .. tostring(key) .. " " .. tostring(val))
-        end
-        print("+-----------------------")
+function p(...)
+    dofile("pp", true)
+    if pp then
+        p = pp
     else
-        print(type(x) .. " - " .. tostring(x))
+        p = function (x) 
+            if type(x) == "table" then
+                print("+--- Table: " .. tostring(x))
+                for key, val in pairs(x) do
+                    print("| " .. tostring(key) .. " " .. tostring(val))
+                end
+                print("+-----------------------")
+            else
+                print(type(x) .. " - " .. tostring(x))
+            end
+        end
     end
+    return p(...)
 end
 
 ------------------------------------------------------------------------
@@ -151,8 +159,15 @@ function info()
             print("current message: " .. creature.message)
         end
         if type(creature.thread) == 'thread' then
+            local status = coroutine.status(creature.thread)
+            if status == "suspended" then
+                status = "alive"
+            end
+            if creature.status then 
+                status = creature.status
+            end
             print(_TRACEBACK(creature.thread, 
-                             "thread status  : " .. (creature.status or coroutine.status(creature.thread)), 
+                             "thread status  : " .. status, 
                              coroutine.status(creature.thread) == "dead" and 0 or 1))
         end
         print()
@@ -230,7 +245,7 @@ do
 
     local loaded = {}
 
-    function dofile(file) 
+    function dofile(file, silent) 
         assert(type(file) == "string", "filename must be string")
 
         -- already loaded into this vm?
@@ -240,7 +255,10 @@ do
 
         -- not allowed to load this file?
         if not config.dofile_allowed or not config.dofile_allowed[file] then
-            print(_TRACEBACK("dofile('" .. file .. "') denied. upload it using the batch (b) command"))
+            if not silent then
+                print(_TRACEBACK("dofile('" .. file .. "') denied. " ..
+                      "upload it using the batch (b) command"))
+            end
             return
         end
 
