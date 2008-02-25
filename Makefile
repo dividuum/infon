@@ -32,10 +32,10 @@ ifdef WINDOWS
 	PREFIX           ?= .\\\\
 	MINGW             = $(HOME)/progs/mingw32/
 	SDLDIR            = $(MINGW)
-	CC                = /opt/xmingw/bin/i386-mingw32msvc-gcc
+	CC                = i586-mingw32msvc-gcc
 	CFLAGS           += -I$(MINGW)/include
-	WINDRES           = /opt/xmingw/bin/i386-mingw32msvc-windres
-	STRIP             = /opt/xmingw/bin/i386-mingw32msvc-strip
+	WINDRES           = i586-mingw32msvc-windres
+	STRIP             = i586-mingw32msvc-strip
 	LUAPLAT           = mingw
 	INFON_EXECUTABLE  = infon.exe
 	INFOND_EXECUTABLE = infond.exe
