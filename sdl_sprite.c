@@ -37,6 +37,13 @@ static SDL_Surface *sprite_load_surface(const char *filename) {
     return ret;
 }
 
+static void sprite_optimize(SDL_Surface **tmp, int transparent) {
+    SDL_Surface *optimized = transparent ? SDL_DisplayFormatAlpha(*tmp) 
+                                         : SDL_DisplayFormat(*tmp);
+    SDL_FreeSurface(*tmp);
+    *tmp = optimized;
+}
+
 static void sprite_load_background() {
     const int tilepos[][2] = { 
         // Border
@@ -86,6 +93,7 @@ static void sprite_load_background() {
         SDL_Rect srcrect = {       tilepos[i][0] * 16, 
                              192 + tilepos[i][1] * 16, SPRITE_TILE_SIZE, SPRITE_TILE_SIZE };
         SDL_BlitSurface(gfx, &srcrect, sprites[i], NULL);
+        sprite_optimize(&sprites[i], 0);
     }
 }
 
@@ -95,12 +103,14 @@ static void sprite_load_food() {
                                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
         SDL_Rect srcrect = { f * 16, 256, 16, 16 };
         SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_FOOD + f], NULL);
+        sprite_optimize(&sprites[SPRITE_FOOD + f], 1);
     }
     for (int f = 0; f < SPRITE_NUM_SNOW_FOOD; f++) {
         sprites[SPRITE_SNOW_FOOD + f] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
                                                              32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
         SDL_Rect srcrect = { f * 16, 256 + 16, 16, 16 };
         SDL_BlitSurface(gfx, &srcrect, sprites[SPRITE_SNOW_FOOD + f], NULL);
+        sprite_optimize(&sprites[SPRITE_SNOW_FOOD + f], 1);
     }
 }
 
@@ -119,6 +129,7 @@ static void sprite_load_thought() {
                 pixels[y * 16 + x] = (pixel & 0xFFFFFF00) | (int)((pixel & 0xFF) / 3);
             }
         }
+        sprite_optimize(&sprites[SPRITE_THOUGHT + t], 1);
     }
 }
 
@@ -127,16 +138,19 @@ static void sprite_load_images() {
                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
     SDL_Rect crect = { 0, 350, 64, 50 };
     SDL_BlitSurface(gfx, &crect, sprites[SPRITE_CROWN], NULL);
+    sprite_optimize(&sprites[SPRITE_CROWN], 1);
 
     sprites[SPRITE_LOGO] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 170, 80,
                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
     SDL_Rect lrect = { 0, 410, 170, 80};
     SDL_BlitSurface(gfx, &lrect, sprites[SPRITE_LOGO], NULL);
+    sprite_optimize(&sprites[SPRITE_LOGO], 1);
 
     sprites[SPRITE_HALO] = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 32, 32,
                                                 32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
     SDL_Rect hrect = {16, 48, 32, 32};
     SDL_BlitSurface(gfx, &hrect, sprites[SPRITE_HALO], NULL);
+    sprite_optimize(&sprites[SPRITE_HALO], 1);
 }
 
 SDL_Surface *sprite_get(int i) {
@@ -185,6 +199,7 @@ void sprite_render_player_creatures(int playerno, int r1, int g1, int b1, int r2
                 *target = SDL_CreateRGBSurface(SDL_HWSURFACE | SDL_SRCALPHA, 16, 16,
                                                32,0xFF000000,0x00FF0000,0x0000FF00,0x000000FF);
                 sge_transform(done, *target, 360.0 * d / 32, 0.75, 0.75, 7, 7, 7 , 7, SGE_TAA|SGE_TSAFE);
+                sprite_optimize(target, 1);
             }
             SDL_FreeSurface(base);
             SDL_FreeSurface(over);
