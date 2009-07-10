@@ -28,7 +28,7 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define ABS(x)   ((x)<0?-(x):(x))
 
-inline int path_calc_cost(int x1, int y1, int x2, int y2) {
+static int path_calc_cost(int x1, int y1, int x2, int y2) {
     //return ABS(x1 - x2) + ABS(y1 - y2);
     const int xd = x1 - x2;
     const int yd = y1 - y2;
@@ -44,7 +44,7 @@ pathnode_t *pathnode_new(int x, int y) {
     return node;
 }
 
-void finder_openset_moveup(open_t *set, int curidx) {
+static void finder_openset_moveup(open_t *set, int curidx) {
     // und in Richtung wurzel des Heaps verschieben,
     // bis richtige position erreicht ist
     while (curidx > 0) {
@@ -61,7 +61,7 @@ void finder_openset_moveup(open_t *set, int curidx) {
     }
 }
 
-void finder_openset_add(pathfinder_t *finder, portal_t *portal, int side, int cost) {
+static void finder_openset_add(pathfinder_t *finder, portal_t *portal, int side, int cost) {
     if (finder->numopen >= finder->maxopen)
         return;
 
@@ -77,7 +77,7 @@ void finder_openset_add(pathfinder_t *finder, portal_t *portal, int side, int co
     finder->numopen++;
 }
 
-void finder_openset_update(pathfinder_t *finder, int idx, int side, int cost) {
+static void finder_openset_update(pathfinder_t *finder, int idx, int side, int cost) {
     open_t *set = finder->openset;
 
     set[idx].fromside   = side;
@@ -89,7 +89,7 @@ void finder_openset_update(pathfinder_t *finder, int idx, int side, int cost) {
 // Entfernt set[0], indem das letzte element an 
 // stelle 0 verschoben wird und dann an die richtige
 // stelle vertauscht wird.
-void finder_openset_shift(pathfinder_t *finder) {
+static void finder_openset_shift(pathfinder_t *finder) {
     assert(finder->numopen > 0);
     finder->numopen--;
 
@@ -118,7 +118,7 @@ void finder_openset_shift(pathfinder_t *finder) {
     }
 }
 
-int finder_openset_find(pathfinder_t *finder, portal_t *portal) {
+static int finder_openset_find(pathfinder_t *finder, portal_t *portal) {
     open_t *set = finder->openset;
     for (int idx = 0; idx < finder->numopen; idx++) {
         if (set[idx].portal == portal)
@@ -127,7 +127,7 @@ int finder_openset_find(pathfinder_t *finder, portal_t *portal) {
     return -1;
 }
 
-pathfinder_t *finder_alloc() {
+static pathfinder_t *finder_alloc() {
     return (pathfinder_t*)malloc(sizeof(pathfinder_t));
 }
 
