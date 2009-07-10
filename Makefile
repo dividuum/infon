@@ -195,7 +195,7 @@ linux-server-dist: $(INFOND_EXECUTABLE) infond-wrapper
 
 $(INFOND_EXECUTABLE): infond.o server.o listener.o map.o path.o misc.o packet.o player.o world.o creature.o scroller.o game.o pinger.o
 	$(CC) $^ $(LDFLAGS) -o $@
-	$(CC) $^ $(LDFLAGS) -static -o $@-static
+	$(CC) $^ $(LDFLAGS) -lrt -static -o $@-static
 
 $(INFON_EXECUTABLE): infon.o client.o packet.o misc.o client_player.o client_world.o client_creature.o client_game.o renderer.o
 	$(CC) $^ $(LDFLAGS) -o $@ 
