@@ -1,3 +1,10 @@
+infon-devel (0~r218-1) unstable; urgency=low
+
+  * pygtksourceview is deprecated, use pygtksourceview2 instead
+    thanks to Emilio Pozuelo Monfort for the patch. (Closes: #532894)
+
+ -- Joachim Breitner <nomeata@debian.org>  Fri, 12 Jun 2009 20:11:23 +0200
+
 infon-devel (0~r144-1) unstable; urgency=low
 
   * Initial Release

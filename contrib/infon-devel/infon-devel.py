@@ -23,7 +23,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
-import gtksourceview
+import gtksourceview2
 
 import os
 import sys
@@ -249,7 +249,7 @@ class InfonDevel:
             ('ShowNumbers', None, 'Show _Line Numbers', None, 'Toggle visibility of line numbers in the left margin', 
                             lambda a, s: s.set_show_line_numbers(a.get_active())),
             ('ShowMarkers', None, 'Show _Markers', None, 'Toggle visibility of markers in the left margin',
-                            lambda a, s: s.set_show_line_markers(a.get_active())),
+                            lambda a, s: s.set_show_line_marks(a.get_active())),
             ('AutoIndent', None, 'Enable _Auto Indent', None, 'Toggle automatic auto indentation of text', 
                             lambda a, s: s.set_auto_indent(a.get_active())),
             #('InsertSpaces', None, 'Insert _Spaces Instead of Tabs', None, 'Whether to insert space characters when inserting tabulations', 
@@ -320,7 +320,7 @@ class InfonDevel:
         action = actions.get_action('ShowNumbers')
         action.set_active(self.bugview.get_show_line_numbers())
         action = actions.get_action('ShowMarkers')
-        action.set_active(self.bugview.get_show_line_markers())
+        action.set_active(self.bugview.get_show_line_marks())
         action = actions.get_action('AutoIndent')
         action.set_active(self.bugview.get_auto_indent())
         #action = actions.get_action('InsertSpaces')
@@ -333,31 +333,29 @@ class InfonDevel:
         self.ui.insert_action_group(actions,0)
 
     def setup_bugview(self):
-        self.bugbuf = gtksourceview.SourceBuffer()
-        lm = gtksourceview.SourceLanguagesManager()
-        lang = lm.get_language_from_mime_type("text/x-lua")
-        self.bugbuf.set_highlight(True)
+        self.bugbuf = gtksourceview2.Buffer()
+        lm = gtksourceview2.LanguageManager()
+        lang = lm.guess_language(None, "text/x-lua")
+        self.bugbuf.set_highlight_syntax(True)
         self.bugbuf.set_language(lang)
 
         def set_bt_markers(blubb):
             begin, end = self.bugbuf.get_bounds()
-            markers = self.bugbuf.get_markers_in_region(begin, end)
-            map(self.bugbuf.delete_marker, markers)
+            self.bugbuf.remove_source_marks(begin, end)
 
             for creature, line in self.conn.bt:
                 if line:
-                    pos = self.bugbuf.get_iter_at_line(line)
-                    self.bugbuf.create_marker(None, "bt", pos)
+                    self.bugbuf.create_source_mark(None, "bt", line)
         self.conn.connect("new_bt",set_bt_markers)
 
-        self.bugview = gtksourceview.SourceView(self.bugbuf)
-        self.bugview.props.show_line_numbers = True 
-        self.bugview.props.show_line_markers = True 
+        self.bugview = gtksourceview2.View(self.bugbuf)
+        self.bugview.props.show_line_numbers = True
+        self.bugview.props.show_line_marks = True
         self.bugview.props.auto_indent = True
         #self.bugview.props.insert_spaces_instead_of_tabs = True
 
         icon = gtk.gdk.pixbuf_new_from_file(PREFIX + 'marker.png')
-        self.bugview.set_marker_pixbuf("bt",icon)
+        self.bugview.set_mark_category_pixbuf("bt",icon)
 
     def setup_connview(self):
         self.connview = connview.ConnView()
