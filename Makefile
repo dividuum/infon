@@ -1,5 +1,7 @@
 all: targets
 
+MAJOR_VERSION = 1.0
+
 ifndef REVISION
 -include REVISION
 endif
@@ -233,7 +235,7 @@ $(LUA)/src/liblua.a:
 	$(CXX) $(CPPFLAGS) $^ -c -o $@
 
 REVISION:
-	echo "REVISION=`svnversion .`" > $@
+	echo "REVISION=$(MAJOR_VERSION)-`git rev-parse --short=6 HEAD`" > $@
 
 clean: 
 	-rm -f *.o *.so *.dll infond infond-static infon infon.exe infon*.res infond.exe infond.exe-static tags
