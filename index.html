@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <title>Infon Battle Arena - A Programming Game</title>
+        <meta name="description" content="Infon Battle Arena is a realtime networked multiplayer programming game">
+        <meta name="keywords" content="programming, c, game, infon, lua, creatures, ai, bot">
+        <meta name="author" content="Florian Wesch">
+        <meta name="copyright" content="Florian Wesch">
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+        <style type="text/css">
+body, html {
+    margin:0;
+    padding:0;
+    background: #FFF;
+    color: #333;
+    font-family:Verdana, Arial, Helvetica, sans-serif;
+    line-height: 1.3em;
+}
+body {
+    min-width:790px;
+}
+#wrap {
+    margin:0 auto;
+    width:780px;
+}
+#main {
+    float:left;
+    width:500px;
+}
+#main p {
+    text-align: justify;
+}
+#main h2 {
+    padding: 2px;
+    border-bottom: 2px dotted black;
+}
+#sidebar {
+    float:right;
+    width:280px;
+}
+#footer {
+    clear:both;
+}
+#header {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+:link, :visited {
+    text-decoration: underline;
+    color: #b00;
+}
+:link:hover, :visited:hover {
+    background-color: #eee;
+    color: #555;
+}
+img {
+    border: none;
+}
+.kw {
+    font-weight:bold;
+}
+.s {
+    color: #449;
+}
+.n {
+    color: #900;
+}
+.l {
+    color: #090;
+}
+.code {
+    border: 1px dotted black;
+    background-color: #EEE;
+    margin: 5px;
+    padding: 5px;
+
+}
+/* gwt */
+.browser {
+    background: #EEE;
+    border: 1px solid black;
+    margin-bottom: 20px;
+}
+.header {
+    background: #FFF;
+    border: 1px solid black;
+}
+.server {
+    cursor: pointer;				
+}
+.hover {
+    background: #F66;
+}
+        </style>
+    </head>
+    <body>
+        <div id="wrap">
+            <div id="header">
+                <img src="infon.jpg" alt="Infon Battle Arena">
+            </div>
+            <div id="main">
+
+                <h2>About</h2>
+                <p>
+                Infon Battle Arena is a programming game. You control your creatures using the Lua 
+                programming language and let them compete for food and survival. Play online against 
+                other players! It is like corewars on steroids.
+                </p>
+
+                <h2>Screenshot</h2>
+                <img src="screenshot.jpg" alt="Screenshot">
+
+                <h2>Example code</h2>
+                This code will display a small "Hello!" below your creatures.
+                <pre class='code'>
+<span class='kw'>function</span> <span class='l'>Creature</span>:<span class='n'>main</span>()
+    <span class='kw'>self</span>:<span class='n'>screen_message</span>(<span class='s'>"Hello!"</span>)
+<span class='kw'>end</span></pre>
+                See the documentation to <a href='http://code.google.com/p/infon/wiki/CreatureProgramming'>learn more</a> about programming your
+                creatures.
+
+                <h2>Features</h2>
+                <ul>
+                    <li>Network based. Play against others over the Internet!</li>
+                    <li>Different <a href="http://code.google.com/p/infon/wiki/Renderer">renderers</a> (2D, 3D, Asciiart) to view the game.</li>
+                    <li>You'll only need telnet to play the game.</li>
+                    <li>Update your code while the game is running.</li>
+                    <li>Demo recording and playback</li>
+                    <li>Makes heavy use of the <a href="http://www.lua.org">Lua programming language</a></li>
+                    <li>Opensource (GPL). Download it for free!</li>
+                </ul>
+
+                <h2>Client Download</h2>
+                <a href="http://infon.googlecode.com/files/infon-win32-r265.zip"><img src="windows.png" alt="Download Windows Version"></a>
+                <a href="http://infon.googlecode.com/files/infon-linux-i386-r265.tgz"><img src="linux.png" alt="Download Linux Version"></a>
+                <p>For other downloads, visit the <a href='http://code.google.com/p/infon/downloads/list'>download page</a>.
+
+                <h2>Documentation</h2>
+                <p>
+                Head over to the <a href='http://code.google.com/p/infon/'>development site</a> for documentation, tutorials, source code and more...
+                </p>
+
+                <h2>Contact</h2>
+                <p>
+                Mail Florian Wesch &lt;<a href='mailto:%66%77%40%64%69%76%69%64%75%75%6D%2E%64%65'>fw@dividuum.de</a>&gt;<br>
+                Or visit the IRC Channel #infon on irc.freenode.net
+                </p>
+            </div>
+            <div id="sidebar">
+                <img src="creature.png" alt="Infon Logo">
+            </div>
+            <div id="footer">
+                <p>Have fun!</p>
+            </div>
+        </div>
+    </body>
+</html>

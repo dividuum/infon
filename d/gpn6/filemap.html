@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+  "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>S5 File Map</title>
+
+</head>
+<body id="www-meyerweb-com" class="tools">
+
+
+
+<h2>S5 File Map</h2>
+
+<p>
+Pretty much everything you need outside of the slide file itself is found in the <tt>ui</tt> directory, which sits next to the slide file.  That's where, if you dig into the <code>default</code> subdirectory, you find the various CSS files and JavaScript that makes S5 work.
+</p>
+<p>
+The critical files in the <tt>ui/default</tt> directory are:
+</p>
+
+<dl>
+<dt><tt>slides.js</tt></dt>
+<dd>
+<p>
+The JavaScript that drives the dynamic side of the slide show.  It automatically IDs the slides when the document loads, builds the navigation menu, handles the hiding and showing of slides, and so on.  The script also manages the fallback to Opera Show if you're using Opera.
+</p>
+</dd>
+<dt><tt>slides.css</tt></dt>
+<dd>
+<p>
+This is really just a hub file that points to the three files that drive S5.  Those files are:
+</p>
+<dl>
+<dt><tt>s5-core.css</tt></dt>
+<dd>
+<p>
+Contains a few rules that make the system run.  If you mess with this file, you're likely to break the slide show unless you really know what you're doing.
+</p>
+</dd>
+<dt><tt>framing.css</tt></dt>
+<dd>
+<p>
+Contains some rules that place and size the various slide components&mdash;things like the header, footer, slide controls, and so on.  If you want to change the basic slide layout, this is where to go.
+</p>
+</dd>
+<dt><tt>pretty.css</tt></dt>
+<dd>
+<p>
+The CSS that adds the visual pizazz to the slide show&mdash;colors, fonts, text alignment, margins, and all that other good stuff.  You can make a whole new theme just by editing this file, and not touching the others.
+</p>
+</dd>
+</dl>
+</dd>
+<dt><tt>opera.css</tt></dt>
+<dd>
+<p>
+This file is what allows Opera Show to do its thing, assigning a few CSS rules that break the file up into slides.  It should never have to be edited unless you go messing with the rules in <tt>s5-core.css</tt> (not recommended, but hey, it's your slide show).
+</p>
+</dd>
+<dt><tt>outline.css</tt></dt>
+<dd>
+<p>
+The styles that are applied when the slide show is in the outline view.  These are largely meant to make the document a little bit more readable as an outline.
+</p>
+</dd>
+<dt><tt>print.css</tt></dt>
+<dd>
+<p>
+This is what makes the printer-friendly version work.  There are a couple of rules at the beginning of the file you should be careful about changing, but otherwise, it's all up to you.
+</p>
+</dd>
+<dt><tt>iepngfix.htc</tt></dt>
+<dd>
+<p>
+A Microsoft behavior file which adds support for PNG alpha channels to IE/Win; this is called via style rules added via the JavaScript.  This file is skipped over by all other browsers, which don't need hackery to honor PNG alpha channels.
+</p>
+</dd>
+</dl>
+
+
+
+
+</body>
+</html>

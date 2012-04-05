@@ -1,0 +1,222 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+  "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>S5 Features</title>
+
+<style type="text/css" media="all">
+dt {margin-top: 1.5em; font-weight: bold;}
+dd p {margin: 0.25em 0 1em;}
+table.chart tbody td {vertical-align: top; padding: 1em 0;}
+table.chart tbody td ul {margin-top: 0;}
+#main div.aside {margin-top: 5em;}
+</style>
+</head>
+<body id="www-meyerweb-com" class="tools">
+
+
+
+<h2>S5 Features</h2>
+
+<p>
+Note that most of these features are not present in Opera, which displays an S5 slide show as a normal Opera Show document.
+</p>
+
+<dl>
+
+<dt>Auto-scaling of text</dt>
+<dd>
+<p>
+If you're setting up to present your 1024x768 slide show and find out the projector available to you only goes up to 800x600, don't worry.  S5 will auto-scale the text in the presentation to match the browser window, no matter what size you make it.  On the down side, images are not scaled (as of S5 1.1).
+</p>
+</dd>
+
+<dt>Incremental display</dt>
+<dd>
+<p>
+If you're a "show the bullet points one at a time" kind of person, S5 has you covered.  Put <code>class="incremental"</code> on any list, and its list items will be revealed one at a time.  Just use the usual forward/backward keys!  If you want to make other kinds of elements appear in sequence, just <code>class</code> each one <code>incremental</code>, and you're all set.  Combine this with some overlapping images and you can get some basic animation effects.
+</p>
+</dd>
+
+<dt>Progress indicator</dt>
+<dd>
+<p>
+Wonder how far you've gotten into a long presentation?  Thanks to the progress indicator, you can keep track of how well you're staying on schedule.  The "X of Y" text (where "X" is the current slide's number, and "Y" is the total number of slides) tells you exactly where you are, and how far you have to go.
+</p>
+</dd>
+
+<dt>Slide bookmarks</dt>
+<dd>
+<p>
+If you want to point at a specific slide, just add a fragment identifier with <code>slide</code> and the slide number you want.  For example, if you wanted to point straight to slide 7 of a presentation found at <code>http://example.org/preso.html</code>, you'd use the URL <code>http://example.org/preso.html#slide7</code>.
+</p>
+</dd>
+
+<dt>Comprehensive keyboard controls</dt>
+<dd>
+<p>
+There are a bunch of ways to move forward and backward in a slide show, including everyone's favorite advancer, the space bar.  You can make the navigation controls appear and disappear with the "C" key or flip between slide show and outline views with the "T" key.  There are also ways to go straight to a specific slide, or skip forward or backward a certain number of slides.  See the <a href="#controlchart">control chart</a> at the end of this document for details.
+</p>
+
+</dd>
+
+<dt>Click to advance</dt>
+<dd>
+<p>
+If you have one of those super-cool 3D gestural mice, not to worry.  Click on a slide and you'll advance to the next slide (or move forward an incremental step).  Works with everyday mice, too!  Even better, clicks within movies, Flash animations, and the navigation controls do <em>not</em> cause the slide show to advance.
+</p>
+</dd>
+
+<dt>Author customization features</dt>
+<dd>
+<p>
+Slide show authors can set two basic parameters in the markup of a slide show: whether the presentation defaults to slide show view or outline view, and whether or not the navigation controls are hidden or visible by default in the slide show view.
+</p>
+</dd>
+
+<dt>Based on open standards</dt>
+<dd>
+<p>
+One of the S's in "S5" stands for Standards-based, and that's exactly what it is: a combination of XHTML, CSS, and JavaScript.  If you can create a Web page, you can create an S5 presentation.  If you can create a CSS design, you can create an S5 theme.
+</p>
+</dd>
+
+<dt><acronym title="Opera Show Format">OSF</acronym> and <acronym title="Extensible Open XHTML Outlines">XOXO</acronym> compatible</dt>
+<dd>
+<p>
+By default, S5 files are compatible with the <a href="http://my.opera.com/community/dev/operashow/documentation/doc_fileformat.html">Opera Show Format</a>&mdash;but you can also create an <a href="http://microformats.org/wiki/XOXO">XOXO</a>-based slide show and have it work, too!
+</p>
+</dd>
+
+<dt>Public domain technology</dt>
+<dd>
+<p>
+S5 has been officially released into the Public Domain, so you can always use it without any fear of license restrictions.
+</p>
+</dd>
+
+</dl>
+
+
+
+<div class="aside">
+<h4><a id="controlchart">Keyboard controls</a></h4>
+
+<p>
+The following apply in any supporting browser besides Opera, which uses the default Opera Show controls instead.
+</p>
+
+<table cellspacing="0" class="chart">
+<thead>
+<tr>
+<th>Action</th>
+<th>Key(s)</th>
+</tr>
+</thead>
+
+<tbody>
+
+<tr>
+<td>Go to next slide</td>
+<td>
+<ul>
+<li>Space bar</li>
+<li>Return</li>
+<li>Enter</li>
+<li>Right arrow</li>
+<li>Down arrow</li>
+<li>Page down</li>
+<li>Click left mouse button outside of control area, Flash object, or movie</li>
+</ul>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Go to previous slide</td>
+<td>
+<ul>
+<li>Left arrow</li>
+<li>Up arrow</li>
+<li>Page up</li>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Go to title (first) slide</td>
+<td>
+<ul>
+<li>Home</li>
+</ul>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Go to last slide</td>
+<td>
+<ul>
+<li>End</li>
+</ul>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Jump directly to slide</td>
+<td>
+<ul>
+<li>Type slide number, then hit Return or Enter</li>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Skip forward <i>n</i> slides</td>
+<td>
+<ul>
+<li>Type number of slides to skip, hit any "go to next" key <strong>except</strong> Return or Enter</li>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Skip backward <i>n</i> slides</td>
+<td>
+<ul>
+<li>Type number of slides to skip, hit any "go to previous" key</li>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Switch between slideshow and outline view</td>
+<td>
+<ul>
+<li>T</li>
+</ul>
+</td>
+</tr>
+
+<tr>
+<td>Show / hide slide controls</td>
+<td>
+<ul>
+<li>C</li>
+<li>Move mouse pointer over control area</li>
+</ul>
+</td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+
+
+
+</body>
+</html>

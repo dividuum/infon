@@ -1,0 +1,402 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>Infon Battle Arena: An Introduction</title>
+<!-- metadata -->
+<meta name="generator" content="S5" />
+<meta name="version" content="S5 1.1" />
+<meta name="presdate" content="20070602" />
+<meta name="author" content="Florian Wesch" />
+<meta name="company" content="none" />
+<!-- configuration parameters -->
+<meta name="defaultView" content="slideshow" />
+<meta name="controlVis" content="hidden" />
+<!-- style sheet links -->
+<link rel="stylesheet" href="ui/infon/slides.css" type="text/css" media="projection" id="slideProj" />
+<link rel="stylesheet" href="ui/infon/outline.css" type="text/css" media="screen" id="outlineStyle" />
+<link rel="stylesheet" href="ui/infon/print.css" type="text/css" media="print" id="slidePrint" />
+<link rel="stylesheet" href="ui/infon/opera.css" type="text/css" media="projection" id="operaFix" />
+<!-- S5 JS -->
+<script src="ui/infon/slides.js" type="text/javascript"></script>
+</head>
+<body>
+
+<div class="layout">
+    <div id="controls"><!-- DO NOT EDIT --></div>
+    <div id="currentSlide"><!-- DO NOT EDIT --></div>
+    <div id="header"></div>
+    <div id="footer">
+        <h1>GPN 6 - 2.6.2007</h1>
+        <h2>Infon Battle Arena - A Programming Game</h2>
+    </div>
+</div>
+
+<div class="presentation">
+
+<div class="slide">
+    <h1>Infon Battle Arena<br/>Eine Einf&uuml;hrung</h1>
+    <div style="position: absolute; right: 30px;">
+    <img src="infon_lua_gross.png" alt="Infon" title="Infon" />
+    </div>
+    <h2>http://infon.dividuum.de/</h2>
+    <h3>Florian Wesch<br/>fw@dividuum.de</h3>
+</div>
+
+<div class="slide">
+    <h1>Worum geht es?</h1>
+    <h2>Infon ist ein Client/Server Realtime Multiplayer Programmier Spiel mit viel Gewusel</h2>
+    <ul>
+        <li>Client/Server</li>
+        <li>Realtime</li>
+        <li>Multiplayer</li>
+        <li>Programmierung</li>
+        <li>Spiel :-)</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Ziel des Spiels</h1>
+    <ul>
+        <li>Fressen, Weiterentwickeln, Reproduzieren</li>
+        <li>Feinde t&ouml;ten</li>
+        <li>"King of the Hill" (koth) Tile erobern.</li>
+        <li>Punkte holen und dadurch das Spiel gewinnen</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Die Welt</h1>
+    <ul>
+        <li>Unterschiedliche Level</li>
+        <li>Tile basiert</li>
+        <li>Jedes Tile ist 256x256 Einheiten gross</li>
+        <li>2 Tile Typen: begehbar und nicht begehbar</li>
+        <li>Spezielles King of the Hill Tile</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Futter</h1>
+    <ul>
+        <li>Level legt fest, wo und wieviel Futter entsteht.</li>
+        <li>Futter ist die einzige Energiequelle</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>The Viecher</h1>
+    Es gibt 3 verschiedene Arten:
+    <br/>
+    <br/>
+    <table>
+        <tr><td><img src="type0.png"></td><td>Typ 0: Kann 10000 Futtereinheiten essen. Kann sich in alle anderen Typen
+                umwandeln. Wird mit abnehmender Gesundheit langsamer. Kann Typ 2 angreifen</td></tr>
+        <tr><td><img src="type1.png"></td><td>Typ 1: Kann alle anderen Arten angreifen. Sehr robust. Kann 20000 Futter
+                aufnehmen.</td></tr>
+        <tr><td><img src="type2.png"></td><td>Typ 2: Kann fliegen. Schwach, dafuer sehr schnell.</td></tr>
+    </table>
+</div>
+
+<div class="slide">
+    <h1>Die unterschiedlichen Zust&auml;nde</h1>
+    <ul>
+        <li>Idling</li>
+        <li>Walking - Eine zuvor festgelegte Position anlaufen/-fliegen.</li>
+        <li>Eating - Futter vom aktuellen Tile aufnehmen.</li>
+        <li>Healing - Aufgenommenes Futter in Lebensenergie umwandeln.</li>
+        <li>Attacking - Andere Viecher angreifen.</li>
+        <li>Converting - Mit Hilfe aufgenommenen Futters in einen anderen Typ umwandeln.</li>
+        <li>Spawning - Nachwuchs erzeugen. Braucht Futter und Lebensenergie.</li>
+        <li>Feeding - Futtertransfer zwischen eigenen Viechern.</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Der Client</h1>
+    <ul>
+        <li>Schlank, portabel, modular.</li>
+        <li>Kann unterschiedliche Renderer f&uuml;r die Ausgabe verwenden.</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>SDL Renderer</h1>
+    <center>
+        ...
+    </center>
+</div>
+
+<div class="slide">
+    <h1>Spielen</h1>
+    <ul>
+        <li>Ein beliebiger Telnet Client</li>
+        <li>Verbinden zum Spielserver</li>
+        <li>Joinen</li>
+        <li>Code hochladen</li>
+        <li>Debuggen</li>
+        <li>Gewinnen :-)</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Verbinden</h1>
+    <center>
+        ...
+    </center>
+</div>
+
+<div class="slide">
+    <h1>Grundlagen</h1>
+    <ul>
+        <li>Eine Spielrunde dauert 1/10 Sekunde</li>
+        <li>Jeder Spieler hat eine eigene Lua Umgebung.</li>
+        <li>Alle Aktionen sind durch Code steuerbar.</li>
+        <li>Neuer Code kann jederzeit hochgeladen werden.</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Lua</h1>
+    <ul>
+        <li>Schnell</li>
+        <li>Einfache, aber sehr praktische Syntax.</li>
+        <li>Schnell erlernbar.</li>
+        <li>Dokumentation gibt es auf http://www.lua.org/</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Hello World</h1>
+    <center>
+        ...
+    </center>
+</div>
+
+<div class="slide">
+    <h1>Beispiel Botcode - The Hello Bot</h1>
+
+    <pre>
+function Creature:main()
+    self:screen_message("hello")
+    self:sleep(1000)
+    self:screen_message("world")
+    self:sleep(1000)
+end
+    </pre>
+</div>
+
+<!--
+<div class="slide">
+    <h1>Das Lua Environment</h1>
+    <ul>
+        <li>A new player joins.</li>
+        <li>Game initializes the player's Lua environment by loading 3 predefined Lua files.</li>
+        <li>Each round the game executes the predefined <code>player_think</code> function which
+            <ul>
+                <li>calls event handlers (more on that later)</li>
+                <li>creates a new <code>Creature</code> object for each created creature, spawns a new thread that executes
+                the object's <code>main</code> function in that thread</li>
+                <li>cycles through all creature threads.</li>
+            </ul>
+        </li>
+    </ul>
+</div>
+-->
+
+<div class="slide">
+    <h1>Random Walker</h1>
+
+    <pre>
+function Creature:main()
+    local x1, y1, x2, y2 = world_size()
+    while not self:set_path(math.random(x2 - x1) + x1,
+                            math.random(y2 - y1) + y1) do
+    end
+    self:begin_walk_path()
+    while self:is_walking() do
+        self:wait_for_next_round()
+    end
+end
+    </pre>
+</div>
+
+<div class="slide">
+    <h1>self:wait_for_next_round()</h1>
+    <ul>
+        <li>Unterbricht die Auff&uuml;hrung der aktuellen Kreatur.</li>
+        <li>Sobald alle Kreaturen fertig sind, geht das Spiel weiter.</li>
+        <li>In der n&auml;chsten Runde wird die Auff&uuml;hrung hinter <code>wait_for_next_round</code> fortgesetzt.</li>
+        instructions.</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>wait_for_next_round() example</h1>
+
+    <pre>
+function Creature:sleep(msec)
+    local time = game_time()
+    while time + msec &gt; game_time() do
+        self:wait_for_next_round()
+    end
+end
+    </pre>
+</div>
+
+<div class="slide">
+    <h1>Creature Thread Status</h1>
+
+    <pre>
+&lt;creature 5 [15488,5760] type 0, health 91, food 0, state idle&gt;:
+------------------------------
+thread status  : suspended
+stack traceback:
+ ./player-highlevel.lua:254: in function 'wait_for_next_round'
+ ./player-highlevel.lua:223: in function 'sleep'
+ [string "paste 104 from client 10"]:3: in function 'main'
+ ./player-highlevel.lua:229: in function &lt;./player-highlevel.lua:227&gt;
+    </pre>
+</div>
+
+<div class="slide">
+    <h1>K&auml;mpfen</h1>
+    <ul>
+        <li>In Reichweite bewegen</li>
+        <li>Das Ziel ausw&auml;hlen</li>
+        <li>Kreature Zustand auf ATTACK setzen</li>
+        <li>wait_for_next_round aufrufen</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Attacking</h1>
+
+    <pre>
+function Creature:attack(target)
+    if not self:set_target(target) then
+        return false
+    end
+    if not self:begin_attacking() then
+        return false
+    end
+    while self:is_attacking() do
+        self:wait_for_next_round()
+    end
+    return true
+end
+    </pre>
+</div>
+
+<div class="slide">
+    <h1>Weitere F&auml;higkeiten</h1>
+    <ul>
+        <li>Infos ueber Feinde mit <code>self:get_nearest_enemy()</code></li>
+        <li>Umwandeln mit <code>self:convert()</code></li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Event Handler 1</h1>
+    Beim Auftreten einiger Ereignisse werden Event Handler der jeweils betroffenen Kreatur aufgerufen:
+    <ul>
+        <li>onSpawned - Nachdem die Kreatur erzeugt wurde</li>
+        <li>onRestart - Nach einem Restart (via 'r').</li>
+        <li>onAttacked - Nach einem Angriff auf die Kreatur.</li>
+        <li>onKilled - Nachdem die Kreatur get&ouml;tet wurde.</li>
+    </ul>
+</div>
+        
+<div class="slide">
+    <h1>Event Handler 2</h1>
+    Des weiteren k&ouml;nnen globale Funktionen definiert werden, um auf Spielereignisse zu reagieren:
+    <ul>
+        <li>onGameStart - Wird aufgerufen, nachdem ein neues Level gestartet wurde</li>
+        <li>onRoundStart - Wird in jeder Runde vor der Ausf&uuml;hrung der einzelnen Kreaturen aufgerufen</li>
+        <li>onRoundEnd - Wird in jeder Runde nach Ausf&uuml;hrung der einzelnen Kreaturen aufgerufen.</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Lowlevel</h1>
+    <pre>
+function Creature:begin_walk_path()
+    return set_state(self.id, CREATURE_WALK)
+end
+    </pre>
+    <ul>
+        <li>Die objektorientierten function sind zum Grossteil Wrapper um die lowlevel Funktionen, die das Spiel bereitstellt</li>
+        <li>Die meisten Lowlevel Funktionen erwarten die id einer eigenen Kreatur als Parameter.</li>
+        <li>Nat&uuml;rlich kann man durch verwenden anderer IDs keine fremden Kreaturen steuern :-)</li>
+        <li>Die Highlevel API befindet sich in api/oo.lua.</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Probleme 1</h1>
+    <pre>
+function Creature:main()
+    while true do 
+        self:wait_for_next_round()
+    end
+end
+    </pre>
+    <ul>
+        <li>Wird dieser Code hochgeladen und anschliessend weiterer Code mit einer <i>main</i> Funktion hochgeladen, so wird dieser nicht aktiv, da noch die alte
+        Version ausgef&uuml;hrt wird.</li>
+        <li>Um die neue Funktion zu aktivieren, muss in der Console 'r' getippt werden. Dies startet in alles Kreaturen die
+        <i>main</i> Funktion neu</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Probleme 2</h1>
+    <ul>
+        <li>In Lua sind Variablen per default global. Um eine Variable als lokal zu definieren muss local verwendet
+        werden. Siehe dazu <i>Programming in Lua</i> welches online abrufbar ist.</li>
+        <li>Hat ein Spieler keine verbundenen Clients, so wird der Spieler nach 120 Sekunden gekickt</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Debugging</h1>
+    <ul>
+        <li>Mittels 'p' k&ouml;nnen Tabelleninhalte ausgegeben werden</li>
+        <li>Mit 'i' kann der aktuelle Stack alle Kreaturen angezeigt werden. Dort stehen auch Fehlermeldungen.</li>
+        <li>In #infon auf irc.freenode.net fragen :-)</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Weitere Informationen</h1>
+    <ul>
+        <li>Tutorials und Doku gibt es auf <a href='http://infon.dividuum.de/'>http://infon.dividuum.de/</a></li>
+        <li>IRC channel #infon auf irc.freenode.net</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>Und jetzt?</h1>
+    <ul>
+        <li>Botcode schreiben</li>
+        <li>Neue Levels entwerfen</li>
+        <li>Einen neuen Renderer hacken (Sauerbraten anyone?)</li>
+        <li>Sourcecode und Binaries gibt es auf http://infon.dividuum.de/</li>
+    </ul>
+</div>
+
+<div class="slide">
+    <h1>That's all folks!</h1>
+    <center><h2>Fragen?</h2></center>
+</div>
+
+<div class="slide">
+    <center><h2>Have fun!</h2></center>
+</div>
+
+<!-- ################################## -->
+</div>
+</body>
+</html>
